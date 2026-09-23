@@ -3,10 +3,10 @@
 # Motor profesional de optimización cuantitativa de carteras multi-escenario
 
 > **Fase:** PROMPT 0 — Arquitectura, trazabilidad y plan de desarrollo (cerrado el 2026-09-23 con las decisiones del usuario sobre A-01 … A-37; ver §12).
-> **Estado del código productivo:** inexistente. Ningún requisito está implementado. Todos los RequirementID están en `NOT_IMPLEMENTED` (ver `TRACEABILITY.md`).
+> **Estado del código productivo:** Bloque 1 (Foundation) cerrado el 2026-09-23 y auditado el mismo día (`AUDIT_BLOCK_1.md`, `AUDIT_STATUS = PASS_WITH_CHANGES`): 58 RequirementID `VALIDATED`, 13 `PARTIAL`, 245 `NOT_IMPLEMENTED` (ver `TRACEABILITY.md`). Ningún requisito de los Bloques 2–6 está implementado.
 > **Contrato autoritativo:** `MASTER_SPEC.md`. Este documento concreta la especificación en un diseño verificable. Las ambigüedades se documentan en §12; las decisiones aprobadas que modifican el contrato se han incorporado al propio `MASTER_SPEC.md` como correcciones de formato (F-01 … F-04) y enmiendas (E-03, E-06, E-07, E-09, E-24, E-25) en su Anexo A.
 >
-> Las firmas y pseudocódigo de este documento son **diseño**, no código. No existen módulos, stubs ni placeholders en el repositorio.
+> Las firmas y pseudocódigo de este documento son **diseño**. §3, §4.1, §9.2 y el Anexo B incorporan, para el código ya validado del Bloque 1, la implementación real cuando difiere en detalle del diseño original (desviaciones aceptadas en el cierre de auditoría del Bloque 1; ver `CHANGELOG.md`). Los bloques 2–6 siguen siendo diseño, no código.
 
 ---
 
@@ -26,6 +26,7 @@
 12. Ambigüedades, contradicciones potenciales y decisiones propuestas
 13. Evaluación de la versión anterior (`1.-Version Anterior/`)
 14. Dependencias externas y solvers
+Anexo B. Referencias matemáticas de la implementación del Bloque 1
 
 ---
 
@@ -128,7 +129,9 @@ Basada en MASTER_SPEC §81 ("estructura recomendada"), con **adiciones justifica
 │   │   ├── universe_index.py      # AssetIndex: global ↔ eligible ↔ candidate-local
 │   │   ├── market_data.py         # PriceHistory, ReturnsMatrix
 │   │   ├── portfolio.py           # PortfolioSpec, CurrentPortfolioState, CurrentPortfolioComposition
-│   │   ├── risk_model.py          # ExpectedReturns, CovarianceEstimate, RiskModel (MuSigmaVersion)
+│   │   ├── risk_model.py          # ExpectedReturns, CovarianceEstimate, RiskModel (MuSigmaVersion);
+│   │   │                          # Bloque 1: también PSDDiagnostics, PSDRepairReport y ExternalAlpha
+│   │   │                          # (ver §3.1) para que `models` no dependa de `risk`
 │   │   ├── costs.py               # AssetCostVector (Buy/Sell resueltos, fuente, unidades)
 │   │   ├── composition.py         # CandidateComposition, SwapMove  (Bloque 3)
 │   │   ├── solution.py            # SolveResult, OptimizationResult, ValidationReport
@@ -138,13 +141,13 @@ Basada en MASTER_SPEC §81 ("estructura recomendada"), con **adiciones justifica
 │   │   ├── sources/
 │   │   │   ├── base.py            # DataSource (Protocol)
 │   │   │   ├── dataframe_source.py
-│   │   │   ├── csv_source.py
-│   │   │   ├── parquet_source.py
+│   │   │   ├── file_sources.py    # CSVSource y ParquetSource (Bloque 1: fusionados; ver §3.1)
 │   │   │   └── sqlserver_source.py    # Bloque 6
 │   │   └── validation/            # validación de DATOS (no de soluciones)
 │   │       ├── market_data_validator.py
 │   │       ├── universe_validator.py
 │   │       ├── portfolio_validator.py
+│   │       ├── transaction_cost_inputs.py  # Bloque 1: resolución/validación de costes unitarios (ver §3.1)
 │   │       └── report.py          # DataQualityReport, DataIssue, CorrectionLog
 │   ├── returns/                   # §8–9
 │   │   ├── returns_engine.py      # aritméticos (defecto), log (solo con justificación)
@@ -164,8 +167,11 @@ Basada en MASTER_SPEC §81 ("estructura recomendada"), con **adiciones justifica
 │   │   ├── psd_repair.py          # eigenvalue floor, nearest PSD (Higham)
 │   │   └── risk_model_builder.py
 │   ├── costs/                     # [+] §23–25 (el spec no asigna directorio; se separa por cohesión)
-│   │   ├── transaction_cost_model.py
+│   │   ├── transaction_cost_model.py  # TransactionCost(w), turnover (Bloque 2)
 │   │   └── turnover.py
+│   │   # Bloque 1: la resolución/validación de costes unitarios (AssetCostVector, fuentes,
+│   │   # unidades) vive en data/validation/transaction_cost_inputs.py, no aquí — ver §3.1,
+│   │   # desviación aceptada en el cierre de auditoría del Bloque 1.
 │   ├── constraints/               # §12–13
 │   │   ├── constraint_set.py      # representación declarativa + ConstraintHash
 │   │   ├── linear.py              # budget, bounds, grupos, turnover, beta, factores
@@ -280,13 +286,39 @@ Basada en MASTER_SPEC §81 ("estructura recomendada"), con **adiciones justifica
 | `config/` en la raíz | Ficheros de configuración (datos) distintos del paquete `portfolio_engine/config/` (código). |
 | `data/validation/` vs `validation/` | El spec usa "validación" para datos (§10) y para soluciones (§44). Se separan para no mezclar responsabilidades. |
 
+### 3.1 Desviaciones aceptadas en el cierre de auditoría del Bloque 1
+
+El Bloque 1 introdujo 6 diferencias puntuales respecto al diseño original de este documento,
+documentadas primero en `CHANGELOG.md` (Bloque 1) y evaluadas formalmente en `AUDIT_BLOCK_1.md`
+(`AUDIT_STATUS = PASS_WITH_CHANGES`). Las 6 fueron aceptadas (`ACCEPT` / `ACCEPT_WITH_CHANGES`);
+ninguna sustituye Beam Search por Greedy, Global Frontier por una sola composición, Net Frontier
+por Gross-menos-costes, SOCP por QP incompatible, ni MIQP por heurística. Este documento queda
+actualizado para reflejarlas; el detalle de la evaluación de cada una vive en `AUDIT_BLOCK_1.md`.
+
+| # | Diseño original (este documento) | Implementación real (Bloque 1) | Racional |
+|---|---|---|---|
+| 1 | Resolución de costes unitarios en `costs/` | `data/validation/transaction_cost_inputs.py` | El Bloque 1 solo valida y resuelve costes unitarios por activo (sin optimización); `costs/` queda reservado al cálculo de `TransactionCost(w)` y turnover del Bloque 2, que consumirá el `AssetCostVector` ya validado. |
+| 2 | `risk` depende solo de `models`, `config` (§4.1) | `risk` también depende de `returns` (reutiliza `annualize_covariance`) | Evita duplicar la fórmula de anualización lineal (§9) dentro de `risk/`. El grafo de dependencias por capas sigue siendo acíclico (`tests/unit/test_architecture_rules.py::test_import_graph_is_acyclic`, que ya declara `risk → returns` como permitido). Ver §4.1. |
+| 3 | `csv_source.py` y `parquet_source.py` como módulos separados | `data/sources/file_sources.py` (único módulo) | Ambas fuentes comparten la misma canonicalización estricta de tipos (`data/sources/base.py::canonicalize`); mantenerlas separadas duplicaría esa lógica compartida entre dos ficheros, contra GOV-009 (sin duplicación). Ambas producen tablas canónicas idénticas verificado por `tests/unit/data/test_sources.py::test_all_sources_yield_identical_canonical_tables`. |
+| 4 | `NEAREST_PSD` (§9.2, P23) como proyección alterna sobre PSD ∩ diagonal unitaria (NLP Convexo, algoritmo iterativo de Higham para la matriz de *correlación* más cercana) | `NEAREST_PSD` como proyección de Frobenius en forma cerrada `Σ̂ = V·max(Λ,0)·Vᵀ` (Higham, 1988, Teorema 2.1) | La restricción de diagonal unitaria solo es necesaria para el problema de la *correlación* más cercana; para la *covarianza* más cercana (el caso de este motor) la proyección espectral cerrada es la solución exacta en norma de Frobenius, no una aproximación. No es una simplificación: es PSD, idempotente, y no hay ninguna matriz PSD más cercana en Frobenius (`tests/unit/risk/test_psd_repair.py::test_nearest_psd_is_frobenius_projection`, `tests/property/test_properties.py::test_nearest_psd_is_psd_idempotent_and_closest`). Reclasificación de tipo matemático: de **NLP Convexo** a **Álgebra lineal (proyección cerrada)** — ver §9.2 y Anexo B. |
+| 5 | `PSDDiagnostics`, `PSDRepairReport`, `ExternalAlpha` en `risk/` | `models/risk_model.py` | Si vivieran en `risk/`, el paquete `models` (nivel 0, hoja) tendría que depender de `risk` (nivel 1) para tipar sus propios contratos de datos, invirtiendo la jerarquía de capas de §4.1. Reubicarlas en `models` preserva `models` como hoja sin dependencias hacia arriba. |
+| 6 | — | `EngineConfig` (Bloque 1) no incluye campos para `FrontierConfig`, `CandidateConfig`, `ScenarioConfig`, `SolverConfig`, `ParallelConfig`, `PersistenceConfig`, `BenchmarkConfig` completo | Añadir esos campos como `X | None = None` antes de que sus bloques existan crearía placeholders sin funcionalidad real, prohibido por GOV-010 y por `CLAUDE.md` ("nunca declarar IMPLEMENTED... solo porque exista un placeholder o stub"). Se añaden en el bloque que los usa. |
+
 ---
 
 ## 4. Grafo lógico de dependencias
 
 ### 4.1 Dependencias entre paquetes (dirección: "depende de")
 
-Regla: el grafo es **acíclico**. `models`, `exceptions`, `utils` y `config` son hojas; ningún módulo inferior importa uno superior. Se verificará con un test de grafo de importaciones (GOV-008).
+Regla: el grafo es **acíclico**. `models`, `exceptions`, `utils` y `config` son hojas; ningún módulo inferior importa uno superior. Se verifica con un test de grafo de importaciones
+(GOV-008, `tests/unit/test_architecture_rules.py::test_layered_dependencies` y
+`::test_import_graph_is_acyclic`).
+
+> **Bloque 1 (desviación aceptada #2, ver §3.1):** `risk` depende también de `returns`
+> (reutiliza `returns.annualization.annualize_covariance` en vez de duplicar la fórmula lineal
+> de anualización dentro de `risk/`). El grafo sigue siendo acíclico; la arista `RSK --> RET` del
+> diagrama siguiente ya refleja la dependencia real, y `ALLOWED_DEPENDENCIES` en
+> `test_architecture_rules.py` la declara explícitamente permitida.
 
 ```mermaid
 flowchart TD
@@ -329,7 +361,7 @@ flowchart TD
     MOD --> EXC
     DAT --> MOD & CFG & UTL
     RET --> MOD & CFG
-    RSK --> MOD & CFG
+    RSK --> MOD & CFG & RET
     CST --> MOD & CFG
     MET --> CST & MOD
     CON --> MOD & CFG & CST
@@ -757,11 +789,12 @@ Propiedad: para `c_b,i + c_s,i > 0` el óptimo satisface `b_i·s_i = 0`; por tan
 | P20 | EXACT_MIP + VolLimit/TE | P19 + conos o cuadráticas | **MIQCP / MISOCP** | MixedIntegerBackend | 4 |
 | P21 | Selección discreta FAST_PRODUCTION (§26–30) | swaps, local search, beam, tabu | **Heurístico** | — (usa QP P1–P6 para evaluar) | 3 |
 | P22 | NONCONVEX_RESEARCH (§50–51) | sin caso de uso validado todavía; se preferirá reformulación convexa | **NLP No Convexo** | NonConvexBackend (solo arquitectura; sin algoritmo concreto ni multi-start, A-25/E-25) | 4 (arquitectura) |
-| P23 | Reparación PSD Higham (§11) | proyección alterna sobre conjunto PSD ∩ diagonal unitaria | **NLP Convexo** (proyección) | algoritmo propio (no solver) | 1 |
-| P24 | Ledoit-Wolf (§11) / OAS (diferido, A-07) | shrinkage analítico | cerrado (sin optimización) | — | 1 (LW) / 4 (OAS) |
+| P23 | Reparación PSD `NEAREST_PSD` (§11) | **Implementado en Bloque 1** (`risk/psd_repair.py::nearest_psd_repair`): proyección de Frobenius en forma cerrada `Σ̂ = V·max(Λ,0)·Vᵀ` (Higham, 1988, Teorema 2.1) sobre el cono PSD, sin restricción de diagonal unitaria (esa restricción es propia del problema de correlación más cercana, no del de covarianza; desviación #4 aceptada en `AUDIT_BLOCK_1.md`, ver §3.1 y Anexo B) | **Álgebra lineal (proyección cerrada)** — reclasificado desde el diseño original (NLP Convexo/proyección alterna) porque el problema real tiene solución analítica exacta | algoritmo propio (no solver) | 1 |
+| P23b | Reparación PSD `EIGENVALUE_FLOOR` (§11) | **Implementado en Bloque 1** (`risk/psd_repair.py::eigenvalue_floor_repair`): `λ_i ← max(λ_i, floor·λ_max)` conservando autovectores | **Álgebra lineal (cerrado)** | algoritmo propio (no solver) | 1 |
+| P24 | Ledoit-Wolf (§11) — **Implementado en Bloque 1** (`risk/covariance/ledoit_wolf.py`, fórmula propia, contrastada contra `sklearn.covariance.ledoit_wolf`; ver Anexo B) / OAS (diferido, A-07) | shrinkage analítico hacia identidad escalada | cerrado (sin optimización) | — | 1 (LW) / 4 (OAS) |
 | P25 | Pre-factibilidad (§13) | reglas deterministas | — | — | 2 |
 
-Clasificación resumida: **QP**: P1–P6, P10–P12, P15; **SOCP**: P7–P9, P13, P14, P16, P17; **SDP** (extensión): P18; **MIQP**: P19; **MIQCP/MISOCP**: P20; **NLP Convexo**: P23; **NLP No Convexo**: P22; **Heurístico**: P21.
+Clasificación resumida: **QP**: P1–P6, P10–P12, P15; **SOCP**: P7–P9, P13, P14, P16, P17; **SDP** (extensión): P18; **MIQP**: P19; **MIQCP/MISOCP**: P20; **NLP No Convexo**: P22; **Heurístico**: P21; **Álgebra lineal (cerrado)**: P23, P23b, P24 (reclasificados en el Bloque 1; ver Anexo B para la fórmula exacta implementada de cada uno).
 
 ### 9.3 Verificación algebraica del escalado de costes (§37, §76)
 
@@ -1003,3 +1036,92 @@ Uso permitido: referencia de diseño. Cualquier fragmento que se reutilice se re
 | pyodbc | SQL Server | 6 | presente (servidor no verificado) |
 | pytest, hypothesis | tests | 1 | pytest presente; hypothesis ausente → dependencia de desarrollo del proyecto en Bloque 1, sin instalación global (A-27) |
 | mypy, ruff (dev) | tipado/lint | 1 | no verificado |
+
+---
+
+## Anexo B — Referencias matemáticas de la implementación del Bloque 1 (RSK-002, RSK-003, RSK-010, RSK-011)
+
+`MASTER_SPEC.md §11` exige los métodos `EMPIRICAL`, `LEDOIT_WOLF`, y la reparación PSD
+(`eigenvalue floor`, `nearest PSD`), pero especifica solo su nombre y su rol en el pipeline
+(verificar finitud, simetrizar, diagnosticar, reparar), no la fórmula cerrada de cada estimador.
+Este anexo documenta, sin modificar el contrato de `MASTER_SPEC.md`, qué formulación matemática
+concreta implementa el código del Bloque 1 — cerrando el hallazgo MEDIUM #1 de
+`AUDIT_BLOCK_1.md`. Las fórmulas completas, con la notación exacta usada en el código, están
+también en los docstrings de cada módulo; aquí se listan de forma centralizada y con referencia
+bibliográfica.
+
+### B.1 Covarianza empírica (`risk/covariance/empirical.py`)
+
+Estimador de máxima verosimilitud con corrección de grados de libertad configurable
+(`RiskConfig.empirical_ddof ∈ {0, 1}`, nunca hardcodeado):
+
+```
+Xc = X - mean(X, axis=0)          # retornos centrados, T×N
+S  = Xcᵀ Xc / (T - ddof)
+```
+
+Fórmula estándar de covarianza muestral (véase p. ej. Johnson & Wichern, *Applied Multivariate
+Statistical Analysis*, cap. 4). Verificado por contraste directo contra `numpy.cov(data,
+rowvar=False, ddof=ddof)` con `rtol=1e-12` (`tests/unit/risk/test_covariance_estimators.py::
+test_empirical_matches_numpy_cov`) y contra un caso 2×2 calculado a mano
+(`::test_empirical_manual_two_by_two`).
+
+### B.2 Ledoit-Wolf shrinkage (`risk/covariance/ledoit_wolf.py`)
+
+Implementación propia (no usa `sklearn` en producción; scikit-learn solo se usa como referencia
+independiente en tests) del estimador de contracción hacia la identidad escalada de
+**Ledoit, O. & Wolf, M. (2004), "A well-conditioned estimator for large-dimensional covariance
+matrices", *Journal of Multivariate Analysis*, 88(2), 365-411**:
+
+```
+S  = Xcᵀ Xc / T                        # estimador de máxima verosimilitud
+m  = tr(S) / N
+d² = ‖S − m·I‖²_F / N
+b̄² = (Σ_t ‖x_t‖⁴ − T·‖S‖²_F) / (N·T²)   # Σ_t x_t x_tᵀ = T·S
+b² = min(b̄², d²)
+δ  = b² / d²                            # intensidad de contracción, δ = 0 si b² = 0
+Σ̂  = δ·m·I + (1 − δ)·S
+```
+
+Verificado por contraste numérico directo contra `sklearn.covariance.ledoit_wolf` (matriz
+contraída con `rtol=1e-10`, intensidad `δ` con `rel=1e-10`) en tres regímenes distintos, incluido
+`T < N` (muestral singular) — `tests/unit/risk/test_covariance_estimators.py::
+test_ledoit_wolf_matches_reference_implementation`. La identidad espectral `λ_i(Σ̂) =
+(1-δ)·λ_i(S) + δ·m` se verifica de forma independiente en `::test_ledoit_wolf_spectrum_is_
+convex_combination`.
+
+### B.3 Reparación PSD (`risk/psd_repair.py`)
+
+**`EIGENVALUE_FLOOR`:** eleva los autovalores por debajo de un suelo relativo, conservando
+autovectores:
+
+```
+λ_i ← max(λ_i, floor_relative · λ_max)
+Σ̂  = V · diag(λ) · Vᵀ
+```
+
+Garantiza `λ_min ≥ floor_relative · λ_max` y, por tanto, número de condición
+`≤ 1 / floor_relative` (verificado en `tests/unit/risk/test_psd_repair.py::
+test_eigenvalue_floor_bounds_condition_number` y como propiedad con Hypothesis en
+`tests/property/test_properties.py::test_eigenvalue_floor_guarantees_relative_floor`).
+
+**`NEAREST_PSD`:** proyección de Frobenius en forma cerrada sobre el cono PSD —
+**Higham, N. J. (1988), "Computing a nearest symmetric positive semidefinite matrix", *Linear
+Algebra and its Applications*, 103, 103-118, Teorema 2.1**:
+
+```
+Σ̂ = V · max(Λ, 0) · Vᵀ
+```
+
+Es la matriz PSD más cercana a la original en norma de Frobenius (distancia
+`sqrt(Σ min(λ_i,0)²)`); puede resultar singular. A diferencia del algoritmo alterno de Higham
+para la matriz de *correlación* más cercana (que impone además diagonal unitaria y requiere
+iteración), este caso —covarianza, sin esa restricción— tiene solución analítica exacta en un
+solo paso. Verificado por PSD, idempotencia y optimalidad (distancia de Frobenius mínima) en
+`tests/unit/risk/test_psd_repair.py::test_nearest_psd_is_frobenius_projection` y
+`tests/property/test_properties.py::test_nearest_psd_is_psd_idempotent_and_closest`. Ver también
+la desviación #4 en §3.1.
+
+Ambos métodos usan `numpy.linalg.eigh` (no `eigvalsh`) para la reconstrucción, evitando la
+pérdida de precisión de `eigvalsh` documentada en `CHANGELOG.md` (Bloque 1, "Limitaciones
+conocidas") para magnitudes de entrada extremas (~1e-160), irrelevante en covarianzas reales.

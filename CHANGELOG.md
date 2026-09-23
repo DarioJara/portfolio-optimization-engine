@@ -156,3 +156,50 @@ Se someten a revisión:
 ### Estado
 
 `BLOCK_1_STATUS = PASS`
+
+---
+
+## [Cierre de hallazgos de auditoría — Bloque 1] — 2026-09-23
+
+### Alcance
+
+Cierre de los hallazgos `MEDIUM` y `LOW` de `AUDIT_BLOCK_1.md` (`AUDIT_STATUS = PASS_WITH_CHANGES`).
+Cambio exclusivamente documental: **ningún fichero de `portfolio_engine/` se ha modificado**.
+No se avanza al Bloque 2; ningún requisito de bloques 2–6 cambia de estado.
+
+### Hallazgos cerrados
+
+| # | Hallazgo (`AUDIT_BLOCK_1.md`) | Acción |
+|---|---|---|
+| #2 | `ARCHITECTURE.md` desactualizada: no reflejaba las 6 desviaciones del Bloque 1 y contenía la afirmación obsoleta "Estado del código productivo: inexistente" | Cabecera actualizada con el estado real del Bloque 1; nueva §3.1 con las 6 desviaciones (diseño original vs. implementación real vs. racional), grafo §4.1 actualizado con la arista `risk → returns`, tabla §9.2 (P23/P23b/P24) reclasificada y anotada como implementada |
+| #1 | `MASTER_SPEC.md` no fija fórmulas cerradas para covarianza empírica, Ledoit-Wolf ni reparación PSD | Añadido Anexo B a `ARCHITECTURE.md` con las fórmulas exactas implementadas y su referencia bibliográfica (Ledoit & Wolf 2004; Higham 1988), sin modificar `MASTER_SPEC.md` (sigue siendo la única autoridad del contrato) |
+| #3 | Evidencia circular de `TST-018` (citaba al propio CHANGELOG) | `TRACEABILITY.md`: evidencia sustituida por una enumeración cerrada de 9 tests concretos (`::test_función`), uno por cada categoría obligatoria del gate del Bloque 1 |
+| #4 | ~16 requisitos `VALIDATED` citaban solo el fichero de test, sin función concreta | `TRACEABILITY.md`: evidencia ampliada a `::test_función` en CFG-001, CFG-003, CFG-004, CFG-006, CFG-016, CFG-017, DAT-004, DAT-005, DAT-006, DAT-009, DAT-010, DAT-012, DAT-015, DAT-016, DAT-028, DAT-029, RET-002, RSK-013, CON-021, TC-005 (y CFG-005, PARTIAL, con el mismo criterio) |
+| #5 | `GOV-007` (DI/Protocol) con evidencia vaga ("tests inyectan...") sin test citado | `TRACEABILITY.md`: evidencia sustituida por 3 tests concretos que ejercitan `DataSource`, `ExpectedReturnProvider` y `CovarianceEstimator` inyectados por configuración |
+| #7 / #10 | `ruff format --check` detectaba `README.md` sin formatear (línea 61, falta línea en blanco en un bloque de código) | `README.md` corregido; `ruff format --check .` ahora reporta "95 files already formatted" sin excepciones |
+| #8 | Posible doble contabilidad de test entre DAT-022/DAT-023/DAT-024 | `TRACEABILITY.md`: evidencia desglosada por caso parametrizado (`[value-code]`), confirmando que cada requisito depende de una aserción de `IssueCode` distinta e independiente |
+| #9 | Racional escueto de la desviación 3 (fusión `CSVSource`/`ParquetSource`) | Ampliado en `ARCHITECTURE.md` §3.1: comparten la canonicalización estricta de `data/sources/base.py`; separarlos duplicaría esa lógica (GOV-009) |
+
+Hallazgos no accionables en este cierre (no requieren cambio de fichero, ya evaluados como aceptables
+en `AUDIT_BLOCK_1.md`): #6 (exclusión de pesos cero en `CurrentPortfolioStateHash` — ya documentada
+explícitamente en la descripción de DAT-016), #11 y #12 (observaciones informativas sin acción).
+
+### Validación (re-ejecución completa tras los cambios documentales)
+
+| Comprobación | Resultado |
+|---|---|
+| `pytest -q` | **252 passed, 0 failed, 0 skipped** |
+| `mypy --strict portfolio_engine` | **0 errores, 53 ficheros** |
+| `ruff check .` | **0 violaciones** |
+| `ruff format --check .` | **95 ficheros formateados, 0 pendientes** (incluye `README.md`, antes pendiente) |
+
+Ninguna comprobación reveló una regresión: no fue necesario modificar código productivo.
+
+### Trazabilidad
+
+Sin cambios de `RequirementID` (ningún estado pasa de `PARTIAL`/`VALIDATED`/`NOT_IMPLEMENTED` a
+otro). Se amplía evidencia de trazabilidad únicamente — ver `TRACEABILITY.md`, registro de cambios.
+
+### Estado
+
+`BLOCK_1_CLOSURE_STATUS = PASS`

@@ -58,6 +58,7 @@ El fichero de ejemplo es [`config/default_engine.toml`](config/default_engine.to
 
 ```python
 from portfolio_engine.config import load_engine_config
+
 config = load_engine_config("config/default_engine.toml")
 ```
 
