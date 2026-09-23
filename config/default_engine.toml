@@ -1,0 +1,54 @@
+# Configuración de EJEMPLO del motor (MASTER_SPEC §4).
+#
+# Es la única ubicación de los valores por defecto: el código no contiene defaults de negocio.
+# Toda clave obligatoria debe estar presente; las claves opcionales omitidas valen "no configurado".
+# Para producción, copiar y revisar cada valor explícitamente.
+
+[engine]
+# OptimizationHorizonYears (enmienda E-03): horizonte sobre el que se comparan expected
+# returns, costes de transacción y métricas netas.
+optimization_horizon_years = 1.0
+random_seed = 20260923
+
+[data]
+min_return_observations = 60
+max_stale_run = 5
+stale_price_severity = "WARNING"
+outlier_method = "ROBUST_ZSCORE"
+outlier_threshold = 10.0
+outlier_severity = "WARNING"
+max_calendar_gap_days = 7
+calendar_gap_severity = "WARNING"
+asset_error_policy = "FAIL"
+weight_sum_tolerance = 1e-6
+residual_weight_policy = "ERROR"
+# cash_asset_id: solo con residual_weight_policy = "ASSIGN_TO_CASH".
+
+[returns]
+return_kind = "ARITHMETIC"
+# log_return_justification: obligatoria solo con return_kind = "LOG".
+trading_days_per_year = 252
+risk_free_rate = 0.02
+expected_return_mode = "INTERNAL_ESTIMATION"
+internal_estimation_method = "HISTORICAL_MEAN"
+
+[risk]
+covariance_method = "LEDOIT_WOLF"
+empirical_ddof = 1
+symmetry_tolerance = 1e-8
+psd_tolerance = 1e-10
+repair_method = "EIGENVALUE_FLOOR"
+eigenvalue_floor_relative = 1e-10
+# condition_number_limit: opcional; si se define, repara matrices mal condicionadas.
+
+[constraints]
+long_only = true
+# global_min_weight / global_max_weight: opcionales.
+# Política para activos restringidos ya en cartera (E-09). Valor de ejemplo exigido: HOLD_OR_REDUCE.
+restricted_existing_position_policy = "HOLD_OR_REDUCE"
+
+[transaction_costs]
+input_unit = "BPS"
+source_precedence = ["BUY_SELL", "ESTIMATED", "BID_ASK_SPREAD"]
+spread_commission = 0.0
+max_unit_cost = 0.05

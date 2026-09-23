@@ -65,7 +65,7 @@ Orden de magnitud de memoria que condiciona el diseño: `Sigma_global` 700×700 
 | hypothesis | **ausente** (no se instala globalmente) | Se incorpora como dependencia de desarrollo del entorno del proyecto cuando el Bloque 1 cree la gestión de dependencias (A-27). |
 | Solver MIQP | **ausente** | Referencia aprobada: SCIP / PySCIPOpt, a incorporar en el Bloque 4 como dependencia opcional del grupo EXACT_MIP; Gurobi/CPLEX/MOSEK solo opcionales (A-24). |
 | IPOPT (cyipopt) | **ausente** | No se incorporará mientras no exista un caso no convexo validado (A-25). |
-| Git | 2.50.1; repositorio inicializado con `git init` en el cierre de PROMPT 0 (rama `master`, sin commits todavía; `core.autocrlf = true`) | Permite `GitCommit` (§70) y los commits por bloque de `README_USO.md` (A-26). |
+| Git | 2.50.1; repositorio inicializado con `git init` en el cierre de PROMPT 0 (rama `master`; commit baseline `e49c70e` "Phase 0 - architecture, specification and traceability baseline"; `core.autocrlf = true`) | Permite `GitCommit` (§70) y los commits por bloque de `README_USO.md` (A-26). |
 
 ---
 

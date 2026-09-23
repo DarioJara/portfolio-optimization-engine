@@ -59,7 +59,7 @@ Un requisito que abarca varios bloques (columna *Bloque* con varios valores) sol
 | # | Acción | Responsable | Obligatorio para B1 | Referencia |
 |---|---|---|---|---|
 | PR-1 | Decisiones A-01 … A-37 | Usuario | — | **Cerrado (2026-09-23):** todas aceptadas, con precisiones en A-01, A-02, A-03, A-06, A-07, A-24, A-25, A-26, A-27 (ARCHITECTURE §12; MASTER_SPEC Anexo A) |
-| PR-2 | Inicializar Git en la raíz | Claude (autorizado) | — | **Cerrado:** `git init` ejecutado (rama `master`, sin commits). Los commits se harán solo cuando el usuario lo pida |
+| PR-2 | Inicializar Git en la raíz | Claude (autorizado) | — | **Cerrado:** `git init` ejecutado (rama `master`); baseline de PROMPT 0 registrado en el commit `e49c70e`. Los commits siguientes se harán al cierre de cada bloque validado |
 | PR-3 | Dependencias de desarrollo `hypothesis`, `mypy`, `ruff` | Bloque 1 | Sí | **Sin instalación global.** El Bloque 1 las declara en `pyproject.toml` (grupo de desarrollo) y se instalan en un entorno virtual local del proyecto (`.venv`, excluido de Git) |
 | PR-4 | Decidir tratamiento de la carpeta `1.-Version Anterior/` (se mantiene como referencia de solo lectura; no se importa) | Usuario | No | ARCHITECTURE §13 |
 
@@ -342,7 +342,7 @@ Resto de A-xx (A-05, A-14 … A-17, A-20, A-21, A-23, A-29 … A-31, A-33, A-34,
 | Windows `spawn` y memoria compartida | Rendimiento y fugas de segmentos | `SharedMemory` gestionada por el coordinador, benchmark shared_memory vs memmap. |
 | Instalación de SCIP/PySCIPOpt en Windows | EXACT_MIP no validable | Instalar en el entorno del proyecto en B4 (grupo `exact-mip`); si falla, MIP-* queda `NOT_IMPLEMENTED`/`PARTIAL` documentado. |
 | SQL Server no disponible | Persistencia no validable | PER-* `PARTIAL` con motivo; staging Parquet validado igualmente. |
-| Repositorio sin commits | `GitCommit` no disponible hasta el primer commit | `git init` ya ejecutado; commits por bloque cuando el usuario lo solicite (README_USO). |
+| Commits de bloque omitidos | Pérdida de trazabilidad de versiones (`GitCommit`) | Baseline `e49c70e` registrado; commit por bloque validado (README_USO). |
 | Deriva de alcance entre bloques | Violación de CLAUDE.md | Declaración de alcance al inicio de cada sesión; módulos permitidos/fuera de alcance de §3. |
 
 ---
@@ -356,7 +356,7 @@ Resto de A-xx (A-05, A-14 … A-17, A-20, A-21, A-23, A-29 … A-31, A-33, A-34,
 | `IMPLEMENTATION_PLAN.md` | Creado y actualizado en el cierre |
 | `MASTER_SPEC.md` | Fórmulas corregidas (F-01 … F-03) y enmiendas E-03, E-06, E-07, E-09, E-24, E-25 (Anexo A) |
 | `IMPLEMENTATION_PROMPTS.md` | Bloque 2 corregido tipográficamente (F-04) |
-| Repositorio Git | Inicializado (`git init`), sin commits |
+| Repositorio Git | Inicializado (`git init`); baseline de PROMPT 0 en el commit `e49c70e` |
 | Código productivo | Ninguno (conforme a PROMPT 0) |
 | Stubs / placeholders | Ninguno |
 | Tests | Ninguno (no aplica en PROMPT 0) |

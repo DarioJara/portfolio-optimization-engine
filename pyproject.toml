@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "portfolio-engine"
+version = "0.1.0"
+description = "Motor profesional de optimización cuantitativa de carteras multi-escenario (MASTER_SPEC.md)."
+readme = "README.md"
+requires-python = ">=3.11"
+# Dependencias de runtime del Bloque 1 (núcleo numérico y lectura de datos).
+# Los solvers (osqp, clarabel, pyscipopt) se incorporan en el bloque que los usa.
+dependencies = [
+    "numpy>=1.26,<3",
+    "scipy>=1.11,<2",
+    "pandas>=2.1,<4",
+    "pyarrow>=14",
+]
+
+[project.optional-dependencies]
+# Desarrollo y tests. Nunca se instalan globalmente: usar el entorno local .venv.
+dev = [
+    "pytest>=8",
+    "hypothesis>=6.100",
+    "mypy>=1.10",
+    "ruff>=0.5",
+    # Solo como implementación de referencia independiente en tests (Ledoit-Wolf).
+    "scikit-learn>=1.4",
+]
+
+[tool.setuptools.packages.find]
+include = ["portfolio_engine*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "unit: tests unitarios",
+    "property: tests basados en propiedades (Hypothesis)",
+    "architecture: reglas de arquitectura y gobierno",
+]
+
+[tool.mypy]
+strict = true
+warn_unreachable = true
+files = ["portfolio_engine"]
+
+[[tool.mypy.overrides]]
+module = ["pandas.*", "pyarrow.*", "scipy.*", "sklearn.*"]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF", "C90"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
