@@ -1,4 +1,8 @@
-"""GOV-006, GOV-008, CFG-015 y controles de alcance del Bloque 1 (análisis estático del paquete)."""
+"""GOV-006, GOV-008, CFG-015, SOL-010 y controles de alcance (análisis estático del paquete).
+
+El Bloque 2 amplía las reglas del Bloque 1: nuevos paquetes en el grafo de capas, OSQP confinado
+en su backend y ausencia de módulos de los Bloques 3-6.
+"""
 
 from __future__ import annotations
 
@@ -26,29 +30,53 @@ ALLOWED_DEPENDENCIES: dict[str, set[str]] = {
     "data": {"exceptions", "utils", "models", "config"},
     "returns": {"exceptions", "utils", "models", "config"},
     "risk": {"exceptions", "utils", "models", "config", "returns"},
+    # Bloque 2 (ARCHITECTURE §4.1). ``validation`` NO depende de ``optimizers`` (independencia §44).
+    "costs": {"exceptions", "utils", "models", "config"},
+    "metrics": {"exceptions", "utils", "models", "config", "costs"},
+    "constraints": {"exceptions", "utils", "models", "config", "costs"},
+    "optimizers": {"exceptions", "utils", "models", "config", "constraints", "costs"},
+    "validation": {"exceptions", "utils", "models", "config", "costs", "constraints", "metrics"},
+    "frontiers": {
+        "exceptions",
+        "utils",
+        "models",
+        "config",
+        "costs",
+        "constraints",
+        "metrics",
+        "optimizers",
+        "validation",
+    },
+    "outputs": {"exceptions", "utils", "models", "config", "costs", "metrics"},
+    "benchmark": {"exceptions", "utils", "models", "config", "frontiers", "optimizers"},
 }
 
-#: Paquetes/módulos de bloques posteriores que no deben existir en el Bloque 1.
+#: Paquetes/módulos de bloques posteriores (3-6) que no deben existir en el Bloque 2.
 LATER_BLOCK_PACKAGES = (
-    "frontiers",
     "candidates",
-    "optimizers",
-    "constraints",
     "scenarios",
     "parallel",
     "staging",
     "persistence",
     "cache",
-    "benchmark",
-    "outputs",
-    "metrics",
-    "validation",
-    "costs",
     "engine.py",
+    "frontiers/global_frontier.py",
+    "constraints/conic.py",
+    "constraints/integer.py",
+    "metrics/cvar_metric.py",
+    "optimizers/clarabel_backend.py",
+    "optimizers/mixed_integer_backend.py",
+    "optimizers/nonconvex_backend.py",
+    "optimizers/formulations/sharpe.py",
+    "optimizers/formulations/volatility.py",
+    "optimizers/formulations/cvar.py",
+    "optimizers/formulations/robust.py",
+    "optimizers/formulations/multi_scenario.py",
+    "optimizers/formulations/miqp.py",
 )
 
+#: ``osqp`` solo puede importarse en su backend (test aparte); el resto sigue prohibido.
 FORBIDDEN_IMPORTS = (
-    "osqp",
     "clarabel",
     "cvxpy",
     "pyscipopt",
@@ -144,6 +172,7 @@ def test_import_graph_is_acyclic() -> None:
 
 
 def test_no_later_block_packages_exist() -> None:
+    """Ningún módulo de los Bloques 3-6 existe (no se ha implementado más allá del Bloque 2)."""
     present = [name for name in LATER_BLOCK_PACKAGES if (PACKAGE_ROOT / name).exists()]
     assert not present, f"Módulos de bloques posteriores presentes: {present}"
 
@@ -255,3 +284,77 @@ def test_public_api_is_documented_and_typed() -> None:
                 if inspect.isfunction(member) and "return" not in member.__annotations__:
                     missing.append(f"{module.__name__}.{name} (sin anotación de retorno)")
     assert not missing, missing
+
+
+def test_osqp_confined_to_its_backend() -> None:
+    """SOL-010: OSQP solo en ``optimizers/osqp_backend.py`` (API nativa, sin capas adicionales)."""
+    offenders = [
+        _relative(path)
+        for path in _python_files()
+        if any(imported.split(".")[0] == "osqp" for imported in _imports(path))
+        and _relative(path) != "optimizers/osqp_backend.py"
+    ]
+    assert not offenders, offenders
+
+
+def test_no_cvxpy_in_fast_path() -> None:
+    """SOL-010: sin canonicalización CVXPY en el camino de producción."""
+    hot_path = ("optimizers", "frontiers", "validation", "constraints", "metrics", "costs")
+    offenders = [
+        _relative(path)
+        for path in _python_files()
+        if _relative(path).split("/")[0] in hot_path
+        and any(imported.split(".")[0] == "cvxpy" for imported in _imports(path))
+    ]
+    assert not offenders, offenders
+
+
+def test_validator_is_independent_of_solvers() -> None:
+    """VAL-001: el validador no importa backends, formulaciones ni frontiers (§44)."""
+    forbidden = ("portfolio_engine.optimizers", "portfolio_engine.frontiers", "osqp")
+    offenders = [
+        f"{_relative(path)}: {imported}"
+        for path in _python_files()
+        if _relative(path).startswith("validation/")
+        for imported in _imports(path)
+        if imported.startswith(forbidden)
+    ]
+    assert not offenders, offenders
+
+
+def test_policy_not_referenced_in_backends_or_frontiers() -> None:
+    """CON-022: la política solo se traduce en constraints/ y se verifica en validation/."""
+    packages = ("optimizers/", "frontiers/", "costs/", "metrics/")
+    offenders = [
+        _relative(path)
+        for path in _python_files()
+        if _relative(path).startswith(packages)
+        and "RestrictedExistingPositionPolicy" in path.read_text(encoding="utf-8")
+    ]
+    assert not offenders, offenders
+
+
+def test_scipy_optimize_confined_to_the_lp_backend() -> None:
+    """R2-01: ``scipy.optimize`` (HiGHS) solo en ``optimizers/highs_backend.py``; el resto del
+    paquete no resuelve problemas por su cuenta."""
+    offenders = [
+        _relative(path)
+        for path in _python_files()
+        if any(imported.startswith("scipy.optimize") for imported in _imports(path))
+        and _relative(path) != "optimizers/highs_backend.py"
+    ]
+    assert not offenders, offenders
+
+
+def test_max_return_tolerance_has_a_single_source() -> None:
+    """La holgura de la etapa 2 de MaximumReturn solo se define en ``SolverConfig`` y solo la
+    consume la sesión de frontera (sin copias hardcodeadas ni parámetros paralelos)."""
+    users = sorted(
+        _relative(path)
+        for path in _python_files()
+        if "max_return_tie" in path.read_text(encoding="utf-8")
+    )
+    assert users == [
+        "config/solver_config.py",
+        "frontiers/session.py",
+    ], users

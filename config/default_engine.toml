@@ -46,9 +46,66 @@ long_only = true
 # global_min_weight / global_max_weight: opcionales.
 # Política para activos restringidos ya en cartera (E-09). Valor de ejemplo exigido: HOLD_OR_REDUCE.
 restricted_existing_position_policy = "HOLD_OR_REDUCE"
+# global_max_turnover: opcional; PortfolioSpec.max_turnover prevalece sobre este valor.
+# Límites de peso agregado por grupo (Bloque 2). Ejemplo, sin activar:
+# [[constraints.group_limits]]
+# dimension = "SECTOR"      # SECTOR | COUNTRY | ASSET_CLASS | CURRENCY
+# group = "Tech"
+# min_weight = 0.0          # opcional (al menos uno de min_weight / max_weight)
+# max_weight = 0.6
+group_limits = []
 
 [transaction_costs]
 input_unit = "BPS"
 source_precedence = ["BUY_SELL", "ESTIMATED", "BID_ASK_SPREAD"]
 spread_commission = 0.0
 max_unit_cost = 0.05
+
+[frontier]
+# Puntos totales de la frontera (incluye los extremos MinVariance y MaxReturn), MASTER_SPEC §41.
+frontier_points = 20
+# Frontera adaptativa (§42): con adaptive = true se exigen initial_frontier_points (< frontier_points)
+# y adaptive_gap_tolerance; con adaptive = false no deben declararse.
+adaptive = false
+# theta (§35): AUTO calibra el rango desde los extremos (A-16); EXPLICIT exige theta_min y theta_max.
+theta_grid_mode = "AUTO"
+theta_scale = "LOG"
+theta_auto_min_multiplier = 0.05
+theta_auto_max_multiplier = 5.0
+dedup_weight_tolerance = 1e-6
+dedup_return_tolerance = 1e-8
+dedup_volatility_tolerance = 1e-8
+pareto_tolerance = 1e-10
+zero_weight_tolerance = 1e-8
+zero_volatility_tolerance = 1e-12
+# min_holding_weight: opcional (A-08); exige tenencia estrictamente positiva en la composición.
+
+[solver]
+eps_abs = 1e-9
+eps_rel = 1e-9
+max_iterations = 50000
+# time_limit_seconds: opcional.
+polish = true
+# Intervalo fijo de rho adaptativo: garantiza resultados reproducibles (no dependen del reloj).
+adaptive_rho_interval = 25
+warm_start = true
+workspace_reuse = true
+ambiguous_status_policy = "COLD_RETRY"
+retry_iteration_multiplier = 4
+accept_inaccurate_solutions = false
+# Tolerancias del SolutionValidator (VAL-008).
+budget_tolerance = 1e-7
+bound_tolerance = 1e-7
+constraint_tolerance = 1e-7
+variance_tolerance = 1e-12
+# LP de MaximumReturn (HiGHS vía SciPy): tolerancia primal/dual e iteraciones máximas.
+lp_feasibility_tolerance = 1e-9
+lp_max_iterations = 100000
+# Etapa 2 de MaximumReturn (A-14): retorno >= R* - max(abs, rel * |R*|), en unidades de retorno.
+max_return_tie_abs_tolerance = 1e-8
+max_return_tie_rel_tolerance = 1e-7
+
+[benchmark]
+repetitions = 5
+warmup_runs = 1
+percentiles = [50.0, 95.0, 99.0]

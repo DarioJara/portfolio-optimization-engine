@@ -5,7 +5,8 @@ Reglas:
 * toda clave desconocida es un error (evita parámetros ignorados en silencio);
 * toda clave obligatoria ausente es un error: no hay valores por defecto implícitos;
 * solo los campos declarados opcionales (``X | None``) pueden omitirse, y valen ``None``;
-* los enums se indican por nombre y los tipos se comprueban (``bool`` no es un ``int``).
+* los enums se indican por nombre y los tipos se comprueban (``bool`` no es un ``int``);
+* las listas de tablas TOML (``[[seccion.clave]]``) se convierten en tuplas de dataclasses.
 """
 
 from __future__ import annotations
@@ -19,11 +20,14 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, TypeVar
 
+from portfolio_engine.config.benchmark_config import BenchmarkConfig
 from portfolio_engine.config.constraint_config import ConstraintConfig
 from portfolio_engine.config.data_config import DataConfig
 from portfolio_engine.config.engine_config import EngineConfig
+from portfolio_engine.config.frontier_config import FrontierConfig
 from portfolio_engine.config.return_config import ReturnConfig
 from portfolio_engine.config.risk_config import RiskConfig
+from portfolio_engine.config.solver_config import SolverConfig
 from portfolio_engine.config.transaction_cost_config import TransactionCostConfig
 from portfolio_engine.exceptions import ConfigError
 
@@ -35,6 +39,9 @@ _SECTIONS: Mapping[str, type[Any]] = types.MappingProxyType(
         "risk": RiskConfig,
         "constraints": ConstraintConfig,
         "transaction_costs": TransactionCostConfig,
+        "frontier": FrontierConfig,
+        "solver": SolverConfig,
+        "benchmark": BenchmarkConfig,
     }
 )
 
@@ -117,7 +124,12 @@ def _convert(value: object, hint: Any, path: str) -> Any:
     if origin is tuple:
         if not isinstance(value, list):
             raise ConfigError(f"{path} debe ser una lista.")
-        return tuple(_convert(item, args[0], f"{path}[]") for item in value)
+        element = args[0]
+        if dataclasses.is_dataclass(element) and isinstance(element, type):
+            return tuple(
+                _build(element, item, f"{path}[{index}]") for index, item in enumerate(value)
+            )
+        return tuple(_convert(item, element, f"{path}[]") for item in value)
     if isinstance(hint, type) and issubclass(hint, Enum):
         return _convert_enum(value, hint, path)
     return _convert_scalar(value, hint, path)
