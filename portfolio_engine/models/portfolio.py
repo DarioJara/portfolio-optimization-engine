@@ -7,6 +7,7 @@ la cartera actual. Incluye ``CurrentPortfolioStateHash`` (enmienda E-06).
 
 from __future__ import annotations
 
+import json
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -72,6 +73,7 @@ class PortfolioSpec:
     weight_bound_overrides: Mapping[str, WeightBounds] = field(
         default_factory=lambda: MappingProxyType({})
     )
+    nav_currency: str | None = None
 
     def __post_init__(self) -> None:
         if not self.portfolio_id:
@@ -80,6 +82,10 @@ class PortfolioSpec:
             raise DataValidationError("TargetPortfolioSize debe ser positivo.")
         _require_positive_finite(self.volatility_limit, "VolatilityLimit")
         _require_positive_finite(self.nav, "NAV")
+        if self.nav_currency is not None and (
+            not isinstance(self.nav_currency, str) or not self.nav_currency.strip()
+        ):
+            raise DataValidationError("NAVCurrency debe ser un texto no vacío.")
         if self.max_turnover is not None and (
             not math.isfinite(self.max_turnover) or self.max_turnover < 0
         ):
@@ -159,8 +165,15 @@ def current_portfolio_state_hash(weights: Mapping[str, float]) -> str:
 
 
 def composition_hash(asset_ids: frozenset[str]) -> str:
-    """Hash determinista de una composición a partir de sus AssetID ordenados (§31)."""
-    return sha256_hex(canonical_json({"Composition": sorted(asset_ids)}))
+    """Hash determinista de una composición a partir de sus AssetID ordenados (§31).
+
+    Es ``SHA-256(canonical_json({"Composition": sorted(ids)}))`` con la serialización escrita
+    directamente (mismos bytes que ``canonical_json``; contrastado en los tests): se calcula por
+    cada composición evaluada en la búsqueda de candidatos y la normalización recursiva
+    genérica dominaba su coste.
+    """
+    ids = json.dumps(sorted(asset_ids), separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+    return sha256_hex('{"Composition":' + ids + "}")
 
 
 @dataclass(frozen=True, slots=True)

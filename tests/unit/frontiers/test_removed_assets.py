@@ -420,7 +420,9 @@ def test_compiled_exit_data_is_consistent_with_the_cost_model() -> None:
     assert inputs.cost_model is not None
     assert inputs.cost_model.exit_cost_one_off() == pytest.approx(EXIT_COST_ONE_OFF, abs=1e-15)
     assert inputs.compiled.exit_turnover == pytest.approx(EXIT_TURNOVER, abs=1e-15)
-    constraint_set = build_constraint_set(config.constraints, None, "P1", None)
+    constraint_set = build_constraint_set(
+        config.constraints, None, "P1", None, config.candidates.unknown_liquidity_policy
+    )
     problem = _problem(config)
     compiled = ConstraintCompiler().compile(
         constraint_set, problem.universe, COMPOSITION, problem.state

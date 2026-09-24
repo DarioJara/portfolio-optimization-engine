@@ -32,7 +32,9 @@ POLICY = RestrictedExistingPositionPolicy
 
 
 def _compile(config, problem, **kwargs):  # type: ignore[no-untyped-def]
-    constraint_set = build_constraint_set(config.constraints, problem.spec, "P1", None)
+    constraint_set = build_constraint_set(
+        config.constraints, problem.spec, "P1", None, config.candidates.unknown_liquidity_policy
+    )
     composition = problem.composition_asset_ids or problem.state.asset_ids
     return ConstraintCompiler().compile(
         constraint_set, problem.universe, composition, problem.state
@@ -111,9 +113,9 @@ def test_max_turnover_precedence_and_requirement() -> None:
     assert (
         _compile(config, make_problem(MU, SIGMA, CURRENT, config, spec=spec)).max_turnover == 0.25
     )
-    assert build_constraint_set(config.constraints, spec, "P1", None).max_turnover_source.value == (
-        "PORTFOLIO_OVERRIDE"
-    )
+    assert build_constraint_set(
+        config.constraints, spec, "P1", None, config.candidates.unknown_liquidity_policy
+    ).max_turnover_source.value == ("PORTFOLIO_OVERRIDE")
     empty = make_problem(MU, SIGMA, None, config, composition=("A000", "A001", "A002", "A003"))
     with pytest.raises(ConstraintCompilationError, match="sin cartera actual"):
         _compile(config, empty)
@@ -181,7 +183,9 @@ def test_min_holding_weight_is_a_lower_bound_except_for_policy_assets() -> None:
     problem = make_problem(
         MU, SIGMA, CURRENT, config, universe_overrides=restricted_universe(4, [1])
     )
-    constraint_set = build_constraint_set(config.constraints, None, "P1", 0.02)
+    constraint_set = build_constraint_set(
+        config.constraints, None, "P1", 0.02, config.candidates.unknown_liquidity_policy
+    )
     compiled = ConstraintCompiler().compile(
         constraint_set, problem.universe, problem.state.asset_ids, problem.state
     )
@@ -191,7 +195,9 @@ def test_min_holding_weight_is_a_lower_bound_except_for_policy_assets() -> None:
 def test_composition_must_be_sorted_unique_and_non_empty() -> None:
     config = base_config()
     problem = make_problem(MU, SIGMA, CURRENT, config)
-    constraint_set = build_constraint_set(config.constraints, None, "P1", None)
+    constraint_set = build_constraint_set(
+        config.constraints, None, "P1", None, config.candidates.unknown_liquidity_policy
+    )
     compiler = ConstraintCompiler()
     universe = problem.universe
     with pytest.raises(ConstraintCompilationError, match="ordenada"):
@@ -232,7 +238,9 @@ def test_unknown_restricted_status_of_a_new_asset_is_an_error() -> None:
     problem = make_problem(
         MU, SIGMA, [0.5, 0.5, 0.0, 0.0], config, composition=("A000", "A001", "A002")
     )
-    constraint_set = build_constraint_set(config.constraints, None, "P1", None)
+    constraint_set = build_constraint_set(
+        config.constraints, None, "P1", None, config.candidates.unknown_liquidity_policy
+    )
     with pytest.raises(ConstraintCompilationError, match="RestrictedAssetFlag"):
         ConstraintCompiler().compile(
             constraint_set, universe, ("A000", "A001", "A002"), problem.state

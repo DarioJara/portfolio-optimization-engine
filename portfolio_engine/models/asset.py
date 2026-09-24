@@ -10,6 +10,7 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
 from portfolio_engine.exceptions import AssetResolutionError, DataValidationError
+from portfolio_engine.models.enums import AdvUnit
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +35,19 @@ class AssetMetadata:
     adv: float | None
     market_cap: float | None
     restricted: bool | None
+    adv_currency: str | None = None
+    adv_unit: AdvUnit | None = None
+    adv_source: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.adv_unit is not None and not isinstance(self.adv_unit, AdvUnit):
+            raise DataValidationError(
+                f"{self.asset_id}: adv_unit debe ser un AdvUnit (recibido {self.adv_unit!r})."
+            )
+        for name in ("adv_currency", "adv_source"):
+            value = getattr(self, name)
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise DataValidationError(f"{self.asset_id}: {name} debe ser un texto no vacío.")
 
 
 class Universe:

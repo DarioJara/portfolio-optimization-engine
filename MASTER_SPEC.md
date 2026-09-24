@@ -467,6 +467,33 @@ FactorExposureLimits.
 > * La decisión no podrá hardcodearse dentro del `CandidateEngine` ni del optimizador: ambos consumen límites y elegibilidad efectivos derivados de la configuración.
 > * Si la política es incompatible con otras restricciones (p. ej. `FORCE_LIQUIDATE` con `MaxTurnover`, o `FREEZE_WEIGHT` con límites de peso o de grupo), el problema se declara inviable en la factibilidad previa (§13) con la causa registrada; nunca se relaja silenciosamente.
 
+> **Enmienda E-10 (remediación del Bloque 3, 2026-09-24, decisión D-3 de `AUDIT_BLOCK_3.md`) — Existing Non-Buyable Position Policy.**
+>
+> Un activo **no comprable** es el que no admite nuevas compras: `EligibleFlag` falso, `LiquidityFlag` falso o desconocido cuando la política de banderas desconocidas es conservadora (`EXCLUDE`; `ERROR` detiene la ejecución), o activo fuera del `InvestmentUniverse` de la cartera. Para un activo no comprable **presente en la cartera actual** (`w_current_i > 0`) que no es restringido:
+>
+> `0 <= w_i <= min(w_current_i, MaxWeight_i)`
+>
+> Puede mantenerse o reducirse, incluso hasta cero, pero nunca incrementarse; **no** es una liquidación obligatoria. `MinWeight` no fuerza su incremento (como en `HOLD_OR_REDUCE`). Un activo no comprable que **no** está en la cartera no puede entrar (`w_i = 0`).
+>
+> Reglas:
+>
+> * La precedencia de `RestrictedExistingPositionPolicy` (E-09) se conserva: un activo restringido se rige por su política (`HOLD_OR_REDUCE`: `w <= w_current`; `FREEZE_WEIGHT`: `w = w_current`; `FORCE_LIQUIDATE`: `w = 0`), que es igual o más estricta que E-10.
+> * La regla la consumen de forma coherente el filtro de elegibilidad, el compilador de restricciones, la factibilidad previa, el optimizador continuo, el `CandidateEngine` (screening y estimaciones), la `GLOBAL_CANDIDATE_FRONTIER`, el `SolutionValidator` (que la comprueba desde `w_current`, no desde los límites compilados) y los diagnósticos. No se hardcodea en el `CandidateEngine` ni en el optimizador.
+> * Si los topes resultantes hacen imposible el presupuesto, un mínimo de grupo o cualquier otra restricción, el problema se declara inviable en la factibilidad previa (§13) con la causa registrada; nunca se relaja silenciosamente.
+> * La restricción de participación en ADV/NAV (`LiquidityConstraint`) la define la aclaración E-11 (A-11), siguiente.
+
+> **Aclaración E-11 (A-11, remediación del Bloque 3, 2026-09-24) — `LiquidityConstraint` ADV/NAV con posición existente protegida.**
+>
+> `LiquidityCapacity_i = max_adv_participation · ADV_i · liquidation_days / NAV`.
+>
+> * Posición nueva: `w_i <= LiquidityCapacity_i`. Posición existente: `w_i <= max(w_current_i, LiquidityCapacity_i)`: no se obliga a liquidar una posición que ya supera el límite, pero no puede aumentar por encima de su peso actual. Las precedencias de E-09 (restringidos) y E-10 (no comprables) se conservan.
+> * Configuración `[constraints.liquidity]`: `enabled`, `max_adv_participation` (`0 < p <= 1`), `liquidation_days` (`>= 1`) y `fx_rates` explícitos. Sin valores productivos por defecto. `enabled = false` no aplica la restricción; con `enabled = true` ambos parámetros son obligatorios y `NAV > 0`, `ADV_i >= 0` finitos; si falta o es inválido un dato requerido es un error de configuración/datos (nunca se desactiva en silencio).
+> * **Unidad de `ADV` (cierre de datos):** `ADV` es exclusivamente el **importe monetario medio negociado por día** (`ADVUnit = NOTIONAL_PER_DAY`). No se admite un `ADV` en títulos, acciones o contratos por día (`SHARES_PER_DAY`, `CONTRACTS_PER_DAY`): se rechaza con un diagnóstico específico y **sin conversión implícita** (convertirlo exigiría un precio y una política de valoración aprobados). Una unidad ausente o desconocida también se rechaza. Cada activo declara unidad, divisa (`ADVCurrency`), procedencia (`ADVSource`) y valor `ADV >= 0` finito. Dimensionalmente `participación · ADV(divisa/día) · días / NAV(divisa)` es un peso adimensional.
+> * **Divisas:** con la restricción activada `ADVCurrency` y `NAVCurrency` son **obligatorias**; si faltan ambas o solo una es un error (no se supone que coincidan). Si son iguales se usa `ADV` directamente; si difieren se exige el tipo de cambio explícito del par exacto con la orientación `unidades de NAVCurrency por unidad de ADVCurrency` (`ADV_en_NAV = ADV · FXRate`; p. ej. 0,90 EUR por USD: 100 USD = 90 EUR), positivo, finito y trazable. No se invierten ni infieren pares ni se inventan tipos; si falta, error.
+> * **Datos ausentes:** todos los activos de la composición evaluada (incluidos los restringidos, sea cual sea su política E-09) deben tener los datos ADV/NAV; ninguna política E-09/E-10 exime de validarlos. Error de datos, restricción infactible y falta de convergencia del solver son diagnósticos distintos.
+> * Es un límite de tamaño de posición: **no** garantiza que una venta pueda ejecutarse y es distinto de una futura restricción de volumen negociable por operación.
+> * Incompatibilidades con mínimos, presupuesto o grupos se declaran en la factibilidad previa (§13, `FEA-006`) con la causa registrada.
+
 ---
 
 # 13. FACTIBILIDAD PREVIA
@@ -2108,6 +2135,8 @@ El objetivo final es obtener un motor cuantitativo rápido, matemáticamente só
 | E-06 | 2026-09-23 | A-06 | §31, §62 | Enmienda funcional aprobada | `CurrentPortfolioStateHash` en la clave de caché e invalidación ante cambios de pesos actuales. |
 | E-07 | 2026-09-23 | A-07 | §11 | Planificación aprobada | OAS/EWMA diferidos al Bloque 4. |
 | E-09 | 2026-09-23 | A-09 | §12 | Enmienda funcional aprobada | Política `RestrictedExistingPositionPolicy` (`HOLD_OR_REDUCE`, `FREEZE_WEIGHT`, `FORCE_LIQUIDATE`) para activos restringidos ya en cartera; selección explícita obligatoria en producción; `HOLD_OR_REDUCE` en ejemplos y tests. |
+| E-10 | 2026-09-24 | D-3 (`AUDIT_BLOCK_3.md`) | §12 | Enmienda funcional aprobada | Existing Non-Buyable Position Policy: un activo mantenido y no comprable (`EligibleFlag`/`LiquidityFlag` falsos o desconocidos con política conservadora, o fuera del `InvestmentUniverse`) cumple `0 <= w <= min(w_current, MaxWeight)`; puede mantenerse o reducirse, nunca incrementarse; no es liquidación obligatoria. Conserva la precedencia de E-09. |
+| E-11 | 2026-09-24 | A-11 (aclaración) | §12, §13 | Enmienda funcional aprobada | `LiquidityCapacity = max_adv_participation·ADV·liquidation_days/NAV`; posición nueva `w <= capacidad`, existente `w <= max(w_current, capacidad)` (protegida, sin liquidación forzosa); `[constraints.liquidity]` sin valores por defecto (`enabled`, `max_adv_participation`, `liquidation_days`, `fx_rates`); `ADV` = importe monetario diario (`ADVUnit = NOTIONAL_PER_DAY`; títulos/contratos se rechazan sin conversión); `ADVCurrency` y `NAVCurrency` obligatorias (nunca se supone igualdad por ausencia); FX = unidades de NAVCurrency por unidad de ADVCurrency, par exacto explícito; datos requeridos también para activos restringidos; no garantiza ejecutabilidad de ventas. Conserva E-09 y E-10. |
 | F-04 | 2026-09-23 | Cierre documental PROMPT 0 | `IMPLEMENTATION_PROMPTS.md`, Bloque 2 (RISK AVERSION y COSTES) | Corrección de formato en documento subordinado | Operadores perdidos por Markdown (`##`, `*` sueltos) restaurados: `minimize w'Sigma w - theta * mu'w` y `minimize w'Sigma w - theta * mu'w + theta * TC(w)`, coherentes con §35 y §37. Sin cambio de significado. |
 | E-24 | 2026-09-23 | A-24 | §49 | Enmienda funcional aprobada | SCIP/PySCIPOpt como backend MIP de referencia; comerciales opcionales. |
 | E-25 | 2026-09-23 | A-25 | §50, §51 | Enmienda funcional aprobada | NONCONVEX_RESEARCH solo arquitectura hasta caso de uso validado. |

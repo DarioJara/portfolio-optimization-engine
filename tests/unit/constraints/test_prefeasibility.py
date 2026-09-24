@@ -44,7 +44,9 @@ TOLERANCE = 1e-9
 
 
 def _causes(config, problem) -> set[str]:  # type: ignore[no-untyped-def]
-    constraint_set = build_constraint_set(config.constraints, problem.spec, "P1", None)
+    constraint_set = build_constraint_set(
+        config.constraints, problem.spec, "P1", None, config.candidates.unknown_liquidity_policy
+    )
     compiled = ConstraintCompiler().compile(
         constraint_set, problem.universe, problem.state.asset_ids, problem.state
     )
@@ -134,7 +136,9 @@ def test_forced_turnover_matches_a_linear_program() -> None:
             config,
             universe_overrides={"MinWeight": lower.tolist(), "MaxWeight": upper.tolist()},
         )
-        constraint_set = build_constraint_set(config.constraints, None, "P1", None)
+        constraint_set = build_constraint_set(
+            config.constraints, None, "P1", None, config.candidates.unknown_liquidity_policy
+        )
         compiled = ConstraintCompiler().compile(
             constraint_set, problem.universe, problem.state.asset_ids, problem.state
         )
@@ -188,7 +192,9 @@ def test_forced_turnover_accounts_for_a_current_portfolio_that_does_not_sum_to_o
             config,
             universe_overrides={"MinWeight": lower.tolist(), "MaxWeight": upper.tolist()},
         )
-        constraint_set = build_constraint_set(config.constraints, None, "P1", None)
+        constraint_set = build_constraint_set(
+            config.constraints, None, "P1", None, config.candidates.unknown_liquidity_policy
+        )
         compiled = ConstraintCompiler().compile(
             constraint_set, problem.universe, problem.state.asset_ids, problem.state
         )

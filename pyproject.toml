@@ -41,6 +41,7 @@ markers = [
     "architecture: reglas de arquitectura y gobierno",
     "integration: tests de integración de pipelines completos",
     "numerical_regression: regresión numérica frente a valores dorados",
+    "performance: memoria y rendimiento (medidas descriptivas, sin umbrales de producción)",
 ]
 
 [tool.mypy]

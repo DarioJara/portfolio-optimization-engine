@@ -56,7 +56,18 @@ SCHEMAS: Mapping[Table, TableSchema] = MappingProxyType(
             numeric=("AdjustedClose", "Volume", "Bid", "Ask", "FXRate", "MarketCap"),
         ),
         Table.UNIVERSE: TableSchema(
-            text=("AssetID", "Ticker", "Sector", "Industry", "Country", "Currency", "AssetClass"),
+            text=(
+                "AssetID",
+                "Ticker",
+                "Sector",
+                "Industry",
+                "Country",
+                "Currency",
+                "AssetClass",
+                "ADVCurrency",
+                "ADVUnit",
+                "ADVSource",
+            ),
             boolean=("EligibleFlag", "LiquidityFlag", "RestrictedAssetFlag"),
             numeric=(
                 "MinWeight",
@@ -73,7 +84,12 @@ SCHEMAS: Mapping[Table, TableSchema] = MappingProxyType(
             text=("PortfolioID", "AssetID", "Ticker"), numeric=("CurrentWeight",)
         ),
         Table.PORTFOLIO_SPECS: TableSchema(
-            text=("PortfolioID", "InvestmentUniverse", "RestrictedExistingPositionPolicy"),
+            text=(
+                "PortfolioID",
+                "InvestmentUniverse",
+                "RestrictedExistingPositionPolicy",
+                "NAVCurrency",
+            ),
             numeric=("TargetPortfolioSize", "VolatilityLimit", "MaxTurnover", "NAV"),
         ),
         Table.WEIGHT_OVERRIDES: TableSchema(

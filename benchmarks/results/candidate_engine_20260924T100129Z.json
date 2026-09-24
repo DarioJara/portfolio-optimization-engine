@@ -1,0 +1,464 @@
+{
+  "metadata": {
+    "benchmark": "candidate_engine",
+    "requirement": "BEN-009",
+    "execution_timestamp_utc": "20260924T100129Z",
+    "git_commit": "6af836cdc2df155ed3728e24d413a3790a8d38ba+dirty",
+    "config_hash": "48627e7d80f0dcae61111806ade7a9db86989edecb5de3b86b9f8874f4f08d59",
+    "random_seed": 7,
+    "held_assets": 20,
+    "universe_sizes": [
+      50,
+      200,
+      700
+    ],
+    "repetitions": 3,
+    "warmup_runs": 1,
+    "candidate_config": {
+      "beam_width": 5,
+      "max_levels": 4,
+      "swap_orders": [
+        1,
+        2
+      ],
+      "shortlist_in": 8,
+      "shortlist_out": 6,
+      "max_neighbors_per_order": 60,
+      "max_evaluations": 200,
+      "max_candidates": 12,
+      "stagnation_levels": 2,
+      "improvement_tolerance": 1e-09,
+      "diversity_min_distance": 1,
+      "local_search_starts": 2,
+      "utility_risk_aversions": [
+        1.0,
+        4.0,
+        16.0
+      ],
+      "evaluation_mode": "PROJECTED_WEIGHTS",
+      "refinement_iterations": 15,
+      "screening_weights": {
+        "expected_alpha": 1.0,
+        "marginal_risk_contribution": 1.0,
+        "diversification_contribution": 1.0,
+        "covariance_with_portfolio": 0.5,
+        "expected_utility_gain": 2.0,
+        "risk_adjusted_return": 1.0,
+        "liquidity": 0.25,
+        "transaction_cost": 0.5,
+        "sector_fit": 0.25
+      },
+      "normalization": "RANK",
+      "missing_signal_policy": "NEUTRAL",
+      "unknown_liquidity_policy": "EXCLUDE",
+      "exploration": {
+        "exploit_share": 7.0,
+        "diversify_share": 2.0,
+        "explore_share": 1.0
+      },
+      "max_new_assets": null,
+      "max_swaps": null,
+      "cold_start": true,
+      "max_recorded_rejections": 50
+    },
+    "python": "3.13.6",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel",
+    "numpy": "2.5.3",
+    "scipy": "1.18.1",
+    "osqp": "1.1.3",
+    "note": "Tiempos (s) medidos por este script en un proceso, sin paralelismo. No son rendimiento de producci\u00f3n."
+  },
+  "runs": [
+    {
+      "universe_assets": 50,
+      "treatment": "GROSS",
+      "method": "RISK_AVERSION_GRID",
+      "repetitions": 3,
+      "compositions": 12,
+      "compositions_evaluated": 1200,
+      "neighbors_generated": 1296,
+      "compositions_rejected": 0,
+      "frontier_points": 240,
+      "envelope_points": 123,
+      "envelope_compositions": 11,
+      "timings_seconds": {
+        "screening": {
+          "count": 3,
+          "mean": 0.09980526679040243,
+          "max": 0.1420365001540631,
+          "percentiles": {
+            "50.0": 0.08669540006667376,
+            "95.0": 0.13650239014532417,
+            "99.0": 0.14092967815231533
+          }
+        },
+        "candidate_generation": {
+          "count": 3,
+          "mean": 9.284167433312783,
+          "max": 12.908984099980444,
+          "percentiles": {
+            "50.0": 9.960998499998823,
+            "95.0": 12.614185539982282,
+            "99.0": 12.850024387980811
+          }
+        },
+        "frontier_evaluation": {
+          "count": 3,
+          "mean": 0.9238451666509112,
+          "max": 1.3231454000342637,
+          "percentiles": {
+            "50.0": 1.1386155999498442,
+            "95.0": 1.3046924200258219,
+            "99.0": 1.3194548040325753
+          }
+        },
+        "pareto": {
+          "count": 3,
+          "mean": 0.010465699985312918,
+          "max": 0.014099399908445776,
+          "percentiles": {
+            "50.0": 0.013390099979005754,
+            "95.0": 0.014028469915501773,
+            "99.0": 0.014085213909856975
+          }
+        },
+        "total": {
+          "count": 3,
+          "mean": 10.218478299949007,
+          "max": 14.246228899923153,
+          "percentiles": {
+            "50.0": 11.113004199927673,
+            "95.0": 13.932906429923605,
+            "99.0": 14.183564405923244
+          }
+        }
+      }
+    },
+    {
+      "universe_assets": 50,
+      "treatment": "NET",
+      "method": "RISK_AVERSION_GRID",
+      "repetitions": 3,
+      "compositions": 12,
+      "compositions_evaluated": 1200,
+      "neighbors_generated": 1296,
+      "compositions_rejected": 0,
+      "frontier_points": 240,
+      "envelope_points": 124,
+      "envelope_compositions": 11,
+      "timings_seconds": {
+        "screening": {
+          "count": 3,
+          "mean": 0.0731181666875879,
+          "max": 0.07885160017758608,
+          "percentiles": {
+            "50.0": 0.07153549999929965,
+            "95.0": 0.07811999015975743,
+            "99.0": 0.07870527817402034
+          }
+        },
+        "candidate_generation": {
+          "count": 3,
+          "mean": 8.4233549333876,
+          "max": 8.95304280007258,
+          "percentiles": {
+            "50.0": 8.168512200005352,
+            "95.0": 8.874589740065858,
+            "99.0": 8.937352188071236
+          }
+        },
+        "frontier_evaluation": {
+          "count": 3,
+          "mean": 1.0749922666776304,
+          "max": 1.1140998000046238,
+          "percentiles": {
+            "50.0": 1.0829842000966892,
+            "95.0": 1.1109882400138305,
+            "99.0": 1.113477488006465
+          }
+        },
+        "pareto": {
+          "count": 3,
+          "mean": 0.009530500004378458,
+          "max": 0.012491600005887449,
+          "percentiles": {
+            "50.0": 0.011432699975557625,
+            "95.0": 0.012385710002854466,
+            "99.0": 0.012470422005280852
+          }
+        },
+        "total": {
+          "count": 3,
+          "mean": 9.507877700069608,
+          "max": 9.98560280003585,
+          "percentiles": {
+            "50.0": 9.274042300065048,
+            "95.0": 9.914446750038769,
+            "99.0": 9.971371590036433
+          }
+        }
+      }
+    },
+    {
+      "universe_assets": 200,
+      "treatment": "GROSS",
+      "method": "RISK_AVERSION_GRID",
+      "repetitions": 3,
+      "compositions": 12,
+      "compositions_evaluated": 1200,
+      "neighbors_generated": 1296,
+      "compositions_rejected": 0,
+      "frontier_points": 240,
+      "envelope_points": 94,
+      "envelope_compositions": 10,
+      "timings_seconds": {
+        "screening": {
+          "count": 3,
+          "mean": 0.08630283328238875,
+          "max": 0.09299599996302277,
+          "percentiles": {
+            "50.0": 0.08710809983313084,
+            "95.0": 0.09240720995003357,
+            "99.0": 0.09287824196042493
+          }
+        },
+        "candidate_generation": {
+          "count": 3,
+          "mean": 8.656984000001103,
+          "max": 8.924576899968088,
+          "percentiles": {
+            "50.0": 8.82916630001273,
+            "95.0": 8.915035839972552,
+            "99.0": 8.922668687968981
+          }
+        },
+        "frontier_evaluation": {
+          "count": 3,
+          "mean": 1.0203118999876704,
+          "max": 1.1292911999626085,
+          "percentiles": {
+            "50.0": 0.9882568999892101,
+            "95.0": 1.1151877699652686,
+            "99.0": 1.1264705139631406
+          }
+        },
+        "pareto": {
+          "count": 3,
+          "mean": 0.011657000053673983,
+          "max": 0.012604600051417947,
+          "percentiles": {
+            "50.0": 0.011769400094635785,
+            "95.0": 0.012521080055739731,
+            "99.0": 0.012587896052282303
+          }
+        },
+        "total": {
+          "count": 3,
+          "mean": 9.688952900042446,
+          "max": 10.066472699982114,
+          "percentiles": {
+            "50.0": 9.829192600096576,
+            "95.0": 10.04274468999356,
+            "99.0": 10.061727097984404
+          }
+        }
+      }
+    },
+    {
+      "universe_assets": 200,
+      "treatment": "NET",
+      "method": "RISK_AVERSION_GRID",
+      "repetitions": 3,
+      "compositions": 12,
+      "compositions_evaluated": 1200,
+      "neighbors_generated": 1296,
+      "compositions_rejected": 0,
+      "frontier_points": 240,
+      "envelope_points": 91,
+      "envelope_compositions": 10,
+      "timings_seconds": {
+        "screening": {
+          "count": 3,
+          "mean": 0.08321466661679248,
+          "max": 0.08623330004047602,
+          "percentiles": {
+            "50.0": 0.0836931997910142,
+            "95.0": 0.08597929001552984,
+            "99.0": 0.08618249803548679
+          }
+        },
+        "candidate_generation": {
+          "count": 3,
+          "mean": 9.092124699964188,
+          "max": 9.518833299982361,
+          "percentiles": {
+            "50.0": 9.281260099960491,
+            "95.0": 9.495075979980175,
+            "99.0": 9.514081835981925
+          }
+        },
+        "frontier_evaluation": {
+          "count": 3,
+          "mean": 1.2799998000264168,
+          "max": 1.4017987000988796,
+          "percentiles": {
+            "50.0": 1.246349100023508,
+            "95.0": 1.3862537400913424,
+            "99.0": 1.3986897080973721
+          }
+        },
+        "pareto": {
+          "count": 3,
+          "mean": 0.01239613334958752,
+          "max": 0.014507800107821822,
+          "percentiles": {
+            "50.0": 0.01171210000757128,
+            "95.0": 0.014228230097796767,
+            "99.0": 0.01445188610581681
+          }
+        },
+        "total": {
+          "count": 3,
+          "mean": 10.384520633340193,
+          "max": 10.93160050001461,
+          "percentiles": {
+            "50.0": 10.53932129999157,
+            "95.0": 10.892372580012307,
+            "99.0": 10.92375491601415
+          }
+        }
+      }
+    },
+    {
+      "universe_assets": 700,
+      "treatment": "GROSS",
+      "method": "RISK_AVERSION_GRID",
+      "repetitions": 3,
+      "compositions": 12,
+      "compositions_evaluated": 1200,
+      "neighbors_generated": 1296,
+      "compositions_rejected": 0,
+      "frontier_points": 240,
+      "envelope_points": 115,
+      "envelope_compositions": 11,
+      "timings_seconds": {
+        "screening": {
+          "count": 3,
+          "mean": 0.10124393335233133,
+          "max": 0.13317560020368546,
+          "percentiles": {
+            "50.0": 0.12196279992349446,
+            "95.0": 0.13205432017566637,
+            "99.0": 0.13295134419808163
+          }
+        },
+        "candidate_generation": {
+          "count": 3,
+          "mean": 8.212166666674117,
+          "max": 10.559698699973524,
+          "percentiles": {
+            "50.0": 10.544452400063165,
+            "95.0": 10.558174069982488,
+            "99.0": 10.559393773975316
+          }
+        },
+        "frontier_evaluation": {
+          "count": 3,
+          "mean": 0.8287546000210568,
+          "max": 1.077759200008586,
+          "percentiles": {
+            "50.0": 1.0266441000858322,
+            "95.0": 1.0726476900163107,
+            "99.0": 1.076736898010131
+          }
+        },
+        "pareto": {
+          "count": 3,
+          "mean": 0.0108397666287298,
+          "max": 0.013279199949465692,
+          "percentiles": {
+            "50.0": 0.01219659997150302,
+            "95.0": 0.013170939951669425,
+            "99.0": 0.013257547949906438
+          }
+        },
+        "total": {
+          "count": 3,
+          "mean": 9.051761033323904,
+          "max": 11.634408200043254,
+          "percentiles": {
+            "50.0": 10.948602699907497,
+            "95.0": 11.565827650029679,
+            "99.0": 11.620692090040539
+          }
+        }
+      }
+    },
+    {
+      "universe_assets": 700,
+      "treatment": "NET",
+      "method": "RISK_AVERSION_GRID",
+      "repetitions": 3,
+      "compositions": 12,
+      "compositions_evaluated": 1200,
+      "neighbors_generated": 1296,
+      "compositions_rejected": 0,
+      "frontier_points": 240,
+      "envelope_points": 103,
+      "envelope_compositions": 11,
+      "timings_seconds": {
+        "screening": {
+          "count": 3,
+          "mean": 0.11955536645837128,
+          "max": 0.173037399770692,
+          "percentiles": {
+            "50.0": 0.14052749972324818,
+            "95.0": 0.1697864097659476,
+            "99.0": 0.17238720176974312
+          }
+        },
+        "candidate_generation": {
+          "count": 3,
+          "mean": 9.190123166694926,
+          "max": 12.82252290006727,
+          "percentiles": {
+            "50.0": 11.692249299958348,
+            "95.0": 12.709495540056377,
+            "99.0": 12.799917428065092
+          }
+        },
+        "frontier_evaluation": {
+          "count": 3,
+          "mean": 1.036221700021997,
+          "max": 1.7336046000709757,
+          "percentiles": {
+            "50.0": 0.8434875999810174,
+            "95.0": 1.64459290006198,
+            "99.0": 1.7158022600691765
+          }
+        },
+        "pareto": {
+          "count": 3,
+          "mean": 0.010756166651844978,
+          "max": 0.01588119997177273,
+          "percentiles": {
+            "50.0": 0.012452400056645274,
+            "95.0": 0.015538319980259984,
+            "99.0": 0.01581262397347018
+          }
+        },
+        "total": {
+          "count": 3,
+          "mean": 10.237101033368768,
+          "max": 13.441735100001097,
+          "percentiles": {
+            "50.0": 13.358030700008385,
+            "95.0": 13.433364660001825,
+            "99.0": 13.440061012001243
+          }
+        }
+      }
+    }
+  ]
+}

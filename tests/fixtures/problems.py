@@ -192,7 +192,11 @@ def weights_of(point: FrontierPoint) -> npt.NDArray[np.float64]:
 def compiled_for(problem: FrontierProblem, config: EngineConfig) -> CompiledConstraints:
     """Restricciones compiladas de la composición del problema."""
     constraint_set = build_constraint_set(
-        config.constraints, problem.spec, problem.portfolio_id, config.frontier.min_holding_weight
+        config.constraints,
+        problem.spec,
+        problem.portfolio_id,
+        config.frontier.min_holding_weight,
+        config.candidates.unknown_liquidity_policy,
     )
     composition = problem.composition_asset_ids or problem.state.asset_ids
     return ConstraintCompiler().compile(
