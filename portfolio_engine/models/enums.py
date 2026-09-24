@@ -154,9 +154,10 @@ class OptimizationFamily(StrEnum):
 
 
 class FrontierScope(StrEnum):
-    """Alcance de una frontera (A-05). ``GLOBAL_CANDIDATE_FRONTIER`` llega en el Bloque 3."""
+    """Alcance de una frontera (A-05): composición actual fija o múltiples composiciones."""
 
     CONTINUOUS_FRONTIER = "CONTINUOUS_FRONTIER"
+    GLOBAL_CANDIDATE_FRONTIER = "GLOBAL_CANDIDATE_FRONTIER"
 
 
 class CostTreatment(StrEnum):
@@ -215,3 +216,109 @@ class CrossCheckPolicy(StrEnum):
 
     NONE = "NONE"
     COLD_RETRY = "COLD_RETRY"
+
+
+class EligibilityStatus(StrEnum):
+    """Rol de un activo respecto a una cartera en la generación de composiciones (Bloque 3).
+
+    ``HELD`` (A) y ``MANDATORY_HOLD`` (C) están en la cartera actual; ``ELIGIBLE_NEW`` (B) puede
+    comprarse; ``LIQUIDATE_ONLY`` (D) está en cartera pero no puede comprarse; ``MANDATORY_EXIT``
+    debe liquidarse (``FORCE_LIQUIDATE``); ``EXCLUDED`` (E) queda fuera por completo.
+    """
+
+    HELD = "HELD"
+    MANDATORY_HOLD = "MANDATORY_HOLD"
+    LIQUIDATE_ONLY = "LIQUIDATE_ONLY"
+    MANDATORY_EXIT = "MANDATORY_EXIT"
+    ELIGIBLE_NEW = "ELIGIBLE_NEW"
+    EXCLUDED = "EXCLUDED"
+
+
+class EligibilityReason(StrEnum):
+    """Causa explícita por la que un activo no puede entrar en una composición (Bloque 3)."""
+
+    NOT_ELIGIBLE = "NOT_ELIGIBLE"
+    NOT_LIQUID = "NOT_LIQUID"
+    UNKNOWN_LIQUIDITY_FLAG = "UNKNOWN_LIQUIDITY_FLAG"
+    RESTRICTED = "RESTRICTED"
+    UNKNOWN_RESTRICTED_FLAG = "UNKNOWN_RESTRICTED_FLAG"
+    OUTSIDE_INVESTMENT_UNIVERSE = "OUTSIDE_INVESTMENT_UNIVERSE"
+    NO_RISK_MODEL_DATA = "NO_RISK_MODEL_DATA"
+    FREEZE_WEIGHT = "FREEZE_WEIGHT"
+    FORCE_LIQUIDATE = "FORCE_LIQUIDATE"
+
+
+class AdvUnit(StrEnum):
+    """Unidad en la que un dato de origen expresa el ``ADV`` (A-11, E-11).
+
+    Solo ``NOTIONAL_PER_DAY`` (importe monetario medio negociado por día, en la divisa de
+    ``ADVCurrency``) es utilizable por la restricción ADV/NAV. Las unidades físicas se reconocen
+    para poder rechazarlas con un diagnóstico específico; su conversión a importe exigiría un precio
+    y una política de valoración aprobados y no está definida.
+    """
+
+    NOTIONAL_PER_DAY = "NOTIONAL_PER_DAY"
+    SHARES_PER_DAY = "SHARES_PER_DAY"
+    CONTRACTS_PER_DAY = "CONTRACTS_PER_DAY"
+
+
+class UnknownFlagPolicy(StrEnum):
+    """Tratamiento explícito de un ``LiquidityFlag`` desconocido (sin sustitución silenciosa)."""
+
+    EXCLUDE = "EXCLUDE"
+    ALLOW = "ALLOW"
+    ERROR = "ERROR"
+
+
+class ScreeningNormalization(StrEnum):
+    """Normalización de las señales de screening dentro de cada conjunto comparado."""
+
+    RANK = "RANK"
+    ZSCORE = "ZSCORE"
+
+
+class MissingSignalPolicy(StrEnum):
+    """Tratamiento explícito de una señal de screening ausente (siempre se registra)."""
+
+    EXCLUDE = "EXCLUDE"
+    NEUTRAL = "NEUTRAL"
+    ERROR = "ERROR"
+
+
+class EvaluationMode(StrEnum):
+    """Cómo se estima la utilidad de una composición durante la búsqueda (CAN-021).
+
+    ``PROJECTED_WEIGHTS``: pesos heredados de la cartera actual proyectados sobre las cotas y
+    refinados (cota inferior de la utilidad óptima). ``QP_UTILITY``: utilidad óptima exacta de la
+    composición con el motor continuo del Bloque 2 (un QP pequeño por composición).
+    """
+
+    PROJECTED_WEIGHTS = "PROJECTED_WEIGHTS"
+    QP_UTILITY = "QP_UTILITY"
+
+
+class MoveKind(StrEnum):
+    """Tipo de movimiento entre composiciones."""
+
+    SWAP = "SWAP"
+    ADD = "ADD"
+    DROP = "DROP"
+
+
+class CandidateType(StrEnum):
+    """Origen de la señal que propone un activo entrante (MASTER_SPEC §28, §66)."""
+
+    HIGH_CONVICTION = "HIGH_CONVICTION"
+    DIVERSIFICATION = "DIVERSIFICATION"
+    EXPLORATION = "EXPLORATION"
+    CURRENT_HOLDING = "CURRENT_HOLDING"
+
+
+class CandidateOrigin(StrEnum):
+    """Etapa del CandidateEngine que generó una composición."""
+
+    REFERENCE = "REFERENCE"
+    REFERENCE_ADJUSTED = "REFERENCE_ADJUSTED"
+    COLD_START_SEED = "COLD_START_SEED"
+    BEAM_SEARCH = "BEAM_SEARCH"
+    LOCAL_SEARCH = "LOCAL_SEARCH"

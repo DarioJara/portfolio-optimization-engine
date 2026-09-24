@@ -67,3 +67,7 @@ class FrontierError(PortfolioEngineError):
 
 class MetricsError(PortfolioEngineError):
     """Una métrica no puede calcularse de forma válida (p. ej. varianza negativa no numérica)."""
+
+
+class CandidateError(PortfolioEngineError):
+    """Entradas o estado inválidos al generar composiciones candidatas (MASTER_SPEC §26-31)."""

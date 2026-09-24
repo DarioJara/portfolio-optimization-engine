@@ -595,3 +595,344 @@ mypy, ruff, SHA-256 de los informes). Los informes `AUDIT_BLOCK_*.md` no se modi
 ### Estado
 
 `BLOCK_2_FINAL_CLOSURE` según el resumen de la sesión; sin commit, merge ni tag.
+
+
+---
+
+## [Bloque 3 — CandidateEngine, sustituciones y Global Candidate Frontier] — 2026-09-24
+
+### Alcance
+
+Bloque 3 de `IMPLEMENTATION_PROMPTS.md`, sobre el baseline `block2-validated` (commit `6af836c`, rama
+`block3-candidate-engine`). RequirementIDs de la fase: `CFG-009`, `CON-010`, `CON-011`, `CON-012`,
+`CON-013`, `CON-019`, `CON-022`, `FEA-002`, `FEA-006`, `OPT-002`, `TC-003`, `TC-011`, `CAN-001` … `CAN-022`,
+`FRN-002`, `FRN-003`, `FRN-017`, `VAL-010`, `DAT-013`, `PAR-006`, `PAR-009`, `PAR-010`, `REP-003`, `OUT-004`,
+`OUT-009`, `TST-012`, `TST-014`, `TST-015`, `TST-016`, `VIS-002` y el nuevo `BEN-009`.
+
+Módulos permitidos usados: `config/candidate_config.py`, `candidates/`, `frontiers/global_frontier.py` (y
+`frontiers/candidate_evaluator.py`), `constraints/integer.py`, `constraints/feasibility.py`,
+`models/composition.py`, `models/universe_index.py`, `parallel/determinism.py` (solo semillas y orden estable),
+`validation/composition_validator.py`, `outputs/candidate_*.py`, `benchmark/candidate_suite.py`. Fuera de
+alcance (no tocado): escenarios, SOCP, CVaR, robustez, MIQP/SCIP, `NONCONVEX_RESEARCH`, multiprocessing,
+`SharedMemory`, batches HPC, DuckDB, SQL Server, caché y persistencia (verificado por
+`tests/unit/test_architecture_rules.py::test_no_later_block_packages_exist`).
+
+### Baseline de no regresión (MASTER_SPEC §80)
+
+- Antes de escribir código: rama `block3-candidate-engine`, tag `block2-validated` presente, árbol limpio.
+- `pytest -q`: **558 passed** (44 s); `mypy --strict portfolio_engine`: 97 ficheros sin errores; `ruff check .`
+  y `ruff format --check portfolio_engine tests benchmarks`: en verde.
+
+### Añadido
+
+- **Configuración:** `CandidateConfig`, `ScreeningWeights`, `ExplorationMix` (`config/candidate_config.py`),
+  sección `[candidates]` (y subtablas) en `config/default_engine.toml`; `EngineConfig.candidates`
+  obligatorio; el loader admite subtablas TOML anidadas.
+- **Índices en tres niveles (DAT-013, TST-015):** `EligibleUniverseIndex` y `CompositionIndexMap`
+  (`models/universe_index.py`); la cartera se mapea siempre por `AssetID`.
+- **`EligibilityFilter`** (`candidates/eligibility.py`): roles A–E (mantenido, obligatorio, solo liquidable,
+  salida obligatoria, elegible nuevo, excluido) según `EligibleFlag`, `LiquidityFlag` (política explícita
+  para banderas desconocidas), restricciones, `InvestmentUniverse` y `RestrictedExistingPositionPolicy`.
+- **`CandidateScreening`** (`candidates/screening.py`): 9 señales vectorizadas con dirección y normalización
+  definidas (`RANK`/`ZSCORE`), pesos configurables, política explícita de datos ausentes; separado del
+  objetivo optimizado.
+- **`ExplorationPolicy`**, **`SwapGenerator`** (1/2/3-swap, `ADD`/`DROP`), **`LocalSearch`**, **`BeamSearch`**,
+  `NeighborhoodExpander`, `CompositionFactory` (reutiliza el compilador y la factibilidad previa del B2),
+  `ProjectedWeightsEvaluator` y `QPCompositionEvaluator`, `CompositionHash`, `CandidateDiagnostics`,
+  **`CandidateEngine`** (`generate_candidate_compositions -> list[CandidateComposition]`, arranque en frío,
+  perfiles de aversión al riesgo, validación independiente de cada composición devuelta).
+- **`GlobalCandidateFrontierEngine`** (`frontiers/global_frontier.py`): frontera continua por composición con el
+  motor del B2, unión de puntos, deduplicación entre composiciones, envolvente de Pareto global (`global_pareto`).
+  `FrontierScope.GLOBAL_CANDIDATE_FRONTIER`.
+- `constraints/integer.py` (nuevos activos, swaps, cardinalidad), `check_cardinality` (FEA-002),
+  `validation/composition_validator.py` (VAL-010), `parallel/determinism.py` (`derive_seed`, `sequence_key`,
+  `tie_break_key`), `models/composition.py`, `outputs/candidate_schemas.py`/`candidate_builders.py`
+  (`CandidateCompositions`, `CandidateDiagnostics`, puntos globales, `visualization_dataset`),
+  `benchmark/candidate_suite.py` y `benchmarks/scripts/candidate_engine.py` (BEN-009).
+- Tests nuevos: **238** (ver más abajo); marcador `performance` en `pyproject.toml`.
+
+### Modificado en módulos de bloques anteriores
+
+Solo ampliaciones necesarias; el comportamiento validado de B1/B2 no cambia:
+`models/enums.py` (nuevos enums y `FrontierScope.GLOBAL_CANDIDATE_FRONTIER`), `models/frontier.py`
+(`GlobalFrontierPoint`, `GlobalFrontierResult`), `models/universe_index.py`, `config/engine_config.py` y
+`config/loader.py`, `constraints/feasibility.py` (`check_cardinality`), `exceptions.py` (`CandidateError`), y los
+`__init__.py` de `config`, `constraints`, `frontiers`, `outputs`, `validation`, `benchmark`.
+
+Tests de bloques anteriores modificados (ampliación legítima de alcance; ninguno se debilitó):
+
+1. `tests/unit/config/test_config_hashing.py::test_snapshot_is_complete_canonical_json`: el snapshot de
+   `ConfigHash` incluye ahora la sección `candidates` (una línea añadida al conjunto esperado de claves).
+2. `tests/unit/test_architecture_rules.py`: `LATER_BLOCK_PACKAGES` deja de prohibir `candidates`,
+   `frontiers/global_frontier.py`, `constraints/integer.py` y `parallel/` (solo `determinism.py`; se prohíben
+   `parallel/batching.py`, `shared_data.py`, `worker.py`, `executor.py`, `threading_control.py`);
+   `ALLOWED_DEPENDENCIES` incorpora `candidates` y `parallel` y las nuevas aristas de `frontiers` y `benchmark`;
+   y se añaden dos reglas nuevas (sin `hash()` ni estado aleatorio global; `candidates` independiente de
+   `optimizers`/`frontiers`/SciPy/OSQP). La cobertura anterior de esas reglas se conserva.
+
+### Decisiones e incidencias durante el bloque
+
+- Diseño registrado en `ARCHITECTURE.md` §3.4 (13 puntos): sin `tabu.py` ni `engine.py`; el evaluador exacto se
+  inyecta desde `frontiers` para no crear dependencias `candidates → optimizers/frontiers`; un perfil de aversión
+  al riesgo por región de la frontera; `parallel/determinism.py` solo con semillas y orden.
+- **Cota inferior de la búsqueda:** el evaluador `PROJECTED_WEIGHTS` nunca sobrestima la utilidad óptima
+  (verificado contra SLSQP independiente); por eso los `estimated_*` se etiquetan como estimaciones.
+- **Presupuesto de la búsqueda local:** en una primera versión el haz agotaba el presupuesto y la búsqueda local
+  nunca se ejecutaba (detectado por `test_diagnostics_reconstruct_the_search`); cada fase tiene ahora su propio
+  presupuesto `max_evaluations`.
+- **Rendimiento:** el primer benchmark (universo de 50 activos) tardó 28 s por cartera; el perfilado mostró que el
+  refinamiento (proyecciones y costes recalculados por iteración) dominaba. Se precalcularon los costes de la
+  composición, se vectorizó el mapa elegible↔local, se memoizó el hash por composición y se redujo el ejemplo
+  de configuración (`max_evaluations` 200, `refinement_iterations` 15). Los resultados publicados son de la
+  versión final.
+- Errores del diseño inicial de algunos tests corregidos durante el desarrollo (no de la implementación): cotas
+  infactibles generadas por Hypothesis, covarianza cruda no PSD frente a la reparada, degeneración de fronteras
+  con composiciones de un solo portafolio eficiente.
+- `ruff format` reformatea los bloques de código de los `.md` (recordatorio de la memoria del proyecto): el bloque
+  de `README.md` se ajustó a la salida del formateador; `AUDIT_BLOCK_*.md` no se tocó.
+
+### Tests ejecutados (gate del Bloque 3)
+
+Ejecuciones reales:
+
+- `pytest -q`: **796 passed**, 0 failed, 0 skipped en 201,31 s (baseline 558 + 238 nuevos; los 558 originales
+  pasan sin cambios salvo los dos ajustes de arriba).
+- `mypy --strict portfolio_engine`: 122 ficheros, sin errores (baseline: 97).
+- `ruff check .`: All checks passed. `ruff format --check .` (raíz): 233 ficheros ya formateados.
+
+Tests nuevos relevantes: contractual crítico `tests/integration/test_global_frontier_multi_composition.py`
+(`len(candidates) > 1` y `len(unique(CompositionID)) > 1` antes y después de Pareto, 3 tratamientos × 2 métodos,
+Pareto contrastado con fuerza bruta); `tests/unit/costs/test_liquidation.py` (A 10 %/B 90 % → C 10 %/B 90 %);
+`tests/unit/candidates/test_index_mapping.py` (activos elegibles no consecutivos); casos adversariales donde el
+ranking por alpha individual elegiría mal por covarianza o por coste, con óptimo exacto SLSQP; beam ≠ greedy
+(`B = 3` supera a `B = 1` en tres semillas); búsqueda local con óptimo local y global comprobados por enumeración;
+acuerdo exhaustivo (3 políticas × 495 composiciones) entre `EligibilityFilter` y el validador independiente;
+estimaciones frente a óptimo exacto; MaxTurnover; determinismo con `PYTHONHASHSEED` distintos; memoria con
+`tracemalloc` (N = 700).
+
+### Benchmark real (BEN-009; medición local, un proceso, sin paralelismo)
+
+`benchmarks/results/candidate_engine_20260924T100129Z.json` (commit `6af836c` + cambios sin commit, Python 3.13.6,
+Windows 11, 1 warm-up + 3 repeticiones, cartera de 20 activos, semilla 7, `default_engine.toml`). Medias por cartera:
+
+| Universo | Tratamiento | Screening | Generación de candidatos | Fronteras finalistas | Pareto global | Total |
+|---:|---|---:|---:|---:|---:|---:|
+| 50 | GROSS | 0,100 s | 9,284 s | 0,924 s | 10,5 ms | 10,219 s |
+| 50 | NET | 0,073 s | 8,423 s | 1,075 s | 9,5 ms | 9,508 s |
+| 200 | GROSS | 0,086 s | 8,657 s | 1,020 s | 11,7 ms | 9,689 s |
+| 200 | NET | 0,083 s | 9,092 s | 1,280 s | 12,4 ms | 10,385 s |
+| 700 | GROSS | 0,101 s | 8,212 s | 0,829 s | 10,8 ms | 9,052 s |
+| 700 | NET | 0,120 s | 9,190 s | 1,036 s | 10,8 ms | 10,237 s |
+
+Cada ejecución generó 12 composiciones tras evaluar 1.200 (presupuesto agotado: 3 perfiles × (haz 200 + búsqueda
+local 200)), 240 puntos de frontera y una envolvente con 10-11 composiciones. Observaciones: el screening es
+< 1,3 % del tiempo; la generación (≈ 7 ms por composición evaluada) domina; el coste no crece del universo de 50 al
+de 700 activos (no hay copias `O(N²)` por cartera); un solo perfil y una máquina no son rendimiento de producción.
+
+### Auditoría interna previa al cierre
+
+Revisado el diff frente a `block2-validated`: candidatos realmente múltiples (tests y benchmark); haz no greedy
+(`test_a_wider_beam_finds_compositions_the_greedy_path_misses`); la raíz es la cartera actual y se conserva como
+referencia; índices por `AssetID`; ventas completas y costes NET verificados con cálculo manual y con SLSQP;
+Pareto global contrastado con fuerza bruta; sin literales de negocio en código (`test_no_business_numeric_literals`);
+sin parámetros ignorados (`test_every_candidate_parameter_is_consumed_by_the_engine_code`); sin stubs
+(`test_no_disguised_stubs`); grafo de importaciones acíclico y capas respetadas; sin código de B4–B6.
+
+### Trazabilidad
+
+316 → 317 requisitos (`BEN-009`) **[superado por la remediación: `BEN-009` se retiró como requisito, total 316]**. `VALIDATED` 139 → 182; `PARTIAL` 39 → 40; `NOT_IMPLEMENTED` 138 → 95. Pasan a
+`PARTIAL` (compartidos con bloques posteriores): `CON-010`, `CON-011`, `CON-019` (MIQP exacto B4), `CON-012`
+(solo `LiquidityFlag`), `OPT-002` (sin `engine.py`), `PAR-010` y `REP-003` (B5). `CAN-014` (Tabu, opcional) y
+`FEA-006` siguen `NOT_IMPLEMENTED` **[FEA-006 pasa a `PARTIAL` en la remediación]**. `TC-003` y `TC-011` pasan a `VALIDATED` (TST-014 y la integración con la
+generación de composiciones están implementados y probados).
+
+### Limitaciones conocidas
+
+- **[Corregido en la remediación (E-10): una posición actual no comprable queda acotada a `w_current` en todas
+  las capas.]** El optimizador continuo (B2) no limitaba el **incremento** de peso de una posición actual no
+  elegible; el Bloque 3 solo impedía introducir o recomprar posiciones nuevas. La restricción de participación en ADV/NAV (A-11) no está
+  implementada (`CON-012` `PARTIAL`, `FEA-006` `NOT_IMPLEMENTED`).
+- La cardinalidad se garantiza en la generación discreta (`SWAP`/`ADD`/`DROP`), no con una formulación MIQP exacta
+  (Bloque 4); no hay medida del gap frente al óptimo exacto (`MIP-*`).
+- `PROJECTED_WEIGHTS` exige cotas de peso finitas tras el ajuste por presupuesto (con `long_only = false` y sin
+  cotas usar `QP_UTILITY`) y solo comprueba después las restricciones de grupo y turnover (`violations`).
+- La búsqueda es heurística: un óptimo global del espacio de composiciones no está garantizado y el vecindario de
+  2-/3-swap está restringido a listas cortas (decisión A-18). El coste por composición evaluada (≈ 7 ms) es alto
+  para 1.200 carteras en un solo proceso; la paralelización pertenece al Bloque 5.
+- No hay caché de resultados (Bloque 5): la frontera de la composición actual se reutiliza solo dentro de una
+  misma llamada.
+- Validado solo con Python 3.13.6 en Windows 11, `osqp 1.1.3` y `scipy 1.18.1`.
+
+### Estado
+
+`BLOCK_3_STATUS = PASS` según el resumen de la sesión (pendiente de auditoría independiente); sin commit, merge,
+push, tag ni PR, según instrucciones.
+
+---
+
+## [Remediación del Bloque 3] — 2026-09-24
+
+Tras `AUDIT_BLOCK_3.md` (`AUDIT_BLOCK_3_STATUS = PASS_WITH_CHANGES`). Detalle y mediciones en
+`REMEDIATION_BLOCK_3.md`. Sin commit, merge, push, tag ni PR; sin avance al Bloque 4.
+
+### Baseline de no regresión
+
+`pytest -q` antes de modificar código: **796 passed** (0 failed, 0 skipped) en la rama con el Bloque 3 sin
+commit. Los 51 ficheros de test del baseline `block2-validated` se ejecutan de nuevo sobre el código final
+(ver «Resultados»).
+
+### Cambios
+
+- **H-1 / E-10 (Existing Non-Buyable Position Policy).** Un activo actual no comprable (`EligibleFlag` o
+  `LiquidityFlag` falsos, `LiquidityFlag` desconocido con política conservadora, o fuera del
+  `InvestmentUniverse`) y no restringido cumple `0 <= w <= min(w_current, MaxWeight)`; si no está en cartera,
+  `w = 0`. Nuevo `models/purchasability.py`; `ConstraintSet.unknown_liquidity_policy`
+  (`build_constraint_set` recibe la política); `ConstraintCompiler` fija las cotas y emite
+  `NonBuyablePositionRule`; `PreFeasibilityChecker._non_buyable`; `SolutionValidator._non_buyable` (desde
+  `w_current`); `EligibilityResult.weight_cap` y screening de entrantes con peso de entrada topado;
+  diagnóstico `E10_NON_BUYABLE_POSITIONS_CAPPED_AT_CURRENT_WEIGHT`. Precedencia de E-09 intacta. Enmienda E-10
+  en `MASTER_SPEC.md` §12 y Anexo A; `ARCHITECTURE.md` §3.4 (filas 12-15); `README.md`.
+- **BEN-009 retirado como requisito** (D-1): total contractual 316; el benchmark queda como evidencia de
+  `BEN-001`, `BEN-002`, `BEN-006` (JSON y resultados conservados; el script emite `evidence_for`).
+- **FEA-006** `NOT_IMPLEMENTED` → `PARTIAL`: las incompatibilidades por `LiquidityFlag` se detectan antes del
+  solver (E-10); el chequeo ADV/NAV de A-11 sigue pendiente de una decisión funcional (no se reasigna).
+- **Rendimiento del `CandidateEngine`** (sin cambiar la búsqueda): `composition_id` y `constraint_hash` bajo
+  demanda; `composition_hash` con serialización directa; `SolutionValidator._bounds` vectorizado;
+  `MemoizedEvaluator` (memoria local de evaluaciones de una generación; `evaluation_cache_hits`). Llamadas a
+  funciones por búsqueda −45 %; salida bit a bit idéntica en 4 escenarios. Nuevos
+  `benchmarks/scripts/candidate_profile.py` y `benchmarks/scripts/screening_correlation.py`.
+- **`max_evaluations`**: contrato explícito (por perfil λ y por fase; tope `perfiles × 2 × máximo`) alineado en
+  docstrings, `config/default_engine.toml` y `ARCHITECTURE.md`; sin cambiar su significado.
+- Screening (M-2): correlaciones y sensibilidad medidas y documentadas; ponderaciones por defecto **sin
+  cambios**.
+
+### Tests nuevos (todos con oráculos independientes de las funciones bajo prueba)
+
+`tests/unit/constraints/test_non_buyable_positions.py`, `tests/integration/test_non_buyable_pipelines.py`,
+`tests/unit/candidates/test_non_buyable_screening.py` (E-10); `tests/unit/candidates/test_deduplication.py`
+(L-4; el mutante `dedup_off` ahora se detecta); `tests/unit/candidates/test_screening_correlation.py` (M-2);
+`tests/unit/frontiers/test_known_inaccurate_point.py` (causa del fallo intermitente de B2);
+`tests/unit/validation/test_bounds_vectorization.py`; ampliaciones en `test_composition_hash.py` y
+`test_candidate_engine.py`. Los tests anteriores no se debilitaron: solo se adaptó la llamada a
+`build_constraint_set` (nuevo argumento) en `tests/fixtures/problems.py`,
+`tests/unit/constraints/test_constraint_compiler.py`, `test_prefeasibility.py`,
+`tests/unit/frontiers/test_removed_assets.py` y `tests/unit/validation/test_policy_consistency.py`, sin tocar
+ninguna aserción.
+
+### Resultados
+
+- `pytest -q -p no:cacheprovider`: **929 passed** en 155,24 s (0 failed, 0 skipped): 796 del baseline + 133 nuevos.
+- Los 51 ficheros de test del baseline `block2-validated` sobre el código final: **560 passed** en 34,13 s
+  (558 + 2 tests de arquitectura añadidos en el B3).
+- `mypy --strict portfolio_engine`: 0 errores en 123 ficheros. `ruff check .`: limpio. `ruff format --check .`:
+  245 ficheros ya formateados.
+- Control de mutación: 4/4 mutantes de E-10 y el mutante `dedup_off` detectados.
+- Rendimiento (búsqueda de candidatos, universo 50, cartera 20): llamadas a funciones 2.296.734 → 1.261.180;
+  CPU mínima de 5 repeticiones alternas 1,17-1,23 s → 1,03-1,08 s; 1.200 evaluaciones y salida idénticas bit a
+  bit. Benchmark real adicional: `benchmarks/results/candidate_engine_20260924T124637Z.json` (árbol sin commit;
+  tiempos absolutos dependientes del estado de la máquina).
+
+### Trazabilidad
+
+316 `RequirementID` (reconciliados por script): `VALIDATED` 182 → 181 (BEN-009 retirado), `PARTIAL` 40 → 41
+(`FEA-006`), `NOT_IMPLEMENTED` 95 → 94. `CAN-013` conserva `VALIDATED` con H-1 corregido y probado. Ningún
+estado de B4–B6 avanza.
+
+### Limitaciones conocidas
+
+- **[Resuelto en la segunda tanda: ADV/NAV implementada, `FEA-006` y `CON-012` `VALIDATED`.]**
+- El test de propiedades de B2 `test_every_frontier_point_satisfies_the_financial_invariants` puede fallar de
+  forma esporádica (≈ 0,2 % de los ejemplos): OSQP no converge o declara infactible en algunas fronteras
+  `TARGET_RETURN_GRID` casi degeneradas (idéntico en `block2-validated`); no se han relajado tolerancias.
+- El tiempo de CPU de esta máquina alterna entre dos estados (≈ 1 s y ≈ 5 s para la misma búsqueda): las cifras
+  absolutas de los benchmarks no son comparables entre ejecuciones; el JSON de B3 se generó sobre un árbol sin
+  commit.
+
+### Estado
+
+Ver `REMEDIATION_BLOCK_3.md` §9 y la respuesta de la sesión (`BLOCK_3_REMEDIATION_STATUS`).
+
+---
+
+## [Remediación del Bloque 3 — segunda tanda: ADV/NAV] — 2026-09-24
+
+Decisiones funcionales del usuario sobre `FEA-006` y A-11 (registradas como **E-11** en `MASTER_SPEC.md` §12 y
+Anexo A, y en A-11 de `ARCHITECTURE.md`). Sin avance al Bloque 4; sin commit, merge, push, tag ni PR.
+
+### Cambios
+
+- **Restricción ADV/NAV** `LiquidityCapacity = max_adv_participation·ADV·liquidation_days/NAV`: posición nueva
+  `w ≤ capacidad`; existente `w ≤ max(w_current, capacidad)` (protegida, sin liquidación forzosa). Nuevos
+  `constraints/liquidity.py`, `LiquidityConfig`/`FxRate`, `[constraints.liquidity]` (sin valores por defecto;
+  `enabled = false`), `AssetMetadata.adv_currency`, `PortfolioSpec.nav_currency`; compilador
+  (`LiquidityCapRule`), `PreFeasibilityChecker.check_liquidity`, `SolutionValidator._liquidity`,
+  `CandidateEngine` (validación de datos al iniciar, peso de entrada del screening, cardinalidad, nota
+  `A11_ADV_NAV_LIQUIDITY_CAPS_ACTIVE`). Datos o parámetros ausentes/inválidos con la restricción activa ⇒ error;
+  `ADV` y `NAV` en la misma divisa o `fx_rates` explícitos. No es un límite de volumen negociable por operación
+  ni garantiza la ejecutabilidad de una venta. E-09 y E-10 sin regresión.
+- **Hallazgo separado de B2** (test de propiedades inestable): `tests/unit/frontiers/test_known_solver_status_cases.py`
+  fija las 7 instancias con un oráculo LP independiente: 0 casos verdaderamente infactibles; el resto son fallos
+  numéricos del solver (`INFEASIBLE` espurio, `NUMERICAL_ERROR`/`MAX_ITERATIONS`, `OPTIMAL_INACCURATE`) con estado
+  reportado correctamente. **No resuelto**; requiere una remediación específica posterior (B4/B2).
+
+### Resultados
+
+- `pytest -q -p no:cacheprovider`: **1003 passed** en 255,47 s (0 failed): 929 + 74 nuevos.
+- 51 ficheros de test del baseline `block2-validated`: **560 passed**.
+- `mypy --strict portfolio_engine`: 0 errores en 124 ficheros; `ruff check .` limpio; `ruff format --check .`:
+  250 ficheros ya formateados. Mutación: 4/4 mutantes de ADV/NAV detectados.
+
+### Trazabilidad
+
+316 `RequirementID`: `CON-012` PARTIAL → `VALIDATED` y `FEA-006` PARTIAL → `VALIDATED` (`VALIDATED` 181 → 183,
+`PARTIAL` 41 → 39, `NOT_IMPLEMENTED` 94). Ningún otro estado cambia.
+
+### Limitaciones conocidas
+
+- Sin `ADVCurrency`/`NAVCurrency` declaradas se asume la misma divisa; no hay conversión FX automática.
+- Fallo esporádico del test de propiedades de B2 (≈ 0,21 % por ejemplo): abierto.
+
+---
+
+## [Remediación final de datos del Bloque 3 — F-1, F-2, F-4, F-6] — 2026-09-24
+
+Respuesta a `AUDIT_BLOCK_3_CLOSURE.md` (`PASS_WITH_CHANGES`). Detalle en `REMEDIATION_BLOCK_3_CLOSURE.md`.
+Sin avance al Bloque 4; sin commit, merge, push, tag ni PR. `AUDIT_BLOCK_3.md` y `AUDIT_BLOCK_3_CLOSURE.md`
+intactos.
+
+### Cambios
+
+- **F-1 (unidad de ADV):** nuevo enum `AdvUnit` (`NOTIONAL_PER_DAY`, `SHARES_PER_DAY`, `CONTRACTS_PER_DAY`),
+  `AssetMetadata.adv_unit`/`adv_source` (columnas `ADVUnit`/`ADVSource`), con validación de tipo. Solo
+  `NOTIONAL_PER_DAY` es utilizable; títulos/contratos se rechazan con diagnóstico específico y sin conversión
+  (requeriría precio y política de valoración aprobados); unidad ausente o desconocida ⇒ error. Comprobación
+  dimensional documentada en `constraints/liquidity.py`.
+- **F-2 (divisas):** con ADV/NAV activo `ADVCurrency` y `NAVCurrency` son obligatorias (ausentes ⇒ error; ya no
+  se supone igualdad); FX = unidades de NAVCurrency por unidad de ADVCurrency (`ADV_en_NAV = ADV·FX`), par
+  exacto, positivo y finito; orientación inversa no aceptada.
+- **F-4:** los activos restringidos (cualquier política E-09) ya no evitan la validación de datos ADV/NAV.
+- **F-8:** los mensajes de `BOUNDS_CROSSED` muestran floats de Python (`float(...)`).
+- **F-5:** documentado por qué cambia `ConstraintHash` (`ARCHITECTURE.md` §3.4 fila 16).
+- `SolutionValidator` comprueba de nuevo el contrato de datos desde la `LiquidityCapRule` (unidad, divisas,
+  FX, capacidad) además del tope.
+- Documentación localizada: `MASTER_SPEC.md` (E-11), `ARCHITECTURE.md`, `TRACEABILITY.md`, `README.md`.
+
+### Resultados
+
+- `pytest -q -p no:cacheprovider`: **1039 passed** en 179,81 s (0 failed): 1003 + 36 nuevos.
+- 51 ficheros de test del baseline: **560 passed** (558 históricos + 2 tests de arquitectura del B3).
+- E-09/E-10/E-11 (10 ficheros específicos): 230 passed. `mypy --strict`: 0 errores en 124 ficheros;
+  `ruff check .` limpio; `ruff format --check .`: 251 ficheros ya formateados.
+- Mutantes de F-1/F-2/F-4/validador: 10/10 detectados sobre una copia; 2 detectores dentro de la suite.
+
+### Trazabilidad (F-6)
+
+`CON-012` y `FEA-006` se consideraron `PARTIAL` durante la corrección y vuelven a `VALIDATED` al corregir F-1 y
+F-2 y pasar sus tests. 316 `RequirementID` (183 `VALIDATED`, 39 `PARTIAL`, 94 `NOT_IMPLEMENTED`); sin nuevos
+`RequirementID`.
+
+### Limitaciones conocidas
+
+- Remediación numérica independiente pendiente antes del Bloque 4 (F-3, heredado de B2; no se tocaron tolerancias
+  ni estados del solver).
+- La conversión de ADV desde títulos no existe (requiere precio y política de valoración aprobados).

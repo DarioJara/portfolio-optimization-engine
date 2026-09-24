@@ -20,6 +20,17 @@ consumen el constructor del problema y el validador de soluciones:
   restringido nuevo   ``w_i = 0`` (nunca se incorpora ni se compra)
   ==================  ==========================================
 
+Un activo **no comprable** (E-10: ``EligibleFlag`` o ``LiquidityFlag`` falsos, ``LiquidityFlag``
+desconocido con política conservadora, o fuera del ``InvestmentUniverse``) que no es restringido
+queda acotado a ``0 <= w_i <= min(w_current_i, MaxWeight_i)``: puede mantenerse o reducirse, nunca
+incrementarse, y si no está en cartera no puede entrar (``w_i = 0``). No es una liquidación
+obligatoria. Un activo restringido conserva su propia política, igual o más estricta.
+
+Con la restricción ADV/NAV activada (A-11) todo activo de la composición debe tener sus datos
+(unidad, divisas, procedencia) y queda además acotado a
+``w <= max(w_current, LiquidityCapacity)``: no se obliga a vender una posición que ya supera el
+límite, pero no puede aumentar por encima de su peso actual. E-09 y E-10 prevalecen.
+
 Un activo restringido actual que sale de la composición cumple ``HOLD_OR_REDUCE`` (se reduce a
 cero) y ``FORCE_LIQUIDATE`` (la venta completa es la liquidación); con ``FREEZE_WEIGHT`` no puede
 salir: la composición es incompatible y se rechaza antes del solver (factibilidad previa).
@@ -32,20 +43,28 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from functools import cached_property
 from types import MappingProxyType
 
 import numpy as np
 import numpy.typing as npt
 
 from portfolio_engine.constraints.constraint_set import ConstraintSet
+from portfolio_engine.constraints.liquidity import effective_upper, liquidity_capacity
 from portfolio_engine.exceptions import ConstraintCompilationError
 from portfolio_engine.models.asset import AssetMetadata, Universe
-from portfolio_engine.models.enums import GroupDimension, RestrictedExistingPositionPolicy
+from portfolio_engine.models.enums import (
+    AdvUnit,
+    EligibilityReason,
+    GroupDimension,
+    RestrictedExistingPositionPolicy,
+)
 from portfolio_engine.models.portfolio import (
     CurrentPortfolioState,
     composition_hash,
     resolve_effective_weight_bounds,
 )
+from portfolio_engine.models.purchasability import purchase_block_reasons
 from portfolio_engine.utils.hashing import (
     canonical_float,
     canonical_json,
@@ -84,6 +103,53 @@ class RestrictedPositionRule:
 
 
 @dataclass(frozen=True, slots=True)
+class NonBuyablePositionRule:
+    """Regla E-10 de un activo no comprable (y no restringido) de la composición.
+
+    ``reasons`` son las causas del bloqueo de compra; ``current_weight`` es ``0`` si el activo no
+    está en la cartera (no puede entrar). ``config_lower``/``config_upper`` son los límites previos
+    a la regla, para el diagnóstico de factibilidad previa.
+    """
+
+    position: int
+    asset_id: str
+    current_weight: float
+    is_held: bool
+    reasons: tuple[EligibilityReason, ...]
+    config_lower: float
+    config_upper: float
+
+
+@dataclass(frozen=True, slots=True)
+class LiquidityCapRule:
+    """Regla ADV/NAV (A-11) de un activo de la composición, con sus datos de cálculo.
+
+    ``upper = max(w_current, capacity)`` (``capacity`` para un activo que no está en cartera).
+    ``binding`` indica que el tope de liquidez es más estricto que el límite previo
+    (``config_upper``: ``MaxWeight`` y reglas E-10). ``fx_rate`` es ``None`` sin conversión.
+    """
+
+    position: int
+    asset_id: str
+    current_weight: float
+    is_held: bool
+    capacity: float
+    adv: float
+    fx_rate: float | None
+    config_upper: float
+    binding: bool
+    adv_unit: AdvUnit
+    adv_currency: str
+    nav_currency: str
+    adv_source: str
+
+    @property
+    def upper(self) -> float:
+        """Peso máximo permitido por la liquidez."""
+        return effective_upper(self.current_weight, self.capacity)
+
+
+@dataclass(frozen=True, slots=True)
 class ExitedPosition:
     """Posición actual que no está en la composición y se liquida por completo (MASTER_SPEC §23).
 
@@ -97,16 +163,18 @@ class ExitedPosition:
     policy: RestrictedExistingPositionPolicy | None
 
 
-@dataclass(frozen=True, eq=False, slots=True)
+@dataclass(frozen=True, eq=False)
 class CompiledConstraints:
     """Restricciones lineales compiladas sobre las variables ``w`` de la composición.
 
     Los arrays usan ``±inf`` para "sin límite". ``lower``/``upper`` ya incorporan la política de
-    activos restringidos; ``group_matrix`` tiene una fila indicadora por límite de grupo.
+    activos restringidos y no comprables (E-10); ``group_matrix`` tiene una fila indicadora por
+    límite de grupo. ``composition_id`` y ``constraint_hash`` son hashes SHA-256 deterministas que
+    se calculan **bajo demanda** (la búsqueda de candidatos compila miles de composiciones y solo
+    las finalistas los publican); su valor no depende de cuándo se calculen.
     """
 
     asset_ids: tuple[str, ...]
-    composition_id: str
     budget: float
     long_only: bool
     lower: npt.NDArray[np.float64]
@@ -119,8 +187,34 @@ class CompiledConstraints:
     has_current_portfolio: bool
     max_turnover: float | None
     restricted_rules: tuple[RestrictedPositionRule, ...]
-    constraint_hash: str
+    constraint_set_hash: str
     exited: tuple[ExitedPosition, ...] = ()
+    non_buyable_rules: tuple[NonBuyablePositionRule, ...] = ()
+    liquidity_rules: tuple[LiquidityCapRule, ...] = ()
+
+    @cached_property
+    def composition_id(self) -> str:
+        """``CompositionHash`` de los ``AssetID`` de la composición."""
+        return composition_hash(frozenset(self.asset_ids))
+
+    @cached_property
+    def constraint_hash(self) -> str:
+        """``ConstraintHash`` determinista de los límites, grupos y liquidaciones compilados."""
+        payload = {
+            "constraint_set": self.constraint_set_hash,
+            "asset_ids": list(self.asset_ids),
+            "lower": hash_float_array(self.lower),
+            "upper": hash_float_array(self.upper),
+            "groups": hash_float_array(self.group_matrix),
+            "group_min": hash_float_array(self.group_min),
+            "group_max": hash_float_array(self.group_max),
+            "current": hash_float_array(self.current_weights),
+            "exited": [
+                [position.asset_id, canonical_float(position.current_weight)]
+                for position in self.exited
+            ],
+        }
+        return sha256_hex(canonical_json(payload))
 
     @property
     def exit_turnover(self) -> float:
@@ -162,15 +256,11 @@ class ConstraintCompiler:
             raise ConstraintCompilationError(
                 "MaxTurnover configurado sin cartera actual: el turnover no está definido."
             )
-        lower, upper, rules = self._bounds(constraint_set, assets, current)
+        lower, upper, rules, blocked, liquid = self._bounds(constraint_set, assets, current)
         labels, matrix, group_min, group_max = self._groups(constraint_set, assets)
         exited = self._exited(constraint_set, universe, asset_ids, state)
-        digest = _constraint_hash(
-            constraint_set, asset_ids, lower, upper, matrix, group_min, group_max, current, exited
-        )
         return CompiledConstraints(
             asset_ids=asset_ids,
-            composition_id=composition_hash(frozenset(asset_ids)),
             budget=1.0,
             long_only=constraint_set.long_only,
             lower=readonly_float_array(lower),
@@ -183,8 +273,10 @@ class ConstraintCompiler:
             has_current_portfolio=state.has_current_portfolio,
             max_turnover=constraint_set.max_turnover,
             restricted_rules=rules,
-            constraint_hash=digest,
+            constraint_set_hash=constraint_set.constraint_hash,
             exited=exited,
+            non_buyable_rules=blocked,
+            liquidity_rules=liquid,
         )
 
     def _exited(
@@ -216,11 +308,25 @@ class ConstraintCompiler:
         assets: Sequence[AssetMetadata],
         current: npt.NDArray[np.float64],
     ) -> tuple[
-        npt.NDArray[np.float64], npt.NDArray[np.float64], tuple[RestrictedPositionRule, ...]
+        npt.NDArray[np.float64],
+        npt.NDArray[np.float64],
+        tuple[RestrictedPositionRule, ...],
+        tuple[NonBuyablePositionRule, ...],
+        tuple[LiquidityCapRule, ...],
     ]:
         lower = np.empty(len(assets), dtype=np.float64)
         upper = np.empty(len(assets), dtype=np.float64)
         rules: list[RestrictedPositionRule] = []
+        blocked: list[NonBuyablePositionRule] = []
+        liquid: list[LiquidityCapRule] = []
+        spec = constraint_set.spec
+        nav = None if spec is None else spec.nav
+        nav_currency = None if spec is None else spec.nav_currency
+        allowed = (
+            None
+            if constraint_set.spec is None or constraint_set.spec.investment_universe is None
+            else frozenset(constraint_set.spec.investment_universe)
+        )
         for position, asset in enumerate(assets):
             effective = resolve_effective_weight_bounds(
                 asset, constraint_set.spec, constraint_set.global_bounds
@@ -245,8 +351,42 @@ class ConstraintCompiler:
                 )
                 rules.append(rule)
                 low, high = _apply_policy(rule)
+            else:
+                reasons = purchase_block_reasons(
+                    asset, allowed, constraint_set.unknown_liquidity_policy
+                )
+                if reasons:
+                    blocked.append(
+                        NonBuyablePositionRule(
+                            position, asset.asset_id, weight, weight > 0.0, reasons, low, high
+                        )
+                    )
+                    low, high = _apply_non_buyable(weight, high)
+            if constraint_set.liquidity.enabled:
+                # todos los activos de la composición (también los restringidos: E-09 no exime de
+                # tener los datos ADV/NAV); E-09/E-10 ya dan topes <= max(w_current, capacidad)
+                capacity = liquidity_capacity(asset, constraint_set.liquidity, nav, nav_currency)
+                tope = effective_upper(weight, capacity.capacity)
+                liquid.append(
+                    LiquidityCapRule(
+                        position,
+                        asset.asset_id,
+                        weight,
+                        weight > 0.0,
+                        capacity.capacity,
+                        capacity.adv,
+                        capacity.fx_rate,
+                        high,
+                        tope < high,
+                        capacity.adv_unit,
+                        capacity.adv_currency,
+                        capacity.nav_currency,
+                        capacity.adv_source,
+                    )
+                )
+                high = min(high, tope)
             lower[position], upper[position] = low, high
-        return lower, upper, tuple(rules)
+        return lower, upper, tuple(rules), tuple(blocked), tuple(liquid)
 
     def _groups(
         self, constraint_set: ConstraintSet, assets: Sequence[AssetMetadata]
@@ -314,28 +454,10 @@ def _apply_policy(rule: RestrictedPositionRule) -> tuple[float, float]:
     return 0.0, 0.0
 
 
-def _constraint_hash(
-    constraint_set: ConstraintSet,
-    asset_ids: tuple[str, ...],
-    lower: npt.NDArray[np.float64],
-    upper: npt.NDArray[np.float64],
-    matrix: npt.NDArray[np.float64],
-    group_min: npt.NDArray[np.float64],
-    group_max: npt.NDArray[np.float64],
-    current: npt.NDArray[np.float64],
-    exited: tuple[ExitedPosition, ...],
-) -> str:
-    payload = {
-        "constraint_set": constraint_set.constraint_hash,
-        "asset_ids": list(asset_ids),
-        "lower": hash_float_array(lower),
-        "upper": hash_float_array(upper),
-        "groups": hash_float_array(matrix),
-        "group_min": hash_float_array(group_min),
-        "group_max": hash_float_array(group_max),
-        "current": hash_float_array(current),
-        "exited": [
-            [position.asset_id, canonical_float(position.current_weight)] for position in exited
-        ],
-    }
-    return sha256_hex(canonical_json(payload))
+def _apply_non_buyable(current_weight: float, config_upper: float) -> tuple[float, float]:
+    """Límites efectivos de un activo no comprable (E-10): ``0 <= w <= min(w_current, MaxWeight)``.
+
+    Como en ``HOLD_OR_REDUCE`` el límite inferior es cero (puede reducirse hasta salir) y prevalece
+    sobre ``MinWeight``; con ``w_current = 0`` el activo no puede entrar.
+    """
+    return 0.0, min(current_weight, config_upper)

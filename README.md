@@ -8,15 +8,25 @@ Motor profesional de optimización cuantitativa de carteras multi-escenario.
 - Plan por bloques: [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 - Historial: [`CHANGELOG.md`](CHANGELOG.md).
 
-Estado actual: **Bloque 2 (Optimizador continuo y frontera eficiente)** sobre el Bloque 1 (Foundation:
-configuración, datos, validación, retornos, covarianza y modelo de riesgo). El motor genera la frontera
-eficiente de la **composición actual fija** (solo cambian los pesos; los activos actuales que no estén
-en la composición se liquidan por completo) con OSQP para los QP y HiGHS (vía SciPy) para el LP de
-Maximum Return: Minimum Variance, Maximum
-Return, malla de aversión al riesgo, malla de retorno objetivo, frontera adaptativa, y las fronteras
-`GROSS`, `NET` (costes dentro de la optimización) y `POST_COST_GROSS` (ex post). Toda solución pasa un
-`SolutionValidator` independiente. Todavía **no** hay CandidateEngine, Global Frontier, escenarios,
-paralelismo ni persistencia (Bloques 3-6).
+Estado actual: **Bloque 3 (CandidateEngine, sustituciones y Global Candidate Frontier)** sobre el
+Bloque 2 (optimizador continuo y frontera eficiente de la composición actual fija) y el Bloque 1
+(Foundation: configuración, datos, validación, retornos, covarianza y modelo de riesgo).
+
+- **Bloque 2:** frontera eficiente de la **composición actual fija** (solo cambian los pesos; los activos
+  actuales que no estén en la composición se liquidan por completo) con OSQP para los QP y HiGHS (vía
+  SciPy) para el LP de Maximum Return: Minimum Variance, Maximum Return, malla de aversión al riesgo,
+  malla de retorno objetivo, frontera adaptativa y las fronteras `GROSS`, `NET` (costes dentro de la
+  optimización) y `POST_COST_GROSS` (ex post). Toda solución pasa un `SolutionValidator` independiente.
+- **Bloque 3:** `CandidateEngine` genera **varias composiciones** a partir de la cartera actual
+  (filtro de elegibilidad, screening multiseñal vectorizado, 1/2/3-swap, búsqueda local y búsqueda en
+  haz con exploración/explotación configurable) y `GlobalCandidateFrontierEngine` resuelve la frontera
+  continua de cada composición y calcula la **envolvente de Pareto global**. La frontera continua
+  (composición actual) y la global (múltiples composiciones) son pipelines distintos y ambos, junto
+  con la cartera actual, se pueden graficar desde `visualization_dataset`.
+
+Todavía **no** hay escenarios, SOCP/CVaR/robustez, MIQP, paralelismo, caché ni persistencia
+(Bloques 4-6). La cardinalidad del CandidateEngine se garantiza en la **generación discreta**; no es
+una formulación MIQP exacta.
 
 ## Requisitos
 
@@ -116,6 +126,62 @@ dataset = frontier_dataset(result)  # Volatility, ExpectedReturnGross, ExpectedR
   previo al solver).
 - Un problema inviable por reglas deterministas (`PreFeasibilityChecker`) devuelve `INFEASIBLE` con
   `StatusSource.PRE_SOLVER_CHECK` sin llamar al solver.
+
+## Uso: candidatos y frontera global (Bloque 3)
+
+```python
+from portfolio_engine.candidates import CandidateContext, CandidateEngine
+from portfolio_engine.frontiers import GlobalCandidateFrontierEngine
+from portfolio_engine.outputs import visualization_dataset
+
+# Solo composiciones candidatas (la cartera actual va primero, como referencia):
+context = CandidateContext(
+    "P1", "BASE", risk_model, universe, current_state, spec=None, costs=asset_costs
+)
+candidates = CandidateEngine(config).generate_candidate_compositions(
+    current_state.composition(), context
+)  # list[CandidateComposition], siempre partiendo de la cartera actual
+
+# Frontera global: una frontera continua por composición + envolvente de Pareto global.
+result = GlobalCandidateFrontierEngine(config).solve(
+    problem, CostTreatment.NET, FrontierMethod.RISK_AVERSION_GRID
+)  # problem: FrontierProblem con composition_asset_ids = None
+result.continuous  # CONTINUOUS_FRONTIER: solo los activos actuales
+result.envelope  # puntos globalmente eficientes (varios CompositionID)
+# Capas graficables: CURRENT_PORTFOLIO, CONTINUOUS_FRONTIER y GLOBAL_CANDIDATE_FRONTIER.
+plot = visualization_dataset(result)
+```
+
+- `estimated_utility_gain`, `estimated_turnover` y `estimated_transaction_cost` de cada candidato son
+  **estimaciones** de la búsqueda (pesos proyectados, cota inferior de la utilidad óptima); los pesos,
+  el turnover y el coste finales solo existen en los puntos de la frontera de su composición.
+- `candidates.evaluation_mode = "QP_UTILITY"` evalúa cada composición con el QP exacto del Bloque 2.
+- Un activo restringido con `FREEZE_WEIGHT` nunca desaparece de un candidato; con `FORCE_LIQUIDATE` sale
+  de todas las alternativas; un activo no elegible, ilíquido o restringido nunca entra como posición
+  nueva. Las composiciones incompatibles se rechazan con su causa (`CandidateDiagnostics`).
+- Sin cartera actual y con `candidates.cold_start = true`, la semilla se elige por utilidad individual
+  y turnover/costes quedan como no disponibles.
+- Posición actual no comprable (E-10): un activo mantenido con `EligibleFlag` o `LiquidityFlag` falsos (o
+  desconocido con política conservadora) o fuera del `InvestmentUniverse` cumple
+  `0 <= w <= min(w_current, MaxWeight)` en la frontera continua, el `CandidateEngine`, la frontera global y
+  el `SolutionValidator`: se mantiene o se reduce, nunca se incrementa.
+- Restricción ADV/NAV (A-11, `[constraints.liquidity]`): `LiquidityCapacity = p·ADV·días/NAV`; una posición
+  nueva no puede superarla y una existente no puede crecer por encima de `max(w_current, capacidad)` (no se
+  fuerza a vender). Sin valores por defecto; con `enabled = true` faltan datos ⇒ error. `ADV` y `NAV` en la
+  misma divisa o `fx_rates` explícitos (unidades de NAVCurrency por unidad de ADVCurrency). `ADV` debe ser un
+  importe monetario diario (`ADVUnit = NOTIONAL_PER_DAY`, con `ADVCurrency` y `ADVSource`); `NAVCurrency`
+  es obligatoria y las divisas ausentes son un error. `ADV` en títulos/contratos se rechaza. Es un límite de
+  tamaño, no garantiza que una venta pueda ejecutarse.
+
+## Benchmark del pipeline de candidatos
+
+```bash
+.venv/Scripts/python benchmarks/scripts/candidate_engine.py --universe 50 200 700 --held 20 --seed 7
+```
+
+Guarda en `benchmarks/results/` los tiempos **medidos** (screening, generación de candidatos,
+evaluación de las fronteras finalistas y Pareto global) con sus metadatos. Son mediciones locales de
+un proceso, no rendimiento de producción (la paralelización es del Bloque 5).
 
 ## Benchmark de reutilización del solver
 

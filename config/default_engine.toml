@@ -55,6 +55,20 @@ restricted_existing_position_policy = "HOLD_OR_REDUCE"
 # max_weight = 0.6
 group_limits = []
 
+# Restriccion ADV/NAV (A-11): LiquidityCapacity_i = max_adv_participation * ADV_i * liquidation_days / NAV.
+# Limite de tamano de posicion; no garantiza que una venta pueda ejecutarse. Sin valores por defecto:
+# con enabled = true son obligatorios max_adv_participation (0 < p <= 1) y liquidation_days (>= 1),
+# y ADV y NAV deben estar en la misma divisa (o declarar fx_rates explicitos).
+[constraints.liquidity]
+enabled = false
+# max_adv_participation = ...
+# liquidation_days = ...
+fx_rates = []
+# [[constraints.liquidity.fx_rates]]
+# from_currency = "USD"   # divisa de ADV
+# to_currency = "EUR"     # divisa de NAV
+# rate = ...
+
 [transaction_costs]
 input_unit = "BPS"
 source_precedence = ["BUY_SELL", "ESTIMATED", "BID_ASK_SPREAD"]
@@ -109,3 +123,57 @@ max_return_tie_rel_tolerance = 1e-7
 repetitions = 5
 warmup_runs = 1
 percentiles = [50.0, 95.0, 99.0]
+
+[candidates]
+# CandidateEngine (Bloque 3, MASTER_SPEC §26-31). Valores de EJEMPLO: revisar cada uno en producción.
+# Búsqueda en haz: composiciones que sobreviven por nivel y niveles máximos.
+beam_width = 5
+max_levels = 4
+# Órdenes de sustitución: 1 = 1-swap, 2 = 2-swap, 3 = 3-swap (opcional).
+swap_orders = [1, 2]
+# Listas cortas por nodo (decisión A-18) y vecinos máximos por orden y nodo.
+shortlist_in = 8
+shortlist_out = 6
+max_neighbors_per_order = 60
+# Presupuestos y criterios de parada. max_evaluations es POR PERFIL lambda Y POR FASE (haz y pulido
+# con busqueda local): tope total = len(utility_risk_aversions) x 2 x max_evaluations (aqui 3x2x200).
+max_evaluations = 200
+max_candidates = 12
+stagnation_levels = 2
+improvement_tolerance = 1e-9
+# Distancia mínima entre supervivientes del haz (1 = solo elimina duplicados).
+diversity_min_distance = 1
+# Finalistas pulidos con búsqueda local tras el haz.
+local_search_starts = 2
+# Perfiles de aversión al riesgo lambda de la utilidad mu'w - lambda w'Sigma w - TC(w).
+utility_risk_aversions = [1.0, 4.0, 16.0]
+# PROJECTED_WEIGHTS (rápido, cota inferior) o QP_UTILITY (QP exacto por composición).
+evaluation_mode = "PROJECTED_WEIGHTS"
+refinement_iterations = 15
+normalization = "RANK"
+# Señal ausente: EXCLUDE | NEUTRAL | ERROR. LiquidityFlag desconocido: EXCLUDE | ALLOW | ERROR.
+missing_signal_policy = "NEUTRAL"
+unknown_liquidity_policy = "EXCLUDE"
+# MaximumNewAssets / MaximumSwaps respecto a la cartera actual: opcionales (sin límite si se omiten).
+# max_new_assets = 3
+# max_swaps = 3
+# Sin cartera actual: generar composiciones desde el screening (decisión A-19).
+cold_start = true
+max_recorded_rejections = 50
+
+[candidates.screening_weights]
+expected_alpha = 1.0
+marginal_risk_contribution = 1.0
+diversification_contribution = 1.0
+covariance_with_portfolio = 0.5
+expected_utility_gain = 2.0
+risk_adjusted_return = 1.0
+liquidity = 0.25
+transaction_cost = 0.5
+sector_fit = 0.25
+
+[candidates.exploration]
+# Reparto relativo de la lista corta: alta convicción / diversificación / exploración.
+exploit_share = 7.0
+diversify_share = 2.0
+explore_share = 1.0

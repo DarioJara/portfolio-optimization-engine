@@ -12,8 +12,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from portfolio_engine.config.constraint_config import ConstraintConfig, GroupLimit
-from portfolio_engine.models.enums import BoundSource, RestrictedExistingPositionPolicy
+from portfolio_engine.config.constraint_config import ConstraintConfig, GroupLimit, LiquidityConfig
+from portfolio_engine.models.enums import (
+    BoundSource,
+    RestrictedExistingPositionPolicy,
+    UnknownFlagPolicy,
+)
 from portfolio_engine.models.portfolio import (
     PortfolioSpec,
     WeightBounds,
@@ -36,6 +40,9 @@ class ConstraintSet:
         max_turnover_source: origen del límite de turnover.
         restricted_policy: política efectiva para activos restringidos ya en cartera (E-09).
         min_holding_weight: peso mínimo estricto de todo activo de la composición (A-08).
+        liquidity: restricción ADV/NAV de A-11 (``enabled = False`` = no se aplica).
+        unknown_liquidity_policy: tratamiento de un ``LiquidityFlag`` desconocido al decidir si un
+            activo puede comprarse (E-10).
         constraint_hash: ``ConstraintHash`` determinista del conjunto.
     """
 
@@ -48,6 +55,8 @@ class ConstraintSet:
     max_turnover_source: BoundSource
     restricted_policy: RestrictedExistingPositionPolicy | None
     min_holding_weight: float | None
+    unknown_liquidity_policy: UnknownFlagPolicy
+    liquidity: LiquidityConfig
     constraint_hash: str = field(init=False)
 
     def __post_init__(self) -> None:
@@ -75,6 +84,13 @@ class ConstraintSet:
             ),
             "policy": self.restricted_policy,
             "min_holding_weight": self.min_holding_weight,
+            "unknown_liquidity_policy": self.unknown_liquidity_policy,
+            "liquidity": [
+                self.liquidity.enabled,
+                self.liquidity.max_adv_participation,
+                self.liquidity.liquidation_days,
+                [[r.from_currency, r.to_currency, r.rate] for r in self.liquidity.fx_rates],
+            ],
         }
         object.__setattr__(self, "constraint_hash", sha256_hex(canonical_json(payload)))
 
@@ -84,11 +100,15 @@ def build_constraint_set(
     spec: PortfolioSpec | None,
     portfolio_id: str,
     min_holding_weight: float | None,
+    unknown_liquidity_policy: UnknownFlagPolicy,
 ) -> ConstraintSet:
     """Resuelve las restricciones efectivas de ``portfolio_id`` (CON-020).
 
     ``PortfolioSpec.max_turnover`` y ``restricted_existing_position_policy`` prevalecen sobre los
     valores globales; los overrides de límites de peso se aplican por activo al compilar.
+    ``unknown_liquidity_policy`` (``candidates.unknown_liquidity_policy``) decide, junto con
+    ``EligibleFlag``, ``LiquidityFlag`` e ``InvestmentUniverse``, qué activos no pueden comprarse
+    (E-10).
     """
     if spec is not None and spec.max_turnover is not None:
         max_turnover, source = spec.max_turnover, BoundSource.PORTFOLIO_OVERRIDE
@@ -107,4 +127,6 @@ def build_constraint_set(
         max_turnover_source=source,
         restricted_policy=policy,
         min_holding_weight=min_holding_weight,
+        unknown_liquidity_policy=unknown_liquidity_policy,
+        liquidity=constraints.liquidity,
     )

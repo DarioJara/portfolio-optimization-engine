@@ -1,7 +1,9 @@
 """GOV-006, GOV-008, CFG-015, SOL-010 y controles de alcance (análisis estático del paquete).
 
 El Bloque 2 amplía las reglas del Bloque 1: nuevos paquetes en el grafo de capas, OSQP confinado
-en su backend y ausencia de módulos de los Bloques 3-6.
+en su backend y ausencia de módulos de los Bloques 3-6. El Bloque 3 añade los paquetes
+``candidates`` y ``parallel`` (solo determinismo) al grafo y retira de la lista de módulos
+futuros los que implementa; los de los Bloques 4-6 siguen prohibidos.
 """
 
 from __future__ import annotations
@@ -31,11 +33,24 @@ ALLOWED_DEPENDENCIES: dict[str, set[str]] = {
     "returns": {"exceptions", "utils", "models", "config"},
     "risk": {"exceptions", "utils", "models", "config", "returns"},
     # Bloque 2 (ARCHITECTURE §4.1). ``validation`` NO depende de ``optimizers`` (independencia §44).
+    "parallel": {"utils"},
     "costs": {"exceptions", "utils", "models", "config"},
     "metrics": {"exceptions", "utils", "models", "config", "costs"},
     "constraints": {"exceptions", "utils", "models", "config", "costs"},
     "optimizers": {"exceptions", "utils", "models", "config", "constraints", "costs"},
     "validation": {"exceptions", "utils", "models", "config", "costs", "constraints", "metrics"},
+    # Bloque 3: ``candidates`` usa constraints/validation/parallel (sin optimizers ni frontiers);
+    # ``frontiers`` (frontera global) consume ``candidates`` y ``parallel`` (orden estable).
+    "candidates": {
+        "exceptions",
+        "utils",
+        "models",
+        "config",
+        "costs",
+        "constraints",
+        "validation",
+        "parallel",
+    },
     "frontiers": {
         "exceptions",
         "utils",
@@ -46,23 +61,36 @@ ALLOWED_DEPENDENCIES: dict[str, set[str]] = {
         "metrics",
         "optimizers",
         "validation",
+        "candidates",
+        "parallel",
     },
     "outputs": {"exceptions", "utils", "models", "config", "costs", "metrics"},
-    "benchmark": {"exceptions", "utils", "models", "config", "frontiers", "optimizers"},
+    "benchmark": {
+        "exceptions",
+        "utils",
+        "models",
+        "config",
+        "frontiers",
+        "optimizers",
+        "candidates",
+    },
 }
 
-#: Paquetes/módulos de bloques posteriores (3-6) que no deben existir en el Bloque 2.
+#: Paquetes/módulos de los Bloques 4-6 que no deben existir en el Bloque 3 (los del Bloque 3 —
+#: ``candidates``, ``frontiers/global_frontier.py``, ``constraints/integer.py`` y
+#: ``parallel/determinism.py``— se han implementado y ya no figuran aquí).
 LATER_BLOCK_PACKAGES = (
-    "candidates",
     "scenarios",
-    "parallel",
+    "parallel/batching.py",
+    "parallel/shared_data.py",
+    "parallel/worker.py",
+    "parallel/executor.py",
+    "parallel/threading_control.py",
     "staging",
     "persistence",
     "cache",
     "engine.py",
-    "frontiers/global_frontier.py",
     "constraints/conic.py",
-    "constraints/integer.py",
     "metrics/cvar_metric.py",
     "optimizers/clarabel_backend.py",
     "optimizers/mixed_integer_backend.py",
@@ -172,7 +200,7 @@ def test_import_graph_is_acyclic() -> None:
 
 
 def test_no_later_block_packages_exist() -> None:
-    """Ningún módulo de los Bloques 3-6 existe (no se ha implementado más allá del Bloque 2)."""
+    """Ningún módulo de los Bloques 4-6 existe (no se ha implementado más allá del Bloque 3)."""
     present = [name for name in LATER_BLOCK_PACKAGES if (PACKAGE_ROOT / name).exists()]
     assert not present, f"Módulos de bloques posteriores presentes: {present}"
 
@@ -358,3 +386,41 @@ def test_max_return_tolerance_has_a_single_source() -> None:
         "config/solver_config.py",
         "frontiers/session.py",
     ], users
+
+
+def _calls(path: Path) -> Iterator[ast.Call]:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    yield from (node for node in ast.walk(tree) if isinstance(node, ast.Call))
+
+
+def test_candidate_pipeline_never_uses_python_hash_or_global_random_state() -> None:
+    """REP-003, CAN-015: sin ``hash()`` nativo ni estado aleatorio global en candidatos ni
+    fronteras; la única aleatoriedad es ``np.random.default_rng`` con semilla derivada."""
+    offenders = []
+    for path in _python_files():
+        if _relative(path).split("/")[0] not in ("candidates", "frontiers", "parallel"):
+            continue
+        source = path.read_text(encoding="utf-8")
+        if "import random" in source or "from random" in source:
+            offenders.append(f"{_relative(path)}: módulo random")
+        for call in _calls(path):
+            target = ast.unparse(call.func)
+            if target == "hash":
+                offenders.append(f"{_relative(path)}:{call.lineno} hash()")
+            if target.startswith("np.random.") and target != "np.random.default_rng":
+                offenders.append(f"{_relative(path)}:{call.lineno} {target}")
+    assert not offenders, offenders
+
+
+def test_candidate_engine_is_independent_of_solvers_and_frontiers() -> None:
+    """La generación de composiciones solo usa un evaluador inyectado: ni ``optimizers`` ni
+    ``frontiers`` ni SciPy/OSQP se importan desde ``candidates``."""
+    forbidden = ("portfolio_engine.optimizers", "portfolio_engine.frontiers", "osqp", "scipy")
+    offenders = [
+        f"{_relative(path)}: {imported}"
+        for path in _python_files()
+        if _relative(path).startswith("candidates/")
+        for imported in _imports(path)
+        if imported.startswith(forbidden)
+    ]
+    assert not offenders, offenders

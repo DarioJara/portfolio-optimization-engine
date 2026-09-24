@@ -15,7 +15,7 @@ import pytest
 
 from portfolio_engine.constraints import build_constraint_set
 from portfolio_engine.data.validation import effective_restricted_policy
-from portfolio_engine.models.enums import RestrictedExistingPositionPolicy
+from portfolio_engine.models.enums import RestrictedExistingPositionPolicy, UnknownFlagPolicy
 from portfolio_engine.models.portfolio import resolve_restricted_policy
 from portfolio_engine.validation import SolutionValidator, ValidationContext, ValidationTolerances
 from tests.fixtures.problems import (
@@ -110,5 +110,7 @@ def test_policy_precedence_has_a_single_implementation() -> None:
             is expected
         )
         assert effective_restricted_policy(portfolio_spec, constraints) is expected
-        built = build_constraint_set(constraints, portfolio_spec, "P1", None)
+        built = build_constraint_set(
+            constraints, portfolio_spec, "P1", None, UnknownFlagPolicy.EXCLUDE
+        )
         assert built.restricted_policy is expected

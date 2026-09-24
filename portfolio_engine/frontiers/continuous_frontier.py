@@ -215,6 +215,7 @@ class ContinuousFrontierEngine:
             problem.spec,
             problem.portfolio_id,
             self._config.frontier.min_holding_weight,
+            self._config.candidates.unknown_liquidity_policy,
         )
         compiled = self._compiler.compile(
             constraint_set, problem.universe, asset_ids, problem.state

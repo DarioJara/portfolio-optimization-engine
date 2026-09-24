@@ -12,7 +12,7 @@ import pandas as pd
 from portfolio_engine.config.constraint_config import ConstraintConfig
 from portfolio_engine.data.validation.report import DataQualityReport, IssueCode, IssueCollector
 from portfolio_engine.models.asset import AssetMetadata, Universe
-from portfolio_engine.models.enums import GroupDimension
+from portfolio_engine.models.enums import AdvUnit, GroupDimension
 
 REQUIRED_COLUMNS = ("AssetID", "Ticker", "EligibleFlag")
 RECOMMENDED_TEXT = ("Sector", "Country", "Currency", "AssetClass")
@@ -119,6 +119,14 @@ class UniverseValidator:
             for column in (*_WEIGHT_COLUMNS, *_NON_NEGATIVE_NUMERIC)
         }
         self._check_limits(asset_id, numbers["MinWeight"], numbers["MaxWeight"], collector)
+        unit = _text(row.get("ADVUnit"))
+        if unit is not None and unit not in AdvUnit.__members__:
+            collector.error(
+                IssueCode.INVALID_VALUE,
+                f"ADVUnit desconocida {unit!r}: use {sorted(AdvUnit.__members__)}.",
+                asset_id=asset_id,
+            )
+            return None
         return AssetMetadata(
             asset_id=asset_id,
             ticker=ticker,
@@ -138,6 +146,9 @@ class UniverseValidator:
             adv=numbers["ADV"],
             market_cap=numbers["MarketCap"],
             restricted=_bool(row.get("RestrictedAssetFlag")),
+            adv_currency=_text(row.get("ADVCurrency")),
+            adv_unit=None if unit is None else AdvUnit[unit],
+            adv_source=_text(row.get("ADVSource")),
         )
 
     @staticmethod

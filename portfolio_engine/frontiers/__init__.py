@@ -1,6 +1,7 @@
-"""Fronteras eficientes de composición fija (MASTER_SPEC §32, §34-43)."""
+"""Fronteras eficientes: continua (composición fija) y global con sustitución (§32-43)."""
 
 from portfolio_engine.frontiers.adaptive import AdaptiveFrontier, ParametrizedPoint
+from portfolio_engine.frontiers.candidate_evaluator import QPCompositionEvaluator
 from portfolio_engine.frontiers.continuous_frontier import (
     ContinuousFrontierEngine,
     FrontierProblem,
@@ -10,6 +11,11 @@ from portfolio_engine.frontiers.dedup import deduplicate, is_equivalent
 from portfolio_engine.frontiers.explicit_portfolios import (
     solve_maximum_return,
     solve_minimum_variance,
+)
+from portfolio_engine.frontiers.global_frontier import (
+    GlobalCandidateFrontierEngine,
+    global_pareto,
+    relabel_scope,
 )
 from portfolio_engine.frontiers.pareto import apply_efficiency, pareto_mask
 from portfolio_engine.frontiers.risk_aversion_grid import RiskAversionGrid
@@ -33,7 +39,9 @@ __all__ = (
     "FrontierContext",
     "FrontierProblem",
     "FrontierSession",
+    "GlobalCandidateFrontierEngine",
     "ParametrizedPoint",
+    "QPCompositionEvaluator",
     "RiskAversionGrid",
     "TargetReturnGrid",
     "ThetaGrid",
@@ -41,12 +49,14 @@ __all__ = (
     "calibrate_theta_from_points",
     "calibrate_theta_grid",
     "deduplicate",
+    "global_pareto",
     "grid_values",
     "interior_targets",
     "is_equivalent",
     "midpoint",
     "pareto_mask",
     "post_cost_evaluation",
+    "relabel_scope",
     "solve_maximum_return",
     "solve_minimum_variance",
     "target_range",

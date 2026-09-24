@@ -61,6 +61,7 @@ def test_snapshot_is_complete_canonical_json() -> None:
         "frontier",
         "solver",
         "benchmark",
+        "candidates",
         "optimization_horizon_years",
         "random_seed",
     }

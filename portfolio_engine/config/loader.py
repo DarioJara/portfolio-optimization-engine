@@ -6,7 +6,8 @@ Reglas:
 * toda clave obligatoria ausente es un error: no hay valores por defecto implícitos;
 * solo los campos declarados opcionales (``X | None``) pueden omitirse, y valen ``None``;
 * los enums se indican por nombre y los tipos se comprueban (``bool`` no es un ``int``);
-* las listas de tablas TOML (``[[seccion.clave]]``) se convierten en tuplas de dataclasses.
+* las listas de tablas TOML (``[[seccion.clave]]``) se convierten en tuplas de dataclasses y
+  las subtablas (``[seccion.clave]``) en dataclasses anidados.
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from portfolio_engine.config.benchmark_config import BenchmarkConfig
+from portfolio_engine.config.candidate_config import CandidateConfig
 from portfolio_engine.config.constraint_config import ConstraintConfig
 from portfolio_engine.config.data_config import DataConfig
 from portfolio_engine.config.engine_config import EngineConfig
@@ -42,6 +44,7 @@ _SECTIONS: Mapping[str, type[Any]] = types.MappingProxyType(
         "frontier": FrontierConfig,
         "solver": SolverConfig,
         "benchmark": BenchmarkConfig,
+        "candidates": CandidateConfig,
     }
 )
 
@@ -132,6 +135,8 @@ def _convert(value: object, hint: Any, path: str) -> Any:
         return tuple(_convert(item, element, f"{path}[]") for item in value)
     if isinstance(hint, type) and issubclass(hint, Enum):
         return _convert_enum(value, hint, path)
+    if dataclasses.is_dataclass(hint) and isinstance(hint, type):
+        return _build(hint, value, path)
     return _convert_scalar(value, hint, path)
 
 

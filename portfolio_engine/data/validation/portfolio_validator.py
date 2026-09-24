@@ -298,6 +298,7 @@ class _SpecParser:
                 ),
                 nav=_optional_float(row.get("NAV")),
                 weight_bound_overrides=overrides.get(portfolio_id, {}),
+                nav_currency=_optional_text(row.get("NAVCurrency")),
             )
         except DataValidationError as error:
             self._invalid(portfolio_id, str(error))
@@ -345,6 +346,13 @@ def _optional_float(value: object) -> float | None:
     if value is None or (isinstance(value, float) and math.isnan(value)):
         return None
     return float(value)  # type: ignore[arg-type]
+
+
+def _optional_text(value: object) -> str | None:
+    if value is None or (isinstance(value, float) and math.isnan(value)):
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 def _optional_int(value: object) -> int | None:
