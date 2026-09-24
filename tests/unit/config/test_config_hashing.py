@@ -58,6 +58,9 @@ def test_snapshot_is_complete_canonical_json() -> None:
         "risk",
         "constraints",
         "transaction_costs",
+        "frontier",
+        "solver",
+        "benchmark",
         "optimization_horizon_years",
         "random_seed",
     }

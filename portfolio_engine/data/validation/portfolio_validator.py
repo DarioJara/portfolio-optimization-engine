@@ -21,7 +21,12 @@ from portfolio_engine.data.validation.report import DataQualityReport, IssueCode
 from portfolio_engine.exceptions import AssetResolutionError, DataValidationError
 from portfolio_engine.models.asset import Universe
 from portfolio_engine.models.enums import ResidualWeightPolicy, RestrictedExistingPositionPolicy
-from portfolio_engine.models.portfolio import CurrentPortfolioState, PortfolioSpec, WeightBounds
+from portfolio_engine.models.portfolio import (
+    CurrentPortfolioState,
+    PortfolioSpec,
+    WeightBounds,
+    resolve_restricted_policy,
+)
 from portfolio_engine.models.universe_index import AssetIndex
 
 PORTFOLIO_ID = "PortfolioID"
@@ -200,9 +205,7 @@ def effective_restricted_policy(
     spec: PortfolioSpec | None, constraints: ConstraintConfig
 ) -> RestrictedExistingPositionPolicy | None:
     """Política efectiva: override de la cartera si existe; si no, la global (o ``None``)."""
-    if spec is not None and spec.restricted_existing_position_policy is not None:
-        return spec.restricted_existing_position_policy
-    return constraints.restricted_existing_position_policy
+    return resolve_restricted_policy(spec, constraints.restricted_existing_position_policy)
 
 
 def _identifier_column(frame: pd.DataFrame, collector: IssueCollector) -> str:

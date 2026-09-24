@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Any
 
 import pandas as pd
@@ -11,9 +12,19 @@ import pandas as pd
 from portfolio_engine.config.constraint_config import ConstraintConfig
 from portfolio_engine.data.validation.report import DataQualityReport, IssueCode, IssueCollector
 from portfolio_engine.models.asset import AssetMetadata, Universe
+from portfolio_engine.models.enums import GroupDimension
 
 REQUIRED_COLUMNS = ("AssetID", "Ticker", "EligibleFlag")
 RECOMMENDED_TEXT = ("Sector", "Country", "Currency", "AssetClass")
+#: Columna del universo que exige cada dimensión de límite de grupo (DAT-028, Bloque 2).
+GROUP_COLUMN = MappingProxyType(
+    {
+        GroupDimension.SECTOR: "Sector",
+        GroupDimension.COUNTRY: "Country",
+        GroupDimension.ASSET_CLASS: "AssetClass",
+        GroupDimension.CURRENCY: "Currency",
+    }
+)
 _NON_NEGATIVE_NUMERIC = (
     "EstimatedTransactionCost",
     "BuyCost",
@@ -82,8 +93,17 @@ class UniverseValidator:
                 asset_id=asset_id,
             )
             return None
+        required = {GROUP_COLUMN[limit.dimension] for limit in self._constraints.group_limits}
         for column in RECOMMENDED_TEXT:
-            if _text(row.get(column)) is None:
+            if _text(row.get(column)) is not None:
+                continue
+            if column in required:
+                collector.error(
+                    IssueCode.MISSING_METADATA,
+                    f"{column} es obligatorio: hay límites de grupo configurados sobre él.",
+                    asset_id=asset_id,
+                )
+            else:
                 collector.warning(
                     IssueCode.MISSING_RECOMMENDED_METADATA, f"{column} ausente.", asset_id=asset_id
                 )

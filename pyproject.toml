@@ -8,13 +8,14 @@ version = "0.1.0"
 description = "Motor profesional de optimización cuantitativa de carteras multi-escenario (MASTER_SPEC.md)."
 readme = "README.md"
 requires-python = ">=3.11"
-# Dependencias de runtime del Bloque 1 (núcleo numérico y lectura de datos).
-# Los solvers (osqp, clarabel, pyscipopt) se incorporan en el bloque que los usa.
+# Dependencias de runtime: núcleo numérico y lectura de datos (Bloque 1) y OSQP (Bloque 2).
+# Los demás solvers (clarabel, pyscipopt) se incorporan en el bloque que los usa.
 dependencies = [
     "numpy>=1.26,<3",
     "scipy>=1.11,<2",
     "pandas>=2.1,<4",
     "pyarrow>=14",
+    "osqp>=1.1,<2",
 ]
 
 [project.optional-dependencies]
@@ -38,6 +39,8 @@ markers = [
     "unit: tests unitarios",
     "property: tests basados en propiedades (Hypothesis)",
     "architecture: reglas de arquitectura y gobierno",
+    "integration: tests de integración de pipelines completos",
+    "numerical_regression: regresión numérica frente a valores dorados",
 ]
 
 [tool.mypy]
@@ -46,12 +49,17 @@ warn_unreachable = true
 files = ["portfolio_engine"]
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "pyarrow.*", "scipy.*", "sklearn.*"]
+module = ["pandas.*", "pyarrow.*", "scipy.*", "sklearn.*", "osqp.*"]
 ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.format]
+# Los informes de auditoría son evidencia histórica: el formateador de Markdown reescribiría sus
+# bloques de código. Solo se excluyen del formateador; ``ruff check`` sigue activo sobre todo.
+exclude = ["AUDIT_BLOCK_*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF", "C90"]

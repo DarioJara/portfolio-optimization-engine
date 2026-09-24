@@ -102,3 +102,116 @@ class BoundSource(StrEnum):
     GLOBAL_CONFIG = "GLOBAL_CONFIG"
     UNIVERSE = "UNIVERSE"
     UNSET = "UNSET"
+
+
+class SolverStatus(StrEnum):
+    """Estado normalizado de una resolución (MASTER_SPEC §45).
+
+    Un fallo numérico nunca se presenta como inviabilidad matemática.
+    """
+
+    OPTIMAL = "OPTIMAL"
+    OPTIMAL_INACCURATE = "OPTIMAL_INACCURATE"
+    INFEASIBLE = "INFEASIBLE"
+    UNBOUNDED = "UNBOUNDED"
+    MAX_ITERATIONS = "MAX_ITERATIONS"
+    TIME_LIMIT = "TIME_LIMIT"
+    NUMERICAL_ERROR = "NUMERICAL_ERROR"
+    INSUFFICIENT_PROGRESS = "INSUFFICIENT_PROGRESS"
+    UNKNOWN = "UNKNOWN"
+
+
+class StatusSource(StrEnum):
+    """Quién determinó el estado de una solución (decisión A-15)."""
+
+    SOLVER = "SOLVER"
+    PRE_SOLVER_CHECK = "PRE_SOLVER_CHECK"
+    VALIDATOR = "VALIDATOR"
+    CROSS_CHECK = "CROSS_CHECK"
+
+
+class ProblemClass(StrEnum):
+    """Clase matemática de un problema de optimización (ARCHITECTURE §9.2)."""
+
+    QP = "QP"
+    LP = "LP"
+    SOCP = "SOCP"
+    SDP = "SDP"
+    MIQP = "MIQP"
+    MIQCP = "MIQCP"
+    MISOCP = "MISOCP"
+    NLP_CONVEX = "NLP_CONVEX"
+    NLP_NONCONVEX = "NLP_NONCONVEX"
+    HEURISTIC = "HEURISTIC"
+
+
+class OptimizationFamily(StrEnum):
+    """Familias de optimización separadas (MASTER_SPEC §14)."""
+
+    FAST_PRODUCTION = "FAST_PRODUCTION"
+    EXACT_MIP = "EXACT_MIP"
+    NONCONVEX_RESEARCH = "NONCONVEX_RESEARCH"
+
+
+class FrontierScope(StrEnum):
+    """Alcance de una frontera (A-05). ``GLOBAL_CANDIDATE_FRONTIER`` llega en el Bloque 3."""
+
+    CONTINUOUS_FRONTIER = "CONTINUOUS_FRONTIER"
+
+
+class CostTreatment(StrEnum):
+    """Tratamiento de costes de una frontera (MASTER_SPEC §37-39, decisión A-05)."""
+
+    GROSS = "GROSS"
+    NET = "NET"
+    POST_COST_GROSS = "POST_COST_GROSS"
+
+
+class FrontierMethod(StrEnum):
+    """Método de generación de puntos de frontera (MASTER_SPEC §35-36)."""
+
+    RISK_AVERSION_GRID = "RISK_AVERSION_GRID"
+    TARGET_RETURN_GRID = "TARGET_RETURN_GRID"
+
+
+class StrategyID(StrEnum):
+    """Estrategias nombradas implementadas (decisión A-20; el resto llega con su bloque)."""
+
+    CURRENT = "CURRENT"
+    MIN_VARIANCE = "MIN_VARIANCE"
+    MAX_RETURN = "MAX_RETURN"
+    FRONTIER_POINT = "FRONTIER_POINT"
+
+
+class GridScale(StrEnum):
+    """Espaciado de una malla de parámetros."""
+
+    LINEAR = "LINEAR"
+    LOG = "LOG"
+
+
+class ThetaGridMode(StrEnum):
+    """Origen del rango de theta (decisión A-16)."""
+
+    EXPLICIT = "EXPLICIT"
+    AUTO = "AUTO"
+
+
+class GroupDimension(StrEnum):
+    """Dimensiones de restricciones de grupo (MASTER_SPEC §12)."""
+
+    SECTOR = "SECTOR"
+    COUNTRY = "COUNTRY"
+    ASSET_CLASS = "ASSET_CLASS"
+    CURRENCY = "CURRENCY"
+
+
+class CrossCheckPolicy(StrEnum):
+    """Política ante estados ambiguos del solver (decisiones A-32, A-33).
+
+    ``COLD_RETRY`` reintenta desde cero con más iteraciones. La verificación cruzada con un
+    segundo solver (Clarabel) llega en el Bloque 4.
+    """
+
+    NONE = "NONE"
+    COLD_RETRY = "COLD_RETRY"

@@ -121,6 +121,19 @@ def resolve_effective_weight_bounds(
     return EffectiveWeightBounds(lower[0], upper[0], lower[1], upper[1])
 
 
+def resolve_restricted_policy(
+    spec: PortfolioSpec | None, global_policy: RestrictedExistingPositionPolicy | None
+) -> RestrictedExistingPositionPolicy | None:
+    """Política efectiva para activos restringidos ya en cartera (E-09).
+
+    Única fuente de la precedencia: override de la cartera si existe; si no, la global (o
+    ``None``). La comparten el validador de carteras (``data``) y ``ConstraintSet``.
+    """
+    if spec is not None and spec.restricted_existing_position_policy is not None:
+        return spec.restricted_existing_position_policy
+    return global_policy
+
+
 def _first_defined(
     *candidates: tuple[float | None, BoundSource],
 ) -> tuple[float | None, BoundSource]:

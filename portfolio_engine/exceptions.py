@@ -47,3 +47,23 @@ class CovarianceEstimationError(PortfolioEngineError):
 
 class NotPositiveSemidefiniteError(CovarianceEstimationError):
     """La matriz no es PSD y la configuración no autoriza su reparación."""
+
+
+class ConstraintCompilationError(PortfolioEngineError):
+    """Las restricciones no pueden compilarse para la composición dada (MASTER_SPEC §12)."""
+
+
+class SolverError(PortfolioEngineError):
+    """Error de uso o de ejecución de un backend de optimización (MASTER_SPEC §46)."""
+
+
+class RoutingError(SolverError):
+    """El problema no puede enviarse a ningún backend compatible (MASTER_SPEC §46)."""
+
+
+class FrontierError(PortfolioEngineError):
+    """Entradas o estado inválidos al construir una frontera eficiente (MASTER_SPEC §32-43)."""
+
+
+class MetricsError(PortfolioEngineError):
+    """Una métrica no puede calcularse de forma válida (p. ej. varianza negativa no numérica)."""
