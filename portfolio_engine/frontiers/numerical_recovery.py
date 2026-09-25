@@ -22,7 +22,9 @@ Reglas:
   numérico jamás se presenta como inviabilidad matemática); en otro caso se conserva el estado
   original.
 * El resultado conserva los diagnósticos de todos los intentos (:class:`RecoveryTrace`) y suma
-  iteraciones y tiempos.
+  iteraciones y tiempos. ``SolveResult.iterations`` es el total de todos los intentos, oráculo de
+  HiGHS incluido (mismo criterio que ``solve_time``); ``SolveResult.iterations_by_solver`` lo
+  desglosa por solver.
 """
 
 from __future__ import annotations
@@ -193,9 +195,7 @@ class NumericalRecovery:
             status_source=first.status_source if chosen is first else StatusSource.CROSS_CHECK,
             warm_start_used=first.warm_start_used,
             cold_retries=first.cold_retries,
-            iterations=sum(
-                item.iterations for item in attempts if item.strategy != STRATEGY_ORACLE
-            ),
+            iterations=sum(item.iterations for item in attempts),
             setup_time=first.setup_time + extra_setup,
             update_time=first.update_time,
             solve_time=first.solve_time + extra_solve,

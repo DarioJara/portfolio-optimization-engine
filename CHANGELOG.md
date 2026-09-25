@@ -1005,3 +1005,50 @@ conocida; la diferencia de varianza de 1.3e-7 (AF3-04) no corresponde a un punto
 - Solo cubre puntos con retorno objetivo (no la malla de `theta`, MinVariance ni la etapa 2 de MaximumReturn).
 - Pendientes: barridos con `n > 5`, límites de grupo/turnover, activos que salen de la composición, frontera
   adaptativa y benchmark del proyecto (no regenerado).
+
+
+## [Revisión posterior al merge del PR #3 de F-3 — P2-01 y P2-02] — 2026-09-25
+
+Rama `fix/f3-oracle-iteration-accounting` sobre `main` (`b59e446`, posterior al merge del PR #3). Hallazgos de la
+revisión de GitHub posterior al merge; informe en `F3_POST_MERGE_REVIEW.md`. **No pertenece al Bloque 4.** Sin
+commit, merge, push, tag ni PR. Los informes históricos de auditoría no se alteran.
+
+### Cambios
+
+- `optimizers/formulations/qp_builder.py`: `normalize_return_row` calcula la escala sobre toda la fila centrada
+  cuando el bloque de pesos centrado es despreciable (`<= √eps`; retornos idénticos con costes en `NET`), y
+  devuelve `None` solo si la fila es nula o ruido de redondeo. Con pesos informativos la escala es la de antes.
+- `frontiers/numerical_recovery.py`: `SolveResult.iterations` suma todos los intentos, oráculo de HiGHS incluido.
+- `models/solution.py`: `sum_iterations_by_solver`, `RecoveryTrace.iterations_by_solver`,
+  `SolveResult.iterations_by_solver` (desglose OSQP/HiGHS; suma = `iterations`).
+- `models/frontier.py`, `frontiers/session.py`: `FrontierDiagnostics.iterations_by_solver` (campo nuevo con valor
+  por defecto) y `FrontierSession.iterations_by_solver`.
+- Tests nuevos: `tests/unit/frontiers/test_f3_post_merge_review.py`.
+
+### Efecto
+
+`total_iterations` de las fronteras con recuperación por `INFEASIBLE`/`NUMERICAL_ERROR`/`UNKNOWN` aumenta en las
+iteraciones del oráculo (+24…+54 **por frontera** en las instancias contractuales y del barrido que la activan; +2…+8 por punto recuperado); pesos, estados y métricas no cambian.
+`iterations` mezcla algoritmos distintos (ADMM, símplex/punto interior): métrica agregada de actividad, no de
+esfuerzo homogéneo.
+
+
+## [Cierre de hallazgos no bloqueantes de la auditoría posterior al merge de F-3 — RF-01…RF-05] — 2026-09-25
+
+Rama `fix/f3-oracle-iteration-accounting`. Auditoría: `AUDIT_F3_POST_MERGE.md` (`PASS_WITH_CHANGES`, sin
+hallazgos bloqueantes). **Solo documentación y un test focalizado; sin cambio de código productivo, tolerancias,
+algoritmo de recuperación, criterios de aceptación, `RequirementID` ni estados.** No pertenece al Bloque 4. Sin
+commit, merge, push, tag ni PR.
+
+- RF-02 (documentación): corregida la unidad del efecto en las iteraciones del oráculo: +24…+54 **por frontera**
+  (+2…+8 por punto recuperado) en `F3_POST_MERGE_REVIEW.md` y en la entrada anterior de este fichero.
+- RF-01 (test): `tests/unit/frontiers/test_f3_near_identical_net_budget.py`, NET con diferencia de retorno
+  1e-9, 2e-9 y 5e-9: recuperación `OPTIMAL` válida frente al objetivo original (`SolutionValidator`), varianza
+  igual a la referencia analítica, traza original → oráculo → reintentos, y respeto del presupuesto de
+  iteraciones configurado; frontera completa sin puntos inválidos. Sin umbral de tiempo.
+- Limitaciones residuales documentadas (no son defectos financieros resueltos):
+  - RF-01: en esa banda la recuperación es correcta pero puede consumir una proporción elevada del presupuesto de
+    iteraciones de reintento (medido hasta 192 475 de 200 000).
+  - RF-03: `iterations_by_solver` está en los diagnósticos agregados, no en todas las salidas por punto.
+  - RF-04: sin test específico de aditividad de tiempos.
+  - RF-05: la ruta degenerada de P2-01 se verifica con fallo inicial inducido; sin activación espontánea en el barrido.

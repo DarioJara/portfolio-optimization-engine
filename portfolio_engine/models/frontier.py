@@ -82,7 +82,10 @@ class FrontierDiagnostics:
     ``min_variance_time`` y ``max_return_time`` (extremos de la frontera, MaximumReturn incluye el
     LP y la etapa 2) y ``grid_time`` (malla y refinado adaptativo) desglosan ``frontier_time``;
     ``total_iterations`` suma las iteraciones de **todas** las resoluciones (extremos incluidos) y
-    ``endpoint_iterations`` las de los extremos, de modo que la malla es la diferencia.
+    ``endpoint_iterations`` las de los extremos, de modo que la malla es la diferencia. Incluyen
+    las iteraciones del oráculo de HiGHS de la recuperación numérica; al mezclar solvers son una
+    métrica agregada de actividad, no de esfuerzo homogéneo: ``iterations_by_solver`` las desglosa
+    por solver (la suma de sus valores es ``total_iterations``).
     """
 
     solver_name: str
@@ -101,6 +104,7 @@ class FrontierDiagnostics:
     grid_time: float = 0.0
     total_iterations: int = 0
     endpoint_iterations: int = 0
+    iterations_by_solver: tuple[tuple[str, int], ...] = ()
 
 
 @dataclass(frozen=True, eq=False, slots=True)

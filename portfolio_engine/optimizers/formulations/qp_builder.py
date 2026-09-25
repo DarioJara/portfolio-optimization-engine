@@ -34,6 +34,7 @@ original. Las métricas publicadas se recalculan siempre desde ``w`` (independen
 from __future__ import annotations
 
 import dataclasses
+import math
 from dataclasses import dataclass
 
 import numpy as np
@@ -147,8 +148,18 @@ class BuiltProblem:
         return lower
 
     def normalize_return_row(self, weight_scale: float) -> NormalizedReturnProblem | None:
-        """Problema equivalente con la fila de retorno centrada y de máximo coeficiente de peso
-        ``weight_scale`` (``None`` si los retornos son idénticos: no queda información que escalar).
+        """Problema equivalente con la fila de retorno centrada y de máximo coeficiente
+        ``weight_scale`` (``None`` si tras centrar no queda información que escalar).
+
+        Escala de referencia: el mayor coeficiente de **peso** de la fila centrada, que es la que
+        calibró y validó F-3 (con costes de compra/venta órdenes de magnitud menores que la
+        pendiente de ``μ``, ese es el bloque informativo). Si el bloque de pesos es despreciable
+        frente a toda la fila (``<= √eps`` del mayor coeficiente: retornos idénticos o casi
+        idénticos, donde el centrado lo anula) la referencia pasa a ser el mayor coeficiente de
+        **toda** la fila: en NET siguen vivos ``−c_b/H`` y ``−c_s/H``, la restricción sigue siendo
+        informativa y escalar los pesos residuales la inflaría hasta un mal condicionamiento. Una
+        fila cuyos coeficientes centrados son solo ruido de redondeo respecto a la original
+        (``<= dim·eps·max|r|``) es nula.
 
         Solo cambia la fila de retorno (y su cota, vía :meth:`NormalizedReturnProblem.lower_for`);
         ``P``, ``q``, las demás filas y las variables son las del problema original.
@@ -164,9 +175,13 @@ class BuiltProblem:
         ).ravel()
         centering = float(return_row @ budget_row) / float(budget_row @ budget_row)
         centered = return_row - centering * budget_row
-        largest = float(np.max(np.abs(centered[: self.n_weights])))
-        if largest <= 0.0:
+        eps = float(np.finfo(np.float64).eps)
+        overall = float(np.max(np.abs(centered)))
+        if overall <= return_row.size * eps * float(np.max(np.abs(return_row))):
             return None
+        largest = float(np.max(np.abs(centered[: self.n_weights])))
+        if largest <= math.sqrt(eps) * overall:
+            largest = overall
         scale = weight_scale / largest
         matrix[self.return_row, :] = centered * scale
         normalized = dataclasses.replace(problem, A=sparse.csc_matrix(matrix))

@@ -38,7 +38,7 @@ from portfolio_engine.models.enums import (
     StrategyID,
 )
 from portfolio_engine.models.frontier import FrontierDiagnostics, FrontierPoint, PointMetrics
-from portfolio_engine.models.solution import SolveResult, ValidationReport
+from portfolio_engine.models.solution import SolveResult, ValidationReport, sum_iterations_by_solver
 from portfolio_engine.optimizers.base import OptimizationBackend
 from portfolio_engine.optimizers.formulations.qp_builder import (
     BuiltProblem,
@@ -131,8 +131,19 @@ class FrontierSession:
 
     @property
     def total_iterations(self) -> int:
-        """Iteraciones del solver de todas las resoluciones (LP y etapa 2 incluidos)."""
+        """Iteraciones de todas las resoluciones (LP, etapa 2 y oráculo de recuperación incluidos).
+
+        Métrica agregada de actividad de varios solvers; el desglose está en
+        :attr:`iterations_by_solver`.
+        """
         return sum(result.iterations for result in self._results)
+
+    @property
+    def iterations_by_solver(self) -> tuple[tuple[str, int], ...]:
+        """Iteraciones por solver (OSQP, HiGHS) de todas las resoluciones, sin doble cómputo."""
+        return sum_iterations_by_solver(
+            item for result in self._results for item in result.iterations_by_solver
+        )
 
     def net_return(self, weights: npt.NDArray[np.float64]) -> float:
         """Retorno del tratamiento optimizado: neto en ``NET``, bruto en ``GROSS``."""
@@ -224,6 +235,7 @@ class FrontierSession:
             solve_time=sum(result.solve_time for result in self._results),
             frontier_time=time.perf_counter() - self._started,
             total_iterations=self.total_iterations,
+            iterations_by_solver=self.iterations_by_solver,
         )
 
     def backends(self) -> Sequence[OptimizationBackend]:

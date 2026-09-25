@@ -427,3 +427,24 @@ del validador independiente. Generado con el motor real (`numerical_recovery = f
   Tras la remediación: `OPTIMAL`, válido = `True`, `w = [0.5801477327, 0.4198522673]`, retorno neto de los pesos `0.0988273419267` (≥ objetivo), validador independiente: `is_valid = True`, `max_violation = 0`; traza: `RECOVERED`, intentos [('ORIGINAL', 'OPTIMAL_INACCURATE', 250000), ('NORMALIZED_RETURN_ROW', 'OPTIMAL', 14600)].
 
 
+
+---
+
+## Nota posterior al merge del PR #3 (2026-09-25)
+
+> Nota añadida después del merge; **no modifica la evidencia histórica anterior**. Detalle en
+> `F3_POST_MERGE_REVIEW.md` (rama `fix/f3-oracle-iteration-accounting`).
+
+La revisión de GitHub posterior al merge señaló dos defectos P2, ambos reproducidos:
+
+* **P2-01** — `normalize_return_row` calculaba la escala solo sobre `centered[:n_weights]`. Con retornos
+  idénticos en `NET` el bloque de pesos centrado es nulo pero la fila conserva `−c_b/H` y `−c_s/H`; el método
+  devolvía `None` y la escalera de reintentos se abortaba con una restricción aún informativa. Corregido: si el
+  bloque de pesos centrado es despreciable (`<= √eps` del máximo de toda la fila) la escala se calcula sobre
+  toda la fila; en otro caso se conserva la escala de pesos calibrada en este informe (el cambio a «todos los
+  coeficientes» sin condición empeoraba los puntos `NET` recuperados de las instancias contractuales, p. ej.
+  (2, 685): 1,35 M → 3,83 M iteraciones).
+* **P2-02** — `numerical_recovery._merge` excluía del total de iteraciones las del oráculo de HiGHS aunque su
+  tiempo sí se sumaba a `solve_time`. Corregido: `SolveResult.iterations` suma todos los intentos; se añade el
+  desglose `iterations_by_solver`. Las cifras de iteraciones de las tablas anteriores de este informe son las de
+  entonces (sin oráculo) y no se reescriben.
