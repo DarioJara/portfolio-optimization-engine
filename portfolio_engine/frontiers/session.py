@@ -26,6 +26,7 @@ from portfolio_engine.config.solver_config import SolverConfig
 from portfolio_engine.constraints.compiler import CompiledConstraints
 from portfolio_engine.costs.transaction_cost_model import TransactionCostModel, UnionAlignment
 from portfolio_engine.exceptions import FrontierError
+from portfolio_engine.frontiers.numerical_recovery import NumericalRecovery
 from portfolio_engine.metrics.portfolio_metrics import MetricsTolerances, compute_metrics
 from portfolio_engine.models.enums import (
     CostTreatment,
@@ -94,6 +95,7 @@ class FrontierSession:
         self._router = router
         self._validator = validator
         self._tolerances = tolerances
+        self._recovery = NumericalRecovery(solver_config)
         self._variance = build_fixed_composition_problem(
             context.inputs, cost_treatment, quadratic=True
         )
@@ -158,7 +160,7 @@ class FrontierSession:
         """``min wᵀΣw`` s.a. retorno (bruto o neto) ``>= target``: solo cambia ``lower``."""
         q = self._variance.q_zero()
         lower = self._variance.lower_for_target(target)
-        result = self._run_variance(q, lower)
+        result = self._run_variance(q, lower, target)
         return self._finish(
             result, self._variance, strategy, theta=None, target=target, adaptive=adaptive
         )
@@ -259,10 +261,13 @@ class FrontierSession:
         )
 
     def _run_variance(
-        self, q: npt.NDArray[np.float64], lower: npt.NDArray[np.float64]
+        self,
+        q: npt.NDArray[np.float64],
+        lower: npt.NDArray[np.float64],
+        target: float | None = None,
     ) -> SolveResult:
         """Resuelve el problema de varianza con ``q`` y ``lower``, actualizando solo lo que
-        cambia."""
+        cambia. Con ``target`` un estado no óptimo se somete a la recuperación numérica (F-3)."""
         problem = self._variance.problem
         reuse = self._solver_config.workspace_reuse
         if reuse and self._shared is not None:
@@ -280,7 +285,23 @@ class FrontierSession:
         if changed_q is not None or changed_lower is not None:
             backend.update(q=changed_q, lower=changed_lower)
         self._state_q, self._state_lower = q, lower
-        return solve_with_policy(backend, self._solver_config.ambiguous_status_policy)
+        result = solve_with_policy(backend, self._solver_config.ambiguous_status_policy)
+        if target is not None and self._recovery.applies(self._variance, lower, result):
+            result = self._recovery.recover(
+                self._variance,
+                q,
+                lower,
+                result,
+                self._backends,
+                lambda retried: self._passes_validation(retried, target),
+            )
+        return result
+
+    def _passes_validation(self, result: SolveResult, target: float) -> bool:
+        """``True`` si la solución del solver supera el validador independiente (``target``)."""
+        if result.x is None:
+            return False
+        return self._validate(self._variance.weights(result.x), target).is_valid
 
     def _finish(
         self,

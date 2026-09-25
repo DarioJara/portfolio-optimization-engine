@@ -48,6 +48,13 @@ class SolverConfig:
         max_return_tie_abs_tolerance: parte absoluta (unidades de retorno anualizado) de la
             holgura de la etapa 2 de MaximumReturn.
         max_return_tie_rel_tolerance: parte relativa (fracción de ``|R*|``) de esa holgura.
+        numerical_recovery: activa la recuperación numérica de puntos de retorno objetivo que el
+            solver no resuelve (F-3): comprobación de factibilidad con un LP independiente y
+            reintentos deterministas sobre una fila de retorno normalizada.
+        recovery_row_scales: escalas de la escalera de reintentos: cada valor es el máximo
+            ``|coeficiente|`` de los pesos de la fila de retorno tras centrarla; se prueban en orden
+            hasta obtener ``OPTIMAL`` validado (una resolución por escala con ``max_iterations ×
+            retry_iteration_multiplier`` iteraciones, sin más reintentos).
 
     La etapa 2 de MaximumReturn (decisión A-14) resuelve ``min wᵀΣw`` sujeto a
     ``retorno >= R* − tol`` con ``tol = max(abs, rel·|R*|)`` (:meth:`max_return_tie_tolerance`):
@@ -73,6 +80,8 @@ class SolverConfig:
     lp_max_iterations: int
     max_return_tie_abs_tolerance: float
     max_return_tie_rel_tolerance: float
+    numerical_recovery: bool
+    recovery_row_scales: tuple[float, ...]
 
     def __post_init__(self) -> None:
         require_positive(self.eps_abs, "solver.eps_abs")
@@ -86,7 +95,13 @@ class SolverConfig:
         require_int_at_least(
             self.retry_iteration_multiplier, 1, "solver.retry_iteration_multiplier"
         )
-        for name in ("polish", "warm_start", "workspace_reuse", "accept_inaccurate_solutions"):
+        for name in (
+            "polish",
+            "warm_start",
+            "workspace_reuse",
+            "accept_inaccurate_solutions",
+            "numerical_recovery",
+        ):
             if not isinstance(getattr(self, name), bool):
                 raise ConfigError(f"solver.{name} debe ser booleano.")
         if not isinstance(self.ambiguous_status_policy, CrossCheckPolicy):
@@ -100,6 +115,10 @@ class SolverConfig:
             "max_return_tie_rel_tolerance",
         ):
             require_non_negative(getattr(self, name), f"solver.{name}")
+        if self.numerical_recovery and not self.recovery_row_scales:
+            raise ConfigError("solver.recovery_row_scales no puede estar vacía con recuperación.")
+        for scale in self.recovery_row_scales:
+            require_positive(scale, "solver.recovery_row_scales[]")
         if self.max_return_tie_abs_tolerance == 0.0 and self.max_return_tie_rel_tolerance == 0.0:
             raise ConfigError(
                 "La holgura de la etapa 2 de MaximumReturn no puede ser nula: el conjunto "

@@ -3,7 +3,13 @@
 from portfolio_engine.optimizers.formulations.qp_builder import (
     BuiltProblem,
     CompositionInputs,
+    NormalizedReturnProblem,
     build_fixed_composition_problem,
 )
 
-__all__ = ("BuiltProblem", "CompositionInputs", "build_fixed_composition_problem")
+__all__ = (
+    "BuiltProblem",
+    "CompositionInputs",
+    "NormalizedReturnProblem",
+    "build_fixed_composition_problem",
+)

@@ -33,6 +33,7 @@ original. Las métricas publicadas se recalculan siempre desde ``w`` (independen
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass
 
 import numpy as np
@@ -60,6 +61,38 @@ class CompositionInputs:
         size = self.compiled.size
         if self.mu.shape != (size,) or self.sigma.shape != (size, size):
             raise FrontierError("mu y sigma deben corresponder a la composición compilada.")
+
+
+@dataclass(frozen=True, eq=False, slots=True)
+class NormalizedReturnProblem:
+    """Mismo problema con la fila de retorno centrada y escalada (recuperación numérica, F-3).
+
+    La fila de retorno ``r`` es casi paralela a la de presupuesto ``e`` (retornos casi idénticos, o
+    costes que casi cancelan la pendiente de ``μ``): OSQP ve entonces una fila cuya información
+    útil es minúscula frente a su magnitud y declara inviabilidad espuria o no converge. Como
+    ``eᵀx = presupuesto`` es una igualdad, restar ``λe`` (``λ = rᵀe/eᵀe``) y desplazar la cota en
+    ``λ·presupuesto`` es **exactamente** el mismo conjunto factible; multiplicar la fila y su cota
+    por ``s > 0`` tampoco lo altera. Las variables (``x``, pesos incluidos) y el objetivo no
+    cambian, de modo que la solución se usa tal cual.
+
+    Attributes:
+        problem: problema con la fila de retorno transformada (``lower``/``upper`` originales
+            solo para las demás filas; para un objetivo concreto use :meth:`lower_for`).
+        return_row: índice de la fila de retorno.
+        row_scale: factor ``s`` aplicado a la fila y a su cota.
+        row_shift: ``λ·presupuesto`` restado de la cota inferior antes de escalar.
+    """
+
+    problem: CanonicalProblem
+    return_row: int
+    row_scale: float
+    row_shift: float
+
+    def lower_for(self, lower: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+        """``lower`` del problema original (con su objetivo) transformado a la fila normalizada."""
+        mapped = np.array(lower, dtype=np.float64)
+        mapped[self.return_row] = (mapped[self.return_row] - self.row_shift) * self.row_scale
+        return mapped
 
 
 @dataclass(frozen=True, eq=False, slots=True)
@@ -112,6 +145,34 @@ class BuiltProblem:
         lower = self.lower_free_return()
         lower[self.return_row] = target + self.return_offset
         return lower
+
+    def normalize_return_row(self, weight_scale: float) -> NormalizedReturnProblem | None:
+        """Problema equivalente con la fila de retorno centrada y de máximo coeficiente de peso
+        ``weight_scale`` (``None`` si los retornos son idénticos: no queda información que escalar).
+
+        Solo cambia la fila de retorno (y su cota, vía :meth:`NormalizedReturnProblem.lower_for`);
+        ``P``, ``q``, las demás filas y las variables son las del problema original.
+        """
+        problem = self.problem
+        budget = 0
+        if problem.lower[budget] != problem.upper[budget]:
+            raise FrontierError("La fila 0 debe ser la restricción de presupuesto (igualdad).")
+        matrix = sparse.lil_matrix(problem.A)
+        budget_row = np.asarray(problem.A.getrow(budget).toarray(), dtype=np.float64).ravel()
+        return_row = np.asarray(
+            problem.A.getrow(self.return_row).toarray(), dtype=np.float64
+        ).ravel()
+        centering = float(return_row @ budget_row) / float(budget_row @ budget_row)
+        centered = return_row - centering * budget_row
+        largest = float(np.max(np.abs(centered[: self.n_weights])))
+        if largest <= 0.0:
+            return None
+        scale = weight_scale / largest
+        matrix[self.return_row, :] = centered * scale
+        normalized = dataclasses.replace(problem, A=sparse.csc_matrix(matrix))
+        return NormalizedReturnProblem(
+            normalized, self.return_row, scale, centering * float(problem.lower[budget])
+        )
 
     def weights(self, x: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         """Variables de peso ``w`` de una solución ``x``."""

@@ -936,3 +936,72 @@ F-2 y pasar sus tests. 316 `RequirementID` (183 `VALIDATED`, 39 `PARTIAL`, 94 `N
 - Remediación numérica independiente pendiente antes del Bloque 4 (F-3, heredado de B2; no se tocaron tolerancias
   ni estados del solver).
 - La conversión de ADV desde títulos no existe (requiere precio y política de valoración aprobados).
+
+---
+
+## [Remediación numérica independiente F-3 (heredada de B2)] — 2026-09-24
+
+Rama `fix/b2-numerical-f3` sobre el baseline `block3-validated` (`4089909`). Detalle y evidencias en
+`REMEDIATION_F3_NUMERICAL.md`; decisiones `F3-01…F3-08` en `ARCHITECTURE.md` §3.5. **No pertenece al Bloque 4**;
+sin SOCP, CVaR, escenarios, robustez, MIQP, multiprocessing ni persistencia. Sin commit, merge, push, tag ni PR.
+Los cierres históricos de B2 y B3 no se alteran.
+
+### Incidencia
+
+F-3: fronteras `TARGET_RETURN_GRID` con región factible en franja casi degenerada (retornos casi idénticos en
+`GROSS`; costes que casi anulan la pendiente del retorno en `NET`). OSQP declaraba `INFEASIBLE` (certificado
+espurio), `NUMERICAL_ERROR`, `MAX_ITERATIONS` u `OPTIMAL_INACCURATE` en puntos que un LP independiente demuestra
+factibles (hasta 18 de 20 puntos por frontera). Los puntos inválidos nunca se aceptaron.
+
+### Cambios
+
+- `optimizers/feasibility_oracle.py` (nuevo): LP de factibilidad de HiGHS con las mismas filas (`lp_feasibility`).
+- `optimizers/formulations/qp_builder.py`: `BuiltProblem.normalize_return_row` → `NormalizedReturnProblem`
+  (fila de retorno centrada con la de presupuesto y escalada; transformación exacta del conjunto factible).
+- `frontiers/numerical_recovery.py` (nuevo) y `frontiers/session.py`: recuperación determinista y acotada de los
+  puntos de retorno objetivo no óptimos; un reintento solo se acepta si es `OPTIMAL` y supera el
+  `SolutionValidator` con el retorno objetivo original; `OPTIMAL_INACCURATE` no se promueve; un `INFEASIBLE` que el
+  LP halla factible y no se recupera pasa a `NUMERICAL_ERROR`; un `INFEASIBLE` confirmado por el LP se conserva.
+- `models/solution.py`, `models/enums.py`: `SolveResult.recovery` (`RecoveryTrace`, `RecoveryAttempt`,
+  `RecoveryOutcome`) con estado inicial, veredicto del LP, todos los intentos y resultado.
+- `config/solver_config.py`, `config/default_engine.toml`: `solver.numerical_recovery`, `solver.recovery_row_scales`
+  (`[10.0, 1.0, 100.0]`). Ninguna tolerancia ni estado del solver se relaja. El `ConfigHash` cambia respecto a
+  `block3-validated` por los dos campos nuevos.
+- Backends, router, `SolutionValidator`, compilador, costes, `CandidateEngine`, frontera global y Pareto: sin cambios.
+
+### Resultados
+
+- 7 instancias contractuales × GROSS/NET/POST_COST_GROSS: de 77 puntos inválidos a **0**; puntos recuperados óptimos
+  frente a referencias independientes (solución analítica `n = 2`, SLSQP por regiones `n = 3`, LP de HiGHS).
+- Barrido `n = 2…5`, semillas 0-1399, GROSS y NET (11 200 fronteras, 224 000 puntos): de 17 fronteras / **212**
+  puntos inválidos a **0** (10 instancias adicionales al contrato, incorporadas como tests). Barrido adicional,
+  semillas 1400-2999: 12 800 fronteras / 255 982 puntos, **0** puntos inválidos.
+- No regresión: las 11 183 fronteras sin defecto tienen el mismo número de iteraciones; 54 configuraciones de B2/B3
+  idénticas bit a bit a `block3-validated`.
+- `pytest -q`: **1148 passed** en 131,78 s (0 failed, 0 skipped): 1039 + 109 nuevos.
+  `mypy --strict portfolio_engine`: 0 errores en 126 ficheros; `ruff check .` limpio;
+  `ruff format --check .`: 259 ficheros ya formateados.
+- Rendimiento: +2,8 % de iteraciones OSQP en el barrido (solo en las fronteras defectuosas); las sanas no cambian.
+
+### Trazabilidad
+
+316 `RequirementID` (183 `VALIDATED`, 39 `PARTIAL`, 94 `NOT_IMPLEMENTED`); ningún estado cambia. Evidencia ampliada en
+`FRN-008`, `FRN-023`, `VAL-001`, `SOL-002` (sigue `PARTIAL` por Clarabel/B4), `OPT-005` y `CFG-008`.
+
+### Cierre de cobertura de la auditoría (AF3-01, AF3-02)
+
+Solo tests y documentación; sin cambios en código productivo. Tres tests adicionales en
+`tests/unit/frontiers/test_numerical_recovery.py` cubren AF3-01 (reintento que devuelve realmente
+`OPTIMAL_INACCURATE`, no se promueve ni se acepta) y AF3-02 (oráculo LP `INCONCLUSIVE` conserva el `INFEASIBLE`
+original, sin reclasificar ni confirmar infactibilidad, con traza). Los dos mutantes supervivientes (M3 y M7b) son
+ahora detectados (ejecución en copia aislada). `pytest -q`: 1151 passed (1148 + 3). `TRACEABILITY.md`: evidencia de
+`SOL-002` y `FRN-023` corregida sin cambio de estados. El test `test_an_inaccurate_retry_is_never_promoted_to_optimal`
+se conserva como evidencia del límite de escalas, pero no ejercita `OPTIMAL_INACCURATE`. AF3-03 sigue como limitación
+conocida; la diferencia de varianza de 1.3e-7 (AF3-04) no corresponde a un punto recuperado defectuoso.
+
+### Limitaciones conocidas
+
+- La escalera de escalas es empírica; un punto que ninguna escala recupere queda inválido y etiquetado.
+- Solo cubre puntos con retorno objetivo (no la malla de `theta`, MinVariance ni la etapa 2 de MaximumReturn).
+- Pendientes: barridos con `n > 5`, límites de grupo/turnover, activos que salen de la composición, frontera
+  adaptativa y benchmark del proyecto (no regenerado).

@@ -13,11 +13,53 @@ import numpy as np
 import numpy.typing as npt
 
 from portfolio_engine.exceptions import SolverError
-from portfolio_engine.models.enums import ProblemClass, SolverStatus, StatusSource
+from portfolio_engine.models.enums import (
+    ProblemClass,
+    RecoveryOutcome,
+    SolverStatus,
+    StatusSource,
+)
 from portfolio_engine.utils.numerics import readonly_float_array
 
 #: Estados en los que el solver entrega un vector primal utilizable (pendiente de validación).
 USABLE_STATUSES = frozenset({SolverStatus.OPTIMAL, SolverStatus.OPTIMAL_INACCURATE})
+
+
+@dataclass(frozen=True, slots=True)
+class RecoveryAttempt:
+    """Un intento de la recuperación numérica (o el intento original que la activó).
+
+    ``strategy`` es ``ORIGINAL`` (resolución que falló), ``LP_FEASIBILITY_ORACLE`` (comprobación
+    independiente de factibilidad) o ``NORMALIZED_RETURN_ROW`` (reintento con la fila de retorno
+    centrada y escalada por ``row_scale``). ``rejected_by_validator`` marca un intento ``OPTIMAL``
+    del solver cuya solución no supera la validación independiente (no se acepta).
+    """
+
+    strategy: str
+    solver_name: str
+    status: SolverStatus
+    native_status: str
+    iterations: int
+    primal_residual: float | None
+    dual_residual: float | None
+    row_scale: float | None
+    rejected_by_validator: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class RecoveryTrace:
+    """Diagnóstico de la recuperación numérica de un punto (F-3): por qué se activó y qué ocurrió.
+
+    ``trigger_status`` y ``trigger_native_status`` son los del solver inicial; ``feasibility`` es el
+    veredicto del LP independiente (``None`` si no se consultó); ``attempts`` conserva todos los
+    intentos en orden, el original incluido.
+    """
+
+    trigger_status: SolverStatus
+    trigger_native_status: str
+    feasibility: str | None
+    attempts: tuple[RecoveryAttempt, ...]
+    outcome: RecoveryOutcome
 
 
 @dataclass(frozen=True, eq=False, slots=True)
@@ -47,6 +89,7 @@ class SolveResult:
     dual_residual: float | None
     warm_start_used: bool
     cold_retries: int
+    recovery: RecoveryTrace | None = None
 
     def __post_init__(self) -> None:
         usable = self.status in USABLE_STATUSES

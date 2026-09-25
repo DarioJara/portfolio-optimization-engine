@@ -130,6 +130,14 @@ class StatusSource(StrEnum):
     CROSS_CHECK = "CROSS_CHECK"
 
 
+class RecoveryOutcome(StrEnum):
+    """Resultado de la recuperación numérica de un punto de retorno objetivo (F-3)."""
+
+    RECOVERED = "RECOVERED"
+    CONFIRMED_INFEASIBLE = "CONFIRMED_INFEASIBLE"
+    NOT_RECOVERED = "NOT_RECOVERED"
+
+
 class ProblemClass(StrEnum):
     """Clase matemática de un problema de optimización (ARCHITECTURE §9.2)."""
 

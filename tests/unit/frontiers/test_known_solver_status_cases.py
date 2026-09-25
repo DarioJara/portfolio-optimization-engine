@@ -1,7 +1,10 @@
 """SOL-002, VAL-001 (hallazgo B2, separado): casos deterministas del fallo intermitente de
 ``tests/property/test_invariants.py::test_every_frontier_point_satisfies_the_financial_invariants``.
 
-**No resuelve el hallazgo** (sigue abierto; ver ``REMEDIATION_BLOCK_3.md`` §8). Fija, con las siete
+**No resuelve el hallazgo**: el hallazgo se remedió después en ``fix/b2-numerical-f3`` (recuperación
+numérica; ver ``REMEDIATION_F3_NUMERICAL.md`` y ``test_numerical_recovery.py``, que exige fronteras
+completamente válidas). Estos tests se conservan sin cambios y siguen pasando (un punto que
+``numerical_recovery`` no recupere seguiría clasificado como aquí). Fija, con las siete
 instancias reproducibles ``(n, semilla)`` del generador del test de propiedades, lo que sí es cierto
 y distingue cuatro situaciones sin relajar ninguna restricción económica:
 
