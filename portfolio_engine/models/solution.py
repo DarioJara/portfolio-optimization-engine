@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 import numpy as np
@@ -20,6 +21,20 @@ from portfolio_engine.models.enums import (
     StatusSource,
 )
 from portfolio_engine.utils.numerics import readonly_float_array
+
+
+def sum_iterations_by_solver(items: Iterable[tuple[str, int]]) -> tuple[tuple[str, int], ...]:
+    """Suma ``(solver, iteraciones)`` por solver, ordenado por nombre.
+
+    Las iteraciones de solvers distintos (OSQP: ADMM; HiGHS: símplex/punto interior) no son una
+    medida homogénea de esfuerzo: el desglose por solver es la métrica comparable y su suma solo
+    una métrica agregada de actividad.
+    """
+    totals: dict[str, int] = {}
+    for name, iterations in items:
+        totals[name] = totals.get(name, 0) + iterations
+    return tuple(sorted(totals.items()))
+
 
 #: Estados en los que el solver entrega un vector primal utilizable (pendiente de validación).
 USABLE_STATUSES = frozenset({SolverStatus.OPTIMAL, SolverStatus.OPTIMAL_INACCURATE})
@@ -61,6 +76,14 @@ class RecoveryTrace:
     attempts: tuple[RecoveryAttempt, ...]
     outcome: RecoveryOutcome
 
+    @property
+    def iterations_by_solver(self) -> tuple[tuple[str, int], ...]:
+        """Iteraciones de todos los intentos (original, oráculo y reintentos) por solver.
+
+        Ordenado por nombre de solver; cada intento se cuenta una sola vez.
+        """
+        return sum_iterations_by_solver((a.solver_name, a.iterations) for a in self.attempts)
+
 
 @dataclass(frozen=True, eq=False, slots=True)
 class SolveResult:
@@ -70,6 +93,12 @@ class SolveResult:
     cualquier otro estado el iterado del solver no se expone para evitar su uso accidental.
     ``setup_time`` y ``update_time`` son los tiempos pendientes (workspace y actualizaciones)
     atribuidos a esta resolución.
+
+    ``iterations`` es el total de iteraciones de **todos** los solvers que intervinieron en la
+    resolución: sin recuperación, las del solver propio; con recuperación numérica (F-3), las del
+    intento original, del oráculo de factibilidad de HiGHS y de cada reintento (una sola vez por
+    intento). Sumar solvers distintos da una métrica agregada de actividad, no de esfuerzo
+    computacional homogéneo: ``iterations_by_solver`` da el desglose.
     """
 
     status: SolverStatus
@@ -101,6 +130,13 @@ class SolveResult:
                 raise SolverError("Un estado utilizable no puede contener valores no finitos.")
         if self.y is not None:
             object.__setattr__(self, "y", readonly_float_array(self.y))
+
+    @property
+    def iterations_by_solver(self) -> tuple[tuple[str, int], ...]:
+        """Desglose de :attr:`iterations` por solver (suma igual a ``iterations``)."""
+        if self.recovery is None:
+            return ((self.solver_name, self.iterations),)
+        return self.recovery.iterations_by_solver
 
     @property
     def is_usable(self) -> bool:
