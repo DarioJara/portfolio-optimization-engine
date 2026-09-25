@@ -199,6 +199,7 @@ Basada en MASTER_SPEC §81 ("estructura recomendada"), con **adiciones justifica
 │   │   ├── theta_calibration.py
 │   │   ├── risk_aversion_grid.py
 │   │   ├── target_return_grid.py
+│   │   ├── numerical_recovery.py  # recuperación numérica de puntos de retorno objetivo (F-3, posterior a B3)
 │   │   ├── adaptive.py
 │   │   ├── dedup.py
 │   │   ├── pareto.py
@@ -219,6 +220,7 @@ Basada en MASTER_SPEC §81 ("estructura recomendada"), con **adiciones justifica
 │   │   │   └── miqp.py            # Bloque 4
 │   │   ├── osqp_backend.py
 │   │   ├── highs_backend.py       # LP (MaxReturn etapa 1) con HiGHS vía scipy.optimize.linprog (R2-01)
+│   │   ├── feasibility_oracle.py  # LP de factibilidad independiente (HiGHS) para el certificado de OSQP (F-3)
 │   │   ├── clarabel_backend.py
 │   │   ├── mixed_integer_backend.py
 │   │   └── nonconvex_backend.py
@@ -373,6 +375,25 @@ derivados (restricciones compiladas y submatrices) **dentro de una búsqueda**, 
 la composición porque el resto de entradas es constante en esa ejecución; no almacena resultados de
 optimización. La frontera de la composición actual se reutiliza por identidad dentro de la misma llamada
 a `GlobalCandidateFrontierEngine.solve` (no se recalcula ni se confunde con la global).
+### 3.5 Remediación numérica posterior F-3 (rama `fix/b2-numerical-f3`, sobre `block3-validated`)
+
+Incidencia numérica heredada del Bloque 2 (`AUDIT_BLOCK_3_CLOSURE.md` §12, `AUDIT_BLOCK_3_FINAL_CLOSURE.md` §14),
+remediada de forma **independiente** del Bloque 4 y sin tocar los contratos económicos de B1/B2/B3 (costes,
+liquidación completa, turnover, restricciones, E-09/E-10/E-11, `CandidateEngine`, frontera global, Pareto,
+`SolutionValidator`). El informe completo con evidencias consta en `REMEDIATION_F3_NUMERICAL.md`; los informes
+históricos de auditoría no se alteran. Las decisiones llevan el prefijo `F3-`.
+
+| # | Aspecto | Decisión | Racional y verificación |
+|---|---|---|---|
+| F3-01 | Causa raíz | Los puntos `TARGET_RETURN_GRID` fallidos tienen una región factible en forma de **franja casi degenerada**: la fila de retorno es casi paralela a la de presupuesto (retornos casi idénticos: informativa ~1e-6 frente a la magnitud ~1e-1) o, en `NET`, los costes casi anulan la pendiente efectiva de `μ` (pendiente neta ~2e-4 frente a coeficientes ~1e-2). OSQP (ADMM) ve entonces una fila mal condicionada: declara `primal infeasible` con su tolerancia `eps_prim_inf = 1e-4` o no converge en 50 000 iteraciones. Ningún objetivo de los casos conocidos es verdaderamente infactible (oráculo LP) | Reproducido con 77 puntos de las 7 instancias; ajustes de `rho`, `scaling`, `sigma`, `alpha`, `polishing` y `eps_prim_inf` **por sí solos** no resuelven ninguno (`REMEDIATION_F3_NUMERICAL.md` §5) |
+| F3-02 | Normalización reversible | `BuiltProblem.normalize_return_row(escala)` → `NormalizedReturnProblem`: resta a la fila de retorno el múltiplo `λ = rᵀe/eᵀe` de la fila de presupuesto `e` (igualdad `eᵀx = presupuesto`) y desplaza la cota en `λ·presupuesto`; después multiplica fila y cota por `s = escala / máx\|coef. de peso\|`. Es una transformación **exacta** del conjunto factible: mismas variables (los pesos se usan tal cual), mismo objetivo, mismas demás filas | `tests/unit/optimizers/test_return_row_normalization.py` (`fila'·x − cota' = s·(fila·x − cota)` para todo `x` con `1ᵀw = 1`). Retornos idénticos (nada que escalar) → `None` |
+| F3-03 | Oráculo de factibilidad | `optimizers/feasibility_oracle.py::lp_feasibility`: LP de HiGHS de objetivo nulo con **las mismas filas** `lower <= A x <= upper` (backend y router existentes; sin dependencia nueva). Veredictos `FEASIBLE` / `INFEASIBLE` / `INCONCLUSIVE` (límite de iteraciones o tiempo) | Algoritmo distinto del de OSQP; no reutiliza ningún resultado suyo. Un certificado `INFEASIBLE` de OSQP solo se acepta si el LP coincide |
+| F3-04 | Recuperación localizada y determinista | `frontiers/numerical_recovery.py::NumericalRecovery`, invocada por `FrontierSession._run_variance` **solo** con retorno objetivo y estado no óptimo (`INFEASIBLE`, `NUMERICAL_ERROR`, `MAX_ITERATIONS`, `OPTIMAL_INACCURATE`, `UNKNOWN`): (1) para `INFEASIBLE`/`NUMERICAL_ERROR`/`UNKNOWN`, el LP independiente; si es `INFEASIBLE` no se reintenta nada; (2) escalera de workspaces nuevos con la fila normalizada, una resolución por escala de `SolverConfig.recovery_row_scales` con `max_iterations × retry_iteration_multiplier` iteraciones. **Un reintento solo se acepta si es `OPTIMAL` y supera el `SolutionValidator` con el retorno objetivo original**; un `OPTIMAL` rechazado por el validador se registra y se pasa a la siguiente escala. Los puntos `OPTIMAL` no se tocan (huella idéntica bit a bit frente a `block3-validated`) | Sin bucles: como máximo `1 + len(recovery_row_scales)` resoluciones QP más un LP por punto. El objetivo solicitado nunca se modifica (`FrontierPoint.target_return`) |
+| F3-05 | Estados | `OPTIMAL_INACCURATE` **no** se promueve nunca a `OPTIMAL`. Si nada recupera el punto y OSQP había declarado `INFEASIBLE` mientras el LP lo halla factible, el estado se **reclasifica a `NUMERICAL_ERROR`** (un fallo numérico jamás se presenta como inviabilidad matemática; `SOL-002`); un `INFEASIBLE` confirmado por el LP conserva `status_source = SOLVER`. Un punto recuperado lleva `status_source = CROSS_CHECK` | `tests/unit/frontiers/test_numerical_recovery.py` |
+| F3-06 | Diagnóstico | `SolveResult.recovery: RecoveryTrace \| None` (`models/solution.py`): estado y estado nativo del solver inicial, veredicto del LP, **todos** los intentos (`RecoveryAttempt`: estrategia, solver, estado, iteraciones, residuales primal/dual, escala, rechazo del validador) y resultado (`RecoveryOutcome`: `RECOVERED`, `CONFIRMED_INFEASIBLE`, `NOT_RECOVERED`). Las iteraciones y tiempos del resultado suman los de todos los intentos | Los backends y `outputs/` no cambian |
+| F3-07 | Configuración | `SolverConfig.numerical_recovery` (bool) y `recovery_row_scales` (tuplas de escalas positivas; `[10.0, 1.0, 100.0]` en `config/default_engine.toml`, valores de ejemplo justificados en `REMEDIATION_F3_NUMERICAL.md` §5). Sin literales de negocio en el código. Las tolerancias del solver y de validación **no** se relajan | El `ConfigHash` cambia respecto a `block3-validated` porque el snapshot incorpora los dos campos nuevos (mismo criterio que F-5 para `ConstraintHash`); ningún resultado económico depende del hash |
+| F3-08 | Alcance | La recuperación no cubre la malla de `theta` (fila de retorno libre), MinVariance ni la etapa 2 de MaximumReturn (que usa su propia cara óptima, `R2-02`); esos caminos no mostraron el defecto en el barrido | `tests/unit/frontiers/test_numerical_recovery.py::test_the_risk_aversion_grid_and_the_extremes_are_outside_the_recovery` |
+
 ---
 
 ## 4. Grafo lógico de dependencias
@@ -748,6 +769,11 @@ class BackendCapabilities:
 
 class SolverRouter:
     def route(self, problem: CanonicalProblem) -> OptimizationBackend   # por ProblemClass + OptimizationFamily
+
+# Posterior a B3 (F-3, §3.5): certificado de OSQP contrastado con un LP independiente y recuperación
+def lp_feasibility(problem, lower, config) -> tuple[FeasibilityVerdict, SolveResult]
+class NumericalRecovery:   # frontiers/numerical_recovery.py; solo con retorno objetivo y estado no óptimo
+    def recover(self, built, q, lower, first, backends, accept) -> SolveResult   # SolveResult.recovery = RecoveryTrace
 ```
 
 ### 8.7 Validación de soluciones (Bloque 2)

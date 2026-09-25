@@ -118,6 +118,11 @@ lp_max_iterations = 100000
 # Etapa 2 de MaximumReturn (A-14): retorno >= R* - max(abs, rel * |R*|), en unidades de retorno.
 max_return_tie_abs_tolerance = 1e-8
 max_return_tie_rel_tolerance = 1e-7
+# Recuperacion numerica de puntos de retorno objetivo (F-3): si OSQP no devuelve OPTIMAL en un punto
+# con retorno objetivo, se comprueba la factibilidad con un LP independiente (HiGHS) y, si el punto
+# es factible, se reintenta con la fila de retorno centrada y escalada (una resolucion por escala).
+numerical_recovery = true
+recovery_row_scales = [10.0, 1.0, 100.0]
 
 [benchmark]
 repetitions = 5
