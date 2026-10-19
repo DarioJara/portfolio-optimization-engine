@@ -91,7 +91,7 @@ class NumericalRecovery:
         extended = dataclasses.replace(
             config, max_iterations=config.max_iterations * config.retry_iteration_multiplier
         )
-        self._router = SolverRouter(extended)
+        self._router = SolverRouter(extended, inner_loop=True)
 
     def applies(
         self, built: BuiltProblem, lower: npt.NDArray[np.float64], result: SolveResult

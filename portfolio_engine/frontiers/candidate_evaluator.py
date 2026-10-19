@@ -36,7 +36,7 @@ class QPCompositionEvaluator:
 
     def __init__(self, config: EngineConfig) -> None:
         self._config = config
-        self._router = SolverRouter(config.solver)
+        self._router = SolverRouter(config.solver, inner_loop=True)
         self._validator = SolutionValidator(ValidationTolerances.from_config(config.solver))
         self._tolerances = MetricsTolerances.from_config(config.solver, config.frontier)
 

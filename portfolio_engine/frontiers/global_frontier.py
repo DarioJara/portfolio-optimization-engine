@@ -191,6 +191,7 @@ class GlobalCandidateFrontierEngine:
                 "La frontera global parte de la cartera actual: "
                 "composition_asset_ids debe ser None."
             )
+        self._continuous.reject_unenforced_constraints(problem)
         started = time.perf_counter()
         context = CandidateContext(
             problem.portfolio_id,

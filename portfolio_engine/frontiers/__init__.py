@@ -8,6 +8,12 @@ from portfolio_engine.frontiers.continuous_frontier import (
     post_cost_evaluation,
 )
 from portfolio_engine.frontiers.dedup import deduplicate, is_equivalent
+from portfolio_engine.frontiers.exact_mip_validation import (
+    CalibrationSummary,
+    ExactMIPValidator,
+    HeuristicGapReport,
+    calibration_summary,
+)
 from portfolio_engine.frontiers.explicit_portfolios import (
     solve_maximum_return,
     solve_minimum_variance,
@@ -20,6 +26,7 @@ from portfolio_engine.frontiers.global_frontier import (
 from portfolio_engine.frontiers.pareto import apply_efficiency, pareto_mask
 from portfolio_engine.frontiers.risk_aversion_grid import RiskAversionGrid
 from portfolio_engine.frontiers.session import FrontierContext, FrontierSession
+from portfolio_engine.frontiers.strategy_optimizer import StrategyOptimizer
 from portfolio_engine.frontiers.target_return_grid import (
     TargetReturnGrid,
     interior_targets,
@@ -35,19 +42,24 @@ from portfolio_engine.frontiers.theta_calibration import (
 
 __all__ = (
     "AdaptiveFrontier",
+    "CalibrationSummary",
     "ContinuousFrontierEngine",
+    "ExactMIPValidator",
     "FrontierContext",
     "FrontierProblem",
     "FrontierSession",
     "GlobalCandidateFrontierEngine",
+    "HeuristicGapReport",
     "ParametrizedPoint",
     "QPCompositionEvaluator",
     "RiskAversionGrid",
+    "StrategyOptimizer",
     "TargetReturnGrid",
     "ThetaGrid",
     "apply_efficiency",
     "calibrate_theta_from_points",
     "calibrate_theta_grid",
+    "calibration_summary",
     "deduplicate",
     "global_pareto",
     "grid_values",
