@@ -30,7 +30,12 @@ from scipy.optimize import linprog
 
 from portfolio_engine.config.solver_config import SolverConfig
 from portfolio_engine.exceptions import SolverError
-from portfolio_engine.models.enums import ProblemClass, SolverStatus, StatusSource
+from portfolio_engine.models.enums import (
+    OptimalityClaim,
+    ProblemClass,
+    SolverStatus,
+    StatusSource,
+)
 from portfolio_engine.models.solution import USABLE_STATUSES, SolveResult
 from portfolio_engine.optimizers.base import (
     BackendCapabilities,
@@ -114,7 +119,11 @@ class HiGHSLPBackend(OptimizationBackend):
 
     def setup(self, problem: CanonicalProblem) -> SetupInfo:
         """Registra el LP (``P`` debe ser nula)."""
-        if not self.supports(problem.problem_class) or problem.P.nnz:
+        if (
+            not self.supports(problem.problem_class)
+            or problem.P.nnz
+            or type(problem) is not CanonicalProblem
+        ):
             raise SolverError(f"HiGHS solo resuelve LP (P = 0), no {problem.problem_class}.")
         started = time.perf_counter()
         self._matrix = sparse.csr_matrix(problem.A)
@@ -243,6 +252,11 @@ class HiGHSLPBackend(OptimizationBackend):
             dual_residual=None,
             warm_start_used=False,
             cold_retries=cold_retries,
+            optimality_claim=(
+                OptimalityClaim.CONVEX_GLOBAL
+                if status is SolverStatus.OPTIMAL
+                else OptimalityClaim.NOT_ASSESSED
+            ),
         )
 
     def _assemble(

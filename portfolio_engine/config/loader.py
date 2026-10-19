@@ -23,12 +23,17 @@ from typing import Any, TypeVar
 
 from portfolio_engine.config.benchmark_config import BenchmarkConfig
 from portfolio_engine.config.candidate_config import CandidateConfig
+from portfolio_engine.config.conic_config import ConicSolverConfig, SharpeConfig
 from portfolio_engine.config.constraint_config import ConstraintConfig
+from portfolio_engine.config.cvar_config import CVaRConfig
 from portfolio_engine.config.data_config import DataConfig
 from portfolio_engine.config.engine_config import EngineConfig
+from portfolio_engine.config.exact_mip_config import ExactMIPConfig
 from portfolio_engine.config.frontier_config import FrontierConfig
 from portfolio_engine.config.return_config import ReturnConfig
 from portfolio_engine.config.risk_config import RiskConfig
+from portfolio_engine.config.robust_config import RobustConfig
+from portfolio_engine.config.scenario_config import ScenarioConfig
 from portfolio_engine.config.solver_config import SolverConfig
 from portfolio_engine.config.transaction_cost_config import TransactionCostConfig
 from portfolio_engine.exceptions import ConfigError
@@ -45,6 +50,12 @@ _SECTIONS: Mapping[str, type[Any]] = types.MappingProxyType(
         "solver": SolverConfig,
         "benchmark": BenchmarkConfig,
         "candidates": CandidateConfig,
+        "conic": ConicSolverConfig,
+        "sharpe": SharpeConfig,
+        "cvar": CVaRConfig,
+        "exact_mip": ExactMIPConfig,
+        "robust": RobustConfig,
+        "scenarios": ScenarioConfig,
     }
 )
 
@@ -53,7 +64,7 @@ T = TypeVar("T")
 
 def load_engine_config(source: str | Path | Mapping[str, Any]) -> EngineConfig:
     """Carga y valida un :class:`EngineConfig` desde un fichero TOML o un diccionario."""
-    raw = _read(source) if isinstance(source, (str, Path)) else source
+    raw = read_toml(source) if isinstance(source, (str, Path)) else source
     if not isinstance(raw, Mapping):
         raise ConfigError("La configuración debe ser un diccionario de secciones.")
     known = {ENGINE_SECTION, *_SECTIONS}
@@ -83,7 +94,8 @@ def load_engine_config(source: str | Path | Mapping[str, Any]) -> EngineConfig:
     )
 
 
-def _read(path: str | Path) -> Mapping[str, Any]:
+def read_toml(path: str | Path) -> Mapping[str, Any]:
+    """Lee un fichero TOML (errores de lectura o de sintaxis como :class:`ConfigError`)."""
     try:
         with Path(path).open("rb") as handle:
             return tomllib.load(handle)
@@ -91,7 +103,13 @@ def _read(path: str | Path) -> Mapping[str, Any]:
         raise ConfigError(f"No se puede leer la configuración {path}: {error}") from error
 
 
-def _build(cls: type[T], values: object, section: str) -> T:
+def build_dataclass(cls: type[T], values: object, section: str, *, empty_tuples: bool = False) -> T:
+    """Construye ``cls`` desde una tabla con las reglas estrictas del cargador.
+
+    Toda clave desconocida y toda clave obligatoria ausente es un error; los campos ``X | None``
+    ausentes valen ``None``. Con ``empty_tuples`` los campos de tipo tupla ausentes valen ``()``
+    (lo usan las definiciones de escenario, donde «sin shocks» es una lista vacía natural).
+    """
     if not isinstance(values, Mapping):
         raise ConfigError(f"La sección [{section}] debe ser una tabla.")
     hints = typing.get_type_hints(cls)
@@ -104,39 +122,47 @@ def _build(cls: type[T], values: object, section: str) -> T:
         hint = hints[name]
         path = f"{section}.{name}"
         if name not in values:
-            if not _is_optional(hint):
+            if _is_optional(hint):
+                kwargs[name] = None
+            elif empty_tuples and typing.get_origin(hint) is tuple:
+                kwargs[name] = ()
+            else:
                 raise ConfigError(f"Clave obligatoria ausente: {path}")
-            kwargs[name] = None
             continue
-        kwargs[name] = _convert(values[name], hint, path)
+        kwargs[name] = _convert(values[name], hint, path, empty_tuples)
     return cls(**kwargs)
+
+
+def _build(cls: type[T], values: object, section: str, empty_tuples: bool = False) -> T:
+    return build_dataclass(cls, values, section, empty_tuples=empty_tuples)
 
 
 def _is_optional(hint: object) -> bool:
     return type(None) in typing.get_args(hint)
 
 
-def _convert(value: object, hint: Any, path: str) -> Any:
+def _convert(value: object, hint: Any, path: str, empty_tuples: bool = False) -> Any:
     args = typing.get_args(hint)
     origin = typing.get_origin(hint)
     if origin in (types.UnionType, typing.Union):
         non_null = [arg for arg in args if arg is not type(None)]
         if len(non_null) != 1:
             raise ConfigError(f"Tipo de configuración no soportado en {path}: {hint}")
-        return _convert(value, non_null[0], path)
+        return _convert(value, non_null[0], path, empty_tuples)
     if origin is tuple:
         if not isinstance(value, list):
             raise ConfigError(f"{path} debe ser una lista.")
         element = args[0]
         if dataclasses.is_dataclass(element) and isinstance(element, type):
             return tuple(
-                _build(element, item, f"{path}[{index}]") for index, item in enumerate(value)
+                _build(element, item, f"{path}[{index}]", empty_tuples)
+                for index, item in enumerate(value)
             )
-        return tuple(_convert(item, element, f"{path}[]") for item in value)
+        return tuple(_convert(item, element, f"{path}[]", empty_tuples) for item in value)
     if isinstance(hint, type) and issubclass(hint, Enum):
         return _convert_enum(value, hint, path)
     if dataclasses.is_dataclass(hint) and isinstance(hint, type):
-        return _build(hint, value, path)
+        return _build(hint, value, path, empty_tuples)
     return _convert_scalar(value, hint, path)
 
 

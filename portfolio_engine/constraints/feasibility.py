@@ -317,3 +317,50 @@ def check_cardinality(
             )
         )
     return tuple(causes)
+
+
+def volatility_lower_bound(sigma: npt.NDArray[np.float64], budget: float) -> float:
+    """Cota inferior determinista de ``√(wᵀΣw)`` para todo ``w`` con ``Σw = presupuesto``.
+
+    Relaja todas las demás restricciones, de modo que es una cota válida (nunca mayor que la
+    volatilidad mínima real). Con ``Σ`` definida positiva es exacta bajo solo el presupuesto:
+    ``B / √(1ᵀΣ⁻¹1)``; con ``Σ`` singular la cota es ``0`` (existe una dirección sin riesgo que
+    no puede excluirse con solo el presupuesto).
+    """
+    matrix = np.asarray(sigma, dtype=np.float64)
+    eigenvalues = np.linalg.eigvalsh((matrix + matrix.T) / 2.0)
+    if float(eigenvalues[0]) <= float(np.finfo(np.float64).eps) * matrix.shape[0] * float(
+        eigenvalues[-1]
+    ):
+        return 0.0
+    ones = np.ones(matrix.shape[0])
+    return abs(budget) / float(np.sqrt(ones @ np.linalg.solve(matrix, ones)))
+
+
+def check_volatility(
+    sigma: npt.NDArray[np.float64],
+    budget: float,
+    limit: float,
+    tolerance: float,
+) -> tuple[FeasibilityCause, ...]:
+    """FEA-005: incompatibilidades deterministas de un ``VolatilityLimit`` (antes del solver).
+
+    ``VOLATILITY_LIMIT_INVALID`` (no finito o no positivo) y
+    ``VOLATILITY_LIMIT_BELOW_DETERMINISTIC_BOUND`` (el límite es menor que la cota inferior de
+    :func:`volatility_lower_bound`). El certificado más fino (la cartera de mínima varianza validada
+    bajo **todas** las restricciones) lo aporta ``StrategyOptimizer`` con el motor del Bloque 2.
+    """
+    if not np.isfinite(limit) or limit <= 0.0:
+        return (
+            FeasibilityCause("VOLATILITY_LIMIT_INVALID", f"VolatilityLimit {limit!r} no es > 0"),
+        )
+    bound = volatility_lower_bound(sigma, budget)
+    if limit + tolerance < bound:
+        return (
+            FeasibilityCause(
+                "VOLATILITY_LIMIT_BELOW_DETERMINISTIC_BOUND",
+                f"VolatilityLimit {limit!r} < cota inferior {bound!r} de la volatilidad con "
+                "Σw = presupuesto",
+            ),
+        )
+    return ()

@@ -21,7 +21,12 @@ import scipy.sparse as sparse
 
 from portfolio_engine.config.solver_config import SolverConfig
 from portfolio_engine.exceptions import SolverError
-from portfolio_engine.models.enums import ProblemClass, SolverStatus, StatusSource
+from portfolio_engine.models.enums import (
+    OptimalityClaim,
+    ProblemClass,
+    SolverStatus,
+    StatusSource,
+)
 from portfolio_engine.models.solution import USABLE_STATUSES, SolveResult
 from portfolio_engine.optimizers.base import (
     BackendCapabilities,
@@ -105,8 +110,12 @@ class OSQPBackend(OptimizationBackend):
 
     def setup(self, problem: CanonicalProblem) -> SetupInfo:
         """Crea el workspace de OSQP para ``problem``."""
-        if not self.supports(problem.problem_class):
-            raise SolverError(f"OSQP no resuelve problemas {problem.problem_class}.")
+        if not self.supports(problem.problem_class) or type(problem) is not CanonicalProblem:
+            raise SolverError(
+                f"OSQP no resuelve problemas {problem.problem_class} ({type(problem).__name__}): "
+                "solo QP/LP con restricciones lineales; un cono o una variable entera jamás se "
+                "ignora."
+            )
         started = time.perf_counter()
         self._solver = self._new_solver(
             problem, problem.q, problem.lower, problem.upper, self._config.max_iterations
@@ -284,6 +293,11 @@ class OSQPBackend(OptimizationBackend):
             dual_residual=_finite_or_none(info.dual_res),
             warm_start_used=warm_started,
             cold_retries=cold_retries,
+            optimality_claim=(
+                OptimalityClaim.CONVEX_GLOBAL
+                if status is SolverStatus.OPTIMAL
+                else OptimalityClaim.NOT_ASSESSED
+            ),
         )
 
     def _require_problem(self) -> CanonicalProblem:

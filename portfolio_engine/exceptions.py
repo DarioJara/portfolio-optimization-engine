@@ -71,3 +71,11 @@ class MetricsError(PortfolioEngineError):
 
 class CandidateError(PortfolioEngineError):
     """Entradas o estado inválidos al generar composiciones candidatas (MASTER_SPEC §26-31)."""
+
+
+class ScenarioError(PortfolioEngineError):
+    """Un escenario no puede construirse o combinarse de forma válida (MASTER_SPEC §53-54)."""
+
+
+class UnsupportedCombinationError(SolverError):
+    """La formulación no admite una restricción vigente: se rechaza en lugar de ignorarla."""
