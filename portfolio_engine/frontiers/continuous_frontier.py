@@ -127,7 +127,7 @@ class ContinuousFrontierEngine:
 
     def __init__(self, config: EngineConfig) -> None:
         self._config = config
-        self._router = SolverRouter(config.solver)
+        self._router = SolverRouter(config.solver, inner_loop=True)
         self._validator = SolutionValidator(ValidationTolerances.from_config(config.solver))
         self._tolerances = MetricsTolerances.from_config(config.solver, config.frontier)
         self._compiler = ConstraintCompiler()
@@ -144,7 +144,12 @@ class ContinuousFrontierEngine:
         ``POST_COST_GROSS`` resuelve la frontera ``GROSS`` (mismos pesos) pero, si es adaptativa,
         puntúa los intervalos con el retorno neto de esos pesos: la curva que se publica es
         (volatilidad, retorno tras costes).
+
+        Lanza :class:`FrontierError` si la cartera declara un ``VolatilityLimit``: la frontera de
+        QP no impone restricciones cónicas y no puede ignorarlo en silencio (véase
+        :meth:`reject_unenforced_constraints`).
         """
+        self.reject_unenforced_constraints(problem)
         if cost_treatment is CostTreatment.POST_COST_GROSS:
             gross = self._solve(problem, CostTreatment.GROSS, method, cost_treatment)
             return post_cost_evaluation(gross, self._config.frontier.pareto_tolerance)
@@ -193,13 +198,39 @@ class ContinuousFrontierEngine:
             notes=notes,
         )
 
+    @staticmethod
+    def reject_unenforced_constraints(problem: FrontierProblem) -> None:
+        """Rechaza una restricción vigente que la frontera de QP no puede imponer (MASTER_SPEC §79).
+
+        ``PortfolioSpec.volatility_limit`` exige un cono de segundo orden (Bloque 4): las
+        fronteras QP (OSQP) no lo aplican, de modo que ignorarlo devolvería carteras que violan
+        el límite declarado. Se rechaza explícitamente; la estrategia con límite de volatilidad
+        es ``StrategyOptimizer.volatility_target`` / ``max_sharpe``.
+        """
+        if problem.spec is not None and problem.spec.volatility_limit is not None:
+            raise FrontierError(
+                f"La cartera {problem.portfolio_id} declara VolatilityLimit "
+                f"({problem.spec.volatility_limit!r}), que la frontera QP no impone: se rechaza en "
+                "lugar de ignorarlo (use StrategyOptimizer.volatility_target o max_sharpe)."
+            )
+
     def open_session(
-        self, problem: FrontierProblem, cost_treatment: CostTreatment, method: FrontierMethod
+        self,
+        problem: FrontierProblem,
+        cost_treatment: CostTreatment,
+        method: FrontierMethod,
+        *,
+        volatility_limit_handled: bool = False,
     ) -> FrontierSession:
         """Sesión con workspace reutilizable para resolver puntos sueltos (uso avanzado y tests).
 
-        Lanza :class:`FrontierError` si la factibilidad previa detecta inviabilidad.
+        Lanza :class:`FrontierError` si la factibilidad previa detecta inviabilidad o si la cartera
+        declara un ``VolatilityLimit`` que la sesión (QP) no impone, salvo que quien llama lo
+        gestione por otra vía (``volatility_limit_handled``: p. ej. el certificado de MinVariance
+        de ``StrategyOptimizer``, que resuelve el problema cónico aparte).
         """
+        if not volatility_limit_handled:
+            self.reject_unenforced_constraints(problem)
         if cost_treatment is CostTreatment.POST_COST_GROSS:
             raise FrontierError("Una sesión resuelve GROSS o NET; POST_COST_GROSS es ex post.")
         compiled, feasibility = self._compile(problem)
@@ -207,6 +238,24 @@ class ContinuousFrontierEngine:
             causes = "; ".join(f"{cause.code}: {cause.detail}" for cause in feasibility.causes)
             raise FrontierError(f"Problema inviable antes del solver: {causes}")
         return self._new_session(problem, compiled, cost_treatment, method)
+
+    def prepare(
+        self, problem: FrontierProblem, cost_treatment: CostTreatment
+    ) -> tuple[FrontierContext | None, FeasibilityReport]:
+        """Contexto de la composición (``μ_C``, ``Σ_C``, restricciones y costes) sin resolver nada.
+
+        Es la misma preparación que usa la frontera continua (restricciones compiladas, factibilidad
+        previa, submatrices por índices y modelo de costes); la reutilizan las estrategias del
+        Bloque 4 para no duplicar el motor. Devuelve ``(None, informe)`` si la factibilidad previa
+        detecta inviabilidad (el solver no debe invocarse, decisión A-15).
+        """
+        if cost_treatment is CostTreatment.POST_COST_GROSS:
+            raise FrontierError("prepare exige GROSS o NET; POST_COST_GROSS es ex post.")
+        compiled, feasibility = self._compile(problem)
+        if not feasibility.feasible:
+            return None, feasibility
+        alignment = align_union(problem.state, compiled.asset_ids)
+        return self._context(problem, compiled, alignment, cost_treatment), feasibility
 
     def _compile(self, problem: FrontierProblem) -> tuple[CompiledConstraints, FeasibilityReport]:
         asset_ids = self._composition(problem)

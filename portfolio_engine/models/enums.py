@@ -25,9 +25,15 @@ class ExpectedReturnMode(StrEnum):
 
 
 class InternalEstimationMethod(StrEnum):
-    """Métodos internos implementados. EWMA, factoriales, bayesianos y señales son futuros."""
+    """Métodos internos implementados. EWMA, factoriales, bayesianos y señales son futuros.
+
+    ``SHRUNK_HISTORICAL_MEAN`` etiqueta el resultado del shrinkage de la media histórica
+    (Bloque 4, ``[robust]``): no es seleccionable en ``[returns]`` (se aplica a un ``RiskModel``
+    ya construido) y evita presentar una media encogida como la media histórica.
+    """
 
     HISTORICAL_MEAN = "HISTORICAL_MEAN"
+    SHRUNK_HISTORICAL_MEAN = "SHRUNK_HISTORICAL_MEAN"
 
 
 class CovarianceMethod(StrEnum):
@@ -184,12 +190,26 @@ class FrontierMethod(StrEnum):
 
 
 class StrategyID(StrEnum):
-    """Estrategias nombradas implementadas (decisión A-20; el resto llega con su bloque)."""
+    """Estrategias nombradas implementadas (decisión A-20).
+
+    Bloque 2: ``CURRENT``, ``MIN_VARIANCE``, ``MAX_RETURN`` y ``FRONTIER_POINT``. Bloque 4:
+    ``MAX_SHARPE``, ``VOL_TARGET``, ``MIN_CVAR``, ``CVAR_LIMITED``, ``ROBUST`` y las tres
+    estrategias multiescenario de solución única (``EXPECTED_SCENARIO_UTILITY``, ``WORST_CASE``,
+    ``BASE_WITH_STRESS``).
+    """
 
     CURRENT = "CURRENT"
     MIN_VARIANCE = "MIN_VARIANCE"
     MAX_RETURN = "MAX_RETURN"
     FRONTIER_POINT = "FRONTIER_POINT"
+    MAX_SHARPE = "MAX_SHARPE"
+    VOL_TARGET = "VOL_TARGET"
+    MIN_CVAR = "MIN_CVAR"
+    CVAR_LIMITED = "CVAR_LIMITED"
+    ROBUST = "ROBUST"
+    EXPECTED_SCENARIO_UTILITY = "EXPECTED_SCENARIO_UTILITY"
+    WORST_CASE = "WORST_CASE"
+    BASE_WITH_STRESS = "BASE_WITH_STRESS"
 
 
 class GridScale(StrEnum):
@@ -219,7 +239,8 @@ class CrossCheckPolicy(StrEnum):
     """Política ante estados ambiguos del solver (decisiones A-32, A-33).
 
     ``COLD_RETRY`` reintenta desde cero con más iteraciones. La verificación cruzada con un
-    segundo solver (Clarabel) llega en el Bloque 4.
+    segundo solver (Clarabel, Bloque 4) es explícita y no forma parte de esta política:
+    :func:`portfolio_engine.optimizers.router.cross_check_with_second_solver`.
     """
 
     NONE = "NONE"
@@ -330,3 +351,135 @@ class CandidateOrigin(StrEnum):
     COLD_START_SEED = "COLD_START_SEED"
     BEAM_SEARCH = "BEAM_SEARCH"
     LOCAL_SEARCH = "LOCAL_SEARCH"
+
+
+class OptimalityClaim(StrEnum):
+    """Qué afirma —y qué no— una solución sobre su optimalidad (Bloque 4, NCV-004).
+
+    ``CONVEX_GLOBAL``: problema convexo resuelto con estado ``OPTIMAL``; el óptimo es global dentro
+    de la tolerancia del solver. ``MIP_PROVEN``: el solver mixto entero cerró la brecha (cota dual
+    válida). ``MIP_INCUMBENT``: mejor solución entera encontrada con brecha abierta (cota dual
+    disponible). ``FEASIBLE_ONLY``: solución factible sin garantía de optimalidad. ``LOCAL``:
+    óptimo local de un problema no convexo (jamás se presenta como global). ``NOT_ASSESSED``: el
+    backend no hace ninguna afirmación (estado no óptimo o sin solución).
+    """
+
+    CONVEX_GLOBAL = "CONVEX_GLOBAL"
+    MIP_PROVEN = "MIP_PROVEN"
+    MIP_INCUMBENT = "MIP_INCUMBENT"
+    FEASIBLE_ONLY = "FEASIBLE_ONLY"
+    LOCAL = "LOCAL"
+    NOT_ASSESSED = "NOT_ASSESSED"
+
+
+class ScenarioType(StrEnum):
+    """Tipos de escenario soportados (MASTER_SPEC §53).
+
+    El tipo es una etiqueta: **ninguna magnitud de shock depende de él**; todas proceden de la
+    definición del escenario (decisión A-22).
+    """
+
+    BASE = "BASE"
+    BULL = "BULL"
+    BEAR = "BEAR"
+    STRESS = "STRESS"
+    RATE_UP = "RATE_UP"
+    RATE_DOWN = "RATE_DOWN"
+    EQUITY_CRASH = "EQUITY_CRASH"
+    CREDIT_WIDENING = "CREDIT_WIDENING"
+    FX_SHOCK = "FX_SHOCK"
+    CUSTOM = "CUSTOM"
+
+
+class ShockSelector(StrEnum):
+    """Conjunto de activos sobre el que actúa una transformación de escenario."""
+
+    ALL = "ALL"
+    ASSET = "ASSET"
+    SECTOR = "SECTOR"
+    COUNTRY = "COUNTRY"
+    ASSET_CLASS = "ASSET_CLASS"
+    CURRENCY = "CURRENCY"
+
+
+class CorrelationTarget(StrEnum):
+    """Matriz de correlación hacia la que se mezcla un estrés de correlación."""
+
+    CONSTANT = "CONSTANT"
+    SUPPLIED = "SUPPLIED"
+
+
+class MultiScenarioMode(StrEnum):
+    """Modos de optimización multiescenario (MASTER_SPEC §54)."""
+
+    SCENARIO_INDEPENDENT = "SCENARIO_INDEPENDENT"
+    EXPECTED_SCENARIO_UTILITY = "EXPECTED_SCENARIO_UTILITY"
+    WORST_CASE = "WORST_CASE"
+    BASE_WITH_STRESS_CONSTRAINTS = "BASE_WITH_STRESS_CONSTRAINTS"
+
+
+class ScenarioWeighting(StrEnum):
+    """Pesos de las observaciones de un conjunto de escenarios de retorno (CVaR)."""
+
+    EQUAL = "EQUAL"
+    EXPLICIT = "EXPLICIT"
+
+
+class CVaRSource(StrEnum):
+    """Procedencia de los escenarios de retorno usados por el CVaR (decisión A-35)."""
+
+    HISTORICAL = "HISTORICAL"
+    SIMULATED = "SIMULATED"
+
+
+class HorizonScaling(StrEnum):
+    """Escalado de una pérdida por periodo al horizonte del límite de CVaR (decisión A-35)."""
+
+    NONE = "NONE"
+    LINEAR = "LINEAR"
+    SQRT_TIME = "SQRT_TIME"
+
+
+class MuUncertaintyKind(StrEnum):
+    """Conjunto de incertidumbre de los expected returns (MASTER_SPEC §52)."""
+
+    NONE = "NONE"
+    BOX = "BOX"
+    ELLIPSOIDAL = "ELLIPSOIDAL"
+
+
+class ShrinkageMethod(StrEnum):
+    """Estimador de shrinkage de expected returns (MASTER_SPEC §52; no es optimización robusta)."""
+
+    FIXED_INTENSITY = "FIXED_INTENSITY"
+    JORION = "JORION"
+
+
+class ShrinkageTarget(StrEnum):
+    """Destino hacia el que se encogen los expected returns."""
+
+    GRAND_MEAN = "GRAND_MEAN"
+    RISK_FREE = "RISK_FREE"
+    SUPPLIED = "SUPPLIED"
+
+
+class SharpeOutcome(StrEnum):
+    """Resultado de Max Sharpe (A-13): además del estado del solver, la aplicabilidad."""
+
+    OPTIMAL = "OPTIMAL"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+    INFEASIBLE = "INFEASIBLE"
+    UNBOUNDED_ZERO_VOLATILITY = "UNBOUNDED_ZERO_VOLATILITY"
+    SOLVER_FAILURE = "SOLVER_FAILURE"
+
+
+class CVaRObjective(StrEnum):
+    """Objetivo de la formulación de CVaR de Rockafellar-Uryasev (MASTER_SPEC §22).
+
+    ``MIN_CVAR`` minimiza el CVaR; ``UTILITY_WITH_LIMIT`` maximiza la utilidad cuadrática con
+    ``CVaR <= MaxCVaR``; ``MAX_RETURN_WITH_LIMIT`` maximiza el retorno con ``CVaR <= MaxCVaR``.
+    """
+
+    MIN_CVAR = "MIN_CVAR"
+    UTILITY_WITH_LIMIT = "UTILITY_WITH_LIMIT"
+    MAX_RETURN_WITH_LIMIT = "MAX_RETURN_WITH_LIMIT"

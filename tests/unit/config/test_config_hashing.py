@@ -62,6 +62,12 @@ def test_snapshot_is_complete_canonical_json() -> None:
         "solver",
         "benchmark",
         "candidates",
+        "conic",
+        "sharpe",
+        "cvar",
+        "exact_mip",
+        "robust",
+        "scenarios",
         "optimization_horizon_years",
         "random_seed",
     }

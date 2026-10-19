@@ -15,6 +15,7 @@ import numpy.typing as npt
 
 from portfolio_engine.exceptions import SolverError
 from portfolio_engine.models.enums import (
+    OptimalityClaim,
     ProblemClass,
     RecoveryOutcome,
     SolverStatus,
@@ -85,6 +86,35 @@ class RecoveryTrace:
         return sum_iterations_by_solver((a.solver_name, a.iterations) for a in self.attempts)
 
 
+@dataclass(frozen=True, slots=True)
+class MipDiagnostics:
+    """Diagnóstico de una resolución mixta entera (MASTER_SPEC §49, MIP-003).
+
+    ``primal_bound`` es el valor de la mejor solución entera (incumbente) y ``dual_bound`` la cota
+    inferior válida del mínimo del solver (``None`` si no la aporta: entonces no hay brecha
+    certificada). ``relative_gap`` es la brecha del solver ``|primal − dual| / max(|primal|, ε)``
+    y solo existe con cota dual. ``nodes`` son los nodos explorados del árbol. ``incumbent`` es
+    el mejor vector entero hallado aunque el solver no haya cerrado la brecha (nunca se presenta
+    como óptimo: solo permite validarlo de forma independiente y acotar su distancia al óptimo).
+    """
+
+    primal_bound: float | None
+    dual_bound: float | None
+    relative_gap: float | None
+    nodes: int
+    solutions_found: int
+    incumbent: npt.NDArray[np.float64] | None = None
+
+    def __post_init__(self) -> None:
+        if self.incumbent is not None:
+            object.__setattr__(self, "incumbent", readonly_float_array(self.incumbent))
+
+    @property
+    def has_valid_dual_bound(self) -> bool:
+        """``True`` si el solver aporta una cota dual finita (única base de una brecha)."""
+        return self.dual_bound is not None and math.isfinite(self.dual_bound)
+
+
 @dataclass(frozen=True, eq=False, slots=True)
 class SolveResult:
     """Salida normalizada de un backend (MASTER_SPEC §45, §67).
@@ -119,6 +149,8 @@ class SolveResult:
     warm_start_used: bool
     cold_retries: int
     recovery: RecoveryTrace | None = None
+    optimality_claim: OptimalityClaim = OptimalityClaim.NOT_ASSESSED
+    mip: MipDiagnostics | None = None
 
     def __post_init__(self) -> None:
         usable = self.status in USABLE_STATUSES

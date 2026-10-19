@@ -32,6 +32,11 @@ class ReturnConfig:
     def __post_init__(self) -> None:
         require_int_at_least(self.trading_days_per_year, 1, "trading_days_per_year")
         require_finite(self.risk_free_rate, "risk_free_rate")
+        if self.internal_estimation_method is InternalEstimationMethod.SHRUNK_HISTORICAL_MEAN:
+            raise ConfigError(
+                "SHRUNK_HISTORICAL_MEAN no es seleccionable en [returns]: el shrinkage se "
+                "configura en [robust] y se aplica a un RiskModel ya construido."
+            )
         justification = (self.log_return_justification or "").strip()
         if self.return_kind is ReturnKind.LOG and not justification:
             raise ConfigError("return_kind LOG exige log_return_justification no vacía (§9).")

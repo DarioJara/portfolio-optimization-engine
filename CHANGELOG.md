@@ -1052,3 +1052,117 @@ commit, merge, push, tag ni PR.
   - RF-03: `iterations_by_solver` está en los diagnósticos agregados, no en todas las salidas por punto.
   - RF-04: sin test específico de aditividad de tiempos.
   - RF-05: la ruta degenerada de P2-01 se verifica con fallo inicial inducido; sin activación espontánea en el barrido.
+
+
+## [Bloque 4 — Escenarios, optimización robusta, cónica y validación EXACT_MIP] — 2026-09-25
+
+Rama `block4-scenarios-robust-optimization`, sobre el baseline `numerical-f3-validated` (1193 tests). **Sin
+commit, merge, push, tag ni PR; no se avanza al Bloque 5.** Módulos fuera de alcance: paralelización, caché,
+persistencia, visualización y `PersistenceDataset` (Bloques 5–6). `MASTER_SPEC.md`, `IMPLEMENTATION_PROMPTS.md`
+y los informes de auditoría históricos no se modifican; no se usa código de `1.-Version Anterior/`.
+
+### Añadido
+
+- **Backends**: `ClarabelBackend` (forma `A x + s = b`; igualdades → `ZeroCone`, cotas → `Nonneg`, filas
+  `SOC`), `MixedIntegerBackend` sobre SCIP/PySCIPOpt (backends comerciales enchufables y opcionales),
+  `NonConvexBackend` (solo arquitectura, registro de algoritmos vacío: E-25). `map_clarabel_status` y
+  `map_scip_status` distinguen `OPTIMAL`, `OPTIMAL_INACCURATE` (nunca promovido), infactible, no acotado,
+  errores numéricos y límites de iteración/tiempo.
+- **Router**: `SolverRouter(config, *, conic, exact_mip, seed, nonconvex_algorithms, inner_loop)`;
+  QP→OSQP, LP→HiGHS, SOCP→Clarabel, MIQP/MIQCP/MISOCP→mixto entero, NLP no convexo→NonConvex; SDP rechazado;
+  ninguna clase se degrada a OSQP. `inner_loop=True` (motores de producción) rechaza EXACT_MIP y NONCONVEX
+  (MIP-005). `cross_check_with_second_solver` y `CrossCheckReport` como API explícita.
+- **Formulaciones** (`optimizers/formulations/`): factor PSD `Σ=LLᵀ` por autodescomposición (Σ singular
+  admitida), cono de volatilidad, cono rotado, Max Sharpe (Charnes–Cooper, SOCP), control de volatilidad,
+  CVaR Rockafellar–Uryasev (mínimo y restricción, con escalado de horizonte), utilidad esperada multiescenario,
+  peor caso (epígrafe), BaseWithStress, robusta (caja, elipsoidal, covarianza escalada) y MIQP/MISOCP
+  semicontinuo (`MinWeight·z ≤ w ≤ MaxWeight·z`, `Σz=K`, límites de nuevos activos y swaps).
+- **`scenarios/`**: `ScenarioEngine` con los 10 `ScenarioType` (`mu_s`, `Σ_s`, `cost_s`, `constraints_s` desde
+  choques configurables, sin magnitudes por defecto), `MultiScenarioOptimizer` (ScenarioIndependent,
+  ExpectedScenarioUtility, WorstCase, BaseWithStressConstraints), intersección de restricciones.
+- **`frontiers/strategy_optimizer.py`** (MAX_SHARPE, VOL_TARGET, MIN_CVAR, CVAR_LIMITED, ROBUST) y
+  **`frontiers/exact_mip_validation.py`** (EXACT_MIP solo como modo de validación; el gap se informa solo si
+  el solver da una cota dual válida; nunca se inventa).
+- **Validación**: `AdvancedSolutionValidator` (volatilidad, CVaR, Sharpe, escenarios, cardinalidad; recalcula
+  desde los pesos y conserva todas las comprobaciones base).
+- **Métricas/retornos**: `metrics/cvar_metric.py`, `metrics/robust_metric.py`, `returns/shrinkage.py`
+  (intensidad fija y Jorion; `SHRUNK_HISTORICAL_MEAN` no seleccionable en `[returns]`).
+- **Configuración**: secciones `[conic]`, `[sharpe]`, `[cvar]`, `[exact_mip]`, `[robust]`, `[scenarios]`
+  (todas obligatorias, sin defaults implícitos; entran en `ConfigHash`); definiciones de escenarios en
+  `config/scenario_definitions.py`.
+- **Salidas y benchmark**: `outputs/strategy_rows.py`; `benchmark/block4_suite.py` y
+  `benchmarks/scripts/block4_formulations.py` (mediciones descriptivas de un proceso local).
+- **Dependencias**: `clarabel>=0.11,<1` (obligatoria), `pyscipopt>=6` (grupo opcional `exact-mip`);
+  `requirements-lock.txt` con `clarabel==0.11.1` y `pyscipopt==6.2.1`.
+
+### Modificado (deliberado)
+
+- `OSQPBackend`/`HiGHSLPBackend` rechazan problemas no exactos; el `CanonicalProblem` conserva su contrato.
+- `ContinuousFrontierEngine.prepare()`/`open_session(..., volatility_limit_handled)` y
+  `reject_unenforced_constraints`: un `PortfolioSpec.volatility_limit` **deja de ignorarse** en las fronteras
+  QP y se rechaza explícitamente (antes no se aplicaba); no cambia ningún resultado válido de B1–B3/F-3.
+- `constraints/integer.py` (`membership_rules`) y `constraints/feasibility.py` (`check_volatility`).
+- `tests/unit/test_architecture_rules.py`: `clarabel` y `pyscipopt` dejan de estar prohibidos y quedan
+  confinados a sus backends; nuevos paquetes `scenarios`/`benchmark` en el grafo; nuevas reglas (MIP-005,
+  confinamiento de solvers). `tests/unit/config/test_config_hashing.py`: lista de secciones del snapshot.
+  `tests/unit/optimizers/test_router.py`: mensajes de rechazo de MIQP y SOCP/SDP actualizados.
+
+### Defectos encontrados y corregidos durante el bloque
+
+- WorstCase conservaba el objetivo LP base en lugar del epígrafe (corregido con `set_objective(None, epigraph)`).
+- Utilidad esperada/peor caso se validaban contra los límites de estrés: ahora solo BaseWithStress los aplica.
+- El argumento `inner_loop` por llamada rompía siete tests que sustituyen `route`: pasa a ser argumento del
+  constructor del router.
+
+### Desviaciones arquitectónicas (documentadas en `ARCHITECTURE.md`)
+
+1. CVaR y Max Sharpe no viven en un módulo `constraints/conic.py`: son formulaciones en
+   `optimizers/formulations/` (`CON-004` se satisface con el cono de volatilidad).
+2. `CrossCheckPolicy` no se amplió con un segundo solver; la verificación cruzada es una API explícita.
+3. La validación EXACT_MIP reside en `frontiers/exact_mip_validation.py` (no en `candidates/`).
+4. `ScenarioConfig` solo guarda tolerancias; el modo multiescenario es un argumento de API (`CFG-010` PARTIAL).
+5. `MIP-004`: resumen de calibración sobre instancias probadas, sin recalibrar el `CandidateEngine`.
+
+### Limitaciones conocidas
+
+- No implementados: TrackingError, Beta y Factor limits (`CON-015/016/017`, `VAL-006`, `FEA-008`), OAS/EWMA
+  (`RSK-004/005`), Σ robusta por SDP (A-23), multi-start y algoritmos no convexos (E-25), `VIS-003`.
+- EXACT_MIP acotado por `exact_mip.max_universe_size`; valida una composición fija por instancia y es
+  exponencial en el peor caso.
+- Los conjuntos de incertidumbre de μ asumen error muestral iid y se rechazan con alpha externo salvo que sea explícito.
+- Benchmarks descriptivos de un proceso (10 y 20 activos, 3 escenarios, 5 repeticiones, seed 7, `NET`); los
+  tiempos de esta máquina son bimodales y no son rendimiento de producción. Resultado guardado en
+  `benchmarks/results/block4_formulations_20260925T175532Z.json`.
+
+### Tests
+
+Gate ejecutado el 2026-09-25 (sin skipped):
+
+- `pytest -q` completo: **1454 passed** (baseline 1193 + 261 tests nuevos del Bloque 4), 0 failed, 387 s.
+- Regresión F-3 (7 instancias / 77 puntos): `test_numerical_recovery.py`, `test_f3_post_merge_review.py`,
+  `test_f3_near_identical_net_budget.py`: 132 passed. B1/B2/B3 incluidos en la suite completa.
+- `mypy --strict portfolio_engine`: sin errores (158 ficheros). `ruff check .`: sin hallazgos.
+  `ruff format --check portfolio_engine tests benchmarks`: 303 ficheros ya formateados.
+
+Estados finales: 224 `VALIDATED`, 38 `PARTIAL`, 54 `NOT_IMPLEMENTED`, 0 `IMPLEMENTED` (total 316).
+
+
+## [Remediación del Bloque 4 tras `AUDIT_BLOCK_4.md` — F-01, F-02, F-03, F-10] — 2026-10-19
+
+Rama `block4-scenarios-robust-optimization`, sin commit/push/merge/PR/tag; no se avanza al Bloque 5. Informe:
+`REMEDIATION_BLOCK_4.md`. El Bloque 4 **no se declara validado** hasta la auditoría independiente de cierre.
+
+- **F-01 (HIGH)**: `PortfolioSpec.volatility_limit` se aplica (cono `‖Lᵀw‖ <= σ_max`) o se rechaza antes del solver
+  (FEA-005) en `cvar`, `robust`, `solve_worst_case` y `solve_base_with_stress`; el validador independiente recibe
+  `VolatilityLimitCheck`. Nuevo `VolatilityCap`/`add_volatility_cap`, argumento `volatility_cap` en cuatro
+  constructores, `StrategyOptimizer.volatility_mandate`/`volatility_checks`. Tests: `test_volatility_mandate.py`
+  (27; Σ no diagonal, oráculos SLSQP/aleatorio, mutación, escenarios incompatibles).
+- **F-02 (MEDIUM)**: `README.md` (único fichero con `ruff format --check` fallido) corregido a mano.
+- **F-03 (MEDIUM)**: `SharpeOutcome.OPTIMAL` exige resultado válido; si no, `SOLVER_FAILURE` +
+  `SHARPE_SOLUTION_NOT_VALIDATED`. Justificado: tolerancia de volatilidad cero de configuración y
+  `status=OPTIMAL` del LP de aplicabilidad en `NOT_APPLICABLE`.
+- **F-10 (MEDIUM)**: `NCV-001` pasa a `PARTIAL` (solo arquitectura); `SOL-002` sin «prevista». Estados: 223
+  `VALIDATED`, 39 `PARTIAL`, 54 `NOT_IMPLEMENTED`, 0 `IMPLEMENTED` (316).
+- Tests ejecutados: `pytest -q` **1482 passed**, 0 failed; `mypy --strict` sin errores (158 ficheros); `ruff check .`
+  y `ruff format --check .` limpios (319 ficheros); `git diff --check` sin errores de espacios.
+- Abiertos con constancia: F-04…F-09, F-11…F-13 (ver `REMEDIATION_BLOCK_4.md` §5).

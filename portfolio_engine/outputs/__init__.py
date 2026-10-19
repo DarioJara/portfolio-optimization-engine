@@ -32,6 +32,15 @@ from portfolio_engine.outputs.schemas import (
     SolverDiagnosticsRow,
     WeightRow,
 )
+from portfolio_engine.outputs.strategy_rows import (
+    ScenarioMetricRow,
+    StrategyHeaderRow,
+    StrategyWeightRow,
+    scenario_metric_rows,
+    strategy_header_row,
+    strategy_header_rows,
+    strategy_weight_rows,
+)
 
 __all__ = (
     "DATASET_COLUMNS",
@@ -44,7 +53,10 @@ __all__ = (
     "FrontierPointRow",
     "GlobalFrontierPointRow",
     "ScenarioHeaderRow",
+    "ScenarioMetricRow",
     "SolverDiagnosticsRow",
+    "StrategyHeaderRow",
+    "StrategyWeightRow",
     "WeightContext",
     "WeightRow",
     "candidate_composition_rows",
@@ -54,8 +66,12 @@ __all__ = (
     "frontier_weight_rows",
     "global_frontier_point_rows",
     "scenario_header_rows",
+    "scenario_metric_rows",
     "scenario_weight_rows",
     "solver_diagnostics_rows",
+    "strategy_header_row",
+    "strategy_header_rows",
+    "strategy_weight_rows",
     "visualization_dataset",
     "weight_rows",
 )

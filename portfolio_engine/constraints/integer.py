@@ -20,6 +20,11 @@ from __future__ import annotations
 from collections.abc import Collection
 from dataclasses import dataclass
 
+import numpy as np
+
+from portfolio_engine.constraints.compiler import CompiledConstraints
+from portfolio_engine.models.enums import RestrictedExistingPositionPolicy
+
 CARDINALITY = "CARDINALITY"
 MAX_NEW_ASSETS = "MAX_NEW_ASSETS"
 MAX_SWAPS = "MAX_SWAPS"
@@ -86,3 +91,29 @@ def limit_violations(
     if limits.target_size is not None and len(frozenset(candidate)) != limits.target_size:
         violations.insert(0, CARDINALITY)
     return tuple(violations)
+
+
+@dataclass(frozen=True, slots=True)
+class MembershipRules:
+    """Pertenencia forzada a la composición derivada de las restricciones compiladas.
+
+    ``mandatory`` son las posiciones que no pueden salir (política ``FREEZE_WEIGHT`` de un activo
+    restringido en cartera: el peso queda congelado) y ``forbidden`` las que no pueden entrar ni
+    mantenerse con peso (cota superior efectiva nula: restringidos nuevos, ``FORCE_LIQUIDATE`` y
+    activos no comprables ausentes de la cartera). Son las mismas reglas de E-09 y E-10 que aplica
+    el compilador, leídas de las restricciones compiladas y no reinterpretadas.
+    """
+
+    mandatory: tuple[int, ...]
+    forbidden: tuple[int, ...]
+
+
+def membership_rules(compiled: CompiledConstraints) -> MembershipRules:
+    """Posiciones de ``compiled`` cuya pertenencia a la composición está forzada."""
+    mandatory = tuple(
+        rule.position
+        for rule in compiled.restricted_rules
+        if rule.is_held and rule.policy is RestrictedExistingPositionPolicy.FREEZE_WEIGHT
+    )
+    forbidden = tuple(int(i) for i in np.flatnonzero(compiled.upper <= 0.0).tolist())
+    return MembershipRules(mandatory=mandatory, forbidden=forbidden)

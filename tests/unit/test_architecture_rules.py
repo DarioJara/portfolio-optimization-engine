@@ -65,6 +65,22 @@ ALLOWED_DEPENDENCIES: dict[str, set[str]] = {
         "parallel",
     },
     "outputs": {"exceptions", "utils", "models", "config", "costs", "metrics"},
+    # Bloque 4: ``scenarios`` orquesta escenarios y optimización multiescenario sobre los motores de
+    # fronteras y optimizadores; nadie por debajo depende de ``scenarios``.
+    "scenarios": {
+        "exceptions",
+        "utils",
+        "models",
+        "config",
+        "costs",
+        "constraints",
+        "metrics",
+        "optimizers",
+        "validation",
+        "candidates",
+        "frontiers",
+        "risk",
+    },
     "benchmark": {
         "exceptions",
         "utils",
@@ -73,6 +89,11 @@ ALLOWED_DEPENDENCIES: dict[str, set[str]] = {
         "frontiers",
         "optimizers",
         "candidates",
+        "scenarios",
+        "validation",
+        "constraints",
+        "costs",
+        "metrics",
     },
 }
 
@@ -80,7 +101,6 @@ ALLOWED_DEPENDENCIES: dict[str, set[str]] = {
 #: ``candidates``, ``frontiers/global_frontier.py``, ``constraints/integer.py`` y
 #: ``parallel/determinism.py``— se han implementado y ya no figuran aquí).
 LATER_BLOCK_PACKAGES = (
-    "scenarios",
     "parallel/batching.py",
     "parallel/shared_data.py",
     "parallel/worker.py",
@@ -90,10 +110,16 @@ LATER_BLOCK_PACKAGES = (
     "persistence",
     "cache",
     "engine.py",
-    "constraints/conic.py",
+)
+
+#: Módulos del Bloque 4 que deben existir (ScenarioEngine, backends cónico y mixto, formulaciones).
+BLOCK_4_MODULES = (
+    "scenarios/scenario_engine.py",
+    "scenarios/multi_scenario.py",
     "metrics/cvar_metric.py",
     "optimizers/clarabel_backend.py",
     "optimizers/mixed_integer_backend.py",
+    "optimizers/scip_backend.py",
     "optimizers/nonconvex_backend.py",
     "optimizers/formulations/sharpe.py",
     "optimizers/formulations/volatility.py",
@@ -101,13 +127,14 @@ LATER_BLOCK_PACKAGES = (
     "optimizers/formulations/robust.py",
     "optimizers/formulations/multi_scenario.py",
     "optimizers/formulations/miqp.py",
+    "frontiers/strategy_optimizer.py",
+    "frontiers/exact_mip_validation.py",
+    "validation/advanced_validator.py",
 )
 
 #: ``osqp`` solo puede importarse en su backend (test aparte); el resto sigue prohibido.
 FORBIDDEN_IMPORTS = (
-    "clarabel",
     "cvxpy",
-    "pyscipopt",
     "gurobipy",
     "multiprocessing",
     "concurrent",
@@ -200,9 +227,82 @@ def test_import_graph_is_acyclic() -> None:
 
 
 def test_no_later_block_packages_exist() -> None:
-    """Ningún módulo de los Bloques 4-6 existe (no se ha implementado más allá del Bloque 3)."""
+    """Ningún módulo de los Bloques 5-6 existe (no se ha implementado más allá del Bloque 4)."""
     present = [name for name in LATER_BLOCK_PACKAGES if (PACKAGE_ROOT / name).exists()]
     assert not present, f"Módulos de bloques posteriores presentes: {present}"
+
+
+def test_block_4_modules_exist() -> None:
+    """Los módulos del Bloque 4 existen (ScenarioEngine, Clarabel, MIP, formulaciones)."""
+    missing = [name for name in BLOCK_4_MODULES if not (PACKAGE_ROOT / name).exists()]
+    assert not missing, f"Módulos del Bloque 4 ausentes: {missing}"
+
+
+def test_clarabel_and_scip_are_confined_to_their_backends() -> None:
+    """SOL-005, MIP-007: Clarabel y PySCIPOpt solo se importan en su propio backend."""
+    allowed = {
+        "clarabel": "optimizers/clarabel_backend.py",
+        "pyscipopt": "optimizers/scip_backend.py",
+    }
+    offenders = [
+        f"{_relative(path)}: {imported}"
+        for path in _python_files()
+        for imported in _imports(path)
+        if imported.split(".")[0] in allowed and _relative(path) != allowed[imported.split(".")[0]]
+    ]
+    assert not offenders, offenders
+
+
+def test_exact_mip_never_reaches_the_production_inner_loop() -> None:
+    """MIP-005: el bucle interno de producción (candidatos, sesión de frontera, motor continuo y
+    frontera global) no importa el solver mixto, su formulación ni la validación EXACT_MIP."""
+    inner_loop = (
+        "candidates/",
+        "frontiers/session.py",
+        "frontiers/continuous_frontier.py",
+        "frontiers/global_frontier.py",
+        "frontiers/numerical_recovery.py",
+        "frontiers/candidate_evaluator.py",
+    )
+    forbidden = (
+        "portfolio_engine.optimizers.scip_backend",
+        "portfolio_engine.optimizers.mixed_integer_backend",
+        "portfolio_engine.optimizers.formulations.miqp",
+        "portfolio_engine.frontiers.exact_mip_validation",
+        "pyscipopt",
+    )
+    offenders = [
+        f"{_relative(path)}: {imported}"
+        for path in _python_files()
+        if _relative(path).startswith(inner_loop)
+        for imported in _imports(path)
+        if imported.startswith(forbidden)
+    ]
+    assert not offenders, offenders
+
+
+def test_scenario_and_advanced_validation_do_not_bypass_the_validator() -> None:
+    """Las estrategias y el modo multiescenario validan siempre con el validador independiente:
+    ``StrategyOptimizer.assemble`` es el único constructor de ``StrategyResult`` con pesos y usa
+    ``AdvancedSolutionValidator``; ``scenarios`` no importa ningún backend (usa el optimizador)."""
+    forbidden = (
+        "portfolio_engine.optimizers.clarabel_backend",
+        "portfolio_engine.optimizers.osqp_backend",
+        "portfolio_engine.optimizers.highs_backend",
+        "portfolio_engine.optimizers.scip_backend",
+        "clarabel",
+        "osqp",
+    )
+    offenders = [
+        f"{_relative(path)}: {imported}"
+        for path in _python_files()
+        if _relative(path).startswith("scenarios/")
+        for imported in _imports(path)
+        if imported.startswith(forbidden)
+    ]
+    assert not offenders, offenders
+    optimizer = (PACKAGE_ROOT / "frontiers/strategy_optimizer.py").read_text(encoding="utf-8")
+    assert "AdvancedSolutionValidator" in optimizer and "self._validator.validate(" in optimizer
 
 
 def test_no_forbidden_imports() -> None:

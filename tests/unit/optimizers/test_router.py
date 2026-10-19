@@ -57,14 +57,20 @@ def test_each_route_call_returns_a_new_workspace_owner() -> None:
     "problem_class", [ProblemClass.MIQP, ProblemClass.MIQCP, ProblemClass.MISOCP]
 )
 def test_miqp_not_routed_to_osqp(problem_class: ProblemClass) -> None:
-    """MIP-002: ninguna clase mixta entera llega a OSQP; se rechaza explícitamente."""
-    with pytest.raises(RoutingError, match="mixto entero"):
+    """MIP-002: ninguna clase mixta entera llega a OSQP; un problema que solo *declara* la clase
+    (sin variables binarias) se rechaza explícitamente (Bloque 4: solo un ``MixedIntegerProblem``
+    llega a un solver mixto)."""
+    with pytest.raises(RoutingError, match="MixedIntegerProblem"):
         ROUTER.route(_problem(problem_class, OptimizationFamily.EXACT_MIP))
 
 
 @pytest.mark.parametrize("problem_class", [ProblemClass.SOCP, ProblemClass.SDP])
-def test_conic_problems_are_rejected_until_block_4(problem_class: ProblemClass) -> None:
-    with pytest.raises(RoutingError, match="Clarabel"):
+def test_a_bare_conic_or_sdp_declaration_is_never_routed_to_osqp(
+    problem_class: ProblemClass,
+) -> None:
+    """Un router sin ``ConicSolverConfig`` no puede enviar un SOCP a Clarabel y jamás lo envía a
+    OSQP; SDP no está implementado (sin cono PSD)."""
+    with pytest.raises(RoutingError, match=r"Clarabel|SDP"):
         ROUTER.route(_problem(problem_class, OptimizationFamily.FAST_PRODUCTION))
 
 

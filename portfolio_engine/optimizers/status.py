@@ -9,6 +9,13 @@ Reglas:
 * HiGHS (``scipy.optimize.linprog``) devuelve un código entero (:data:`HIGHS_STATUS_BY_CODE`):
   óptimo, límite (iteraciones o tiempo), inviable, no acotado y dificultades numéricas; ninguno
   se colapsa en otro y un código desconocido es ``UNKNOWN``.
+* Clarabel (Bloque 4): ``Solved`` es ``OPTIMAL``; ``AlmostSolved`` es ``OPTIMAL_INACCURATE``; los
+  certificados ``Almost*Infeasible`` son ``NUMERICAL_ERROR`` (el solver sospecha, no certifica) y
+  solo ``PrimalInfeasible``/``DualInfeasible`` son ``INFEASIBLE``/``UNBOUNDED`` firmes.
+* SCIP (Bloque 4): ``optimal`` es ``OPTIMAL``; ``gaplimit`` es ``OPTIMAL`` solo si la brecha
+  verificada no supera la tolerancia configurada (lo decide el backend, no este mapa); los límites
+  de tiempo, nodos y soluciones conservan su propio estado; ``inforunbd`` (inviable o no acotado,
+  sin distinguir) es ``UNKNOWN``.
 * Un estado nativo desconocido es ``UNKNOWN``; el texto nativo se conserva siempre.
 """
 
@@ -33,6 +40,46 @@ OSQP_STATUS_MAP: Mapping[str, SolverStatus] = MappingProxyType(
         "problem non convex": SolverStatus.NUMERICAL_ERROR,
         "interrupted": SolverStatus.UNKNOWN,
         "unsolved": SolverStatus.UNKNOWN,
+    }
+)
+
+#: Textos de estado de Clarabel 0.11 → estado normalizado.
+CLARABEL_STATUS_MAP: Mapping[str, SolverStatus] = MappingProxyType(
+    {
+        "solved": SolverStatus.OPTIMAL,
+        "almostsolved": SolverStatus.OPTIMAL_INACCURATE,
+        "primalinfeasible": SolverStatus.INFEASIBLE,
+        "dualinfeasible": SolverStatus.UNBOUNDED,
+        "almostprimalinfeasible": SolverStatus.NUMERICAL_ERROR,
+        "almostdualinfeasible": SolverStatus.NUMERICAL_ERROR,
+        "maxiterations": SolverStatus.MAX_ITERATIONS,
+        "maxtime": SolverStatus.TIME_LIMIT,
+        "numericalerror": SolverStatus.NUMERICAL_ERROR,
+        "insufficientprogress": SolverStatus.INSUFFICIENT_PROGRESS,
+        "callbackterminated": SolverStatus.UNKNOWN,
+        "unsolved": SolverStatus.UNKNOWN,
+    }
+)
+
+#: Textos de estado de SCIP (``Model.getStatus()``) → estado normalizado.
+SCIP_STATUS_MAP: Mapping[str, SolverStatus] = MappingProxyType(
+    {
+        "optimal": SolverStatus.OPTIMAL,
+        "infeasible": SolverStatus.INFEASIBLE,
+        "unbounded": SolverStatus.UNBOUNDED,
+        "inforunbd": SolverStatus.UNKNOWN,
+        "timelimit": SolverStatus.TIME_LIMIT,
+        "nodelimit": SolverStatus.MAX_ITERATIONS,
+        "totalnodelimit": SolverStatus.MAX_ITERATIONS,
+        "stallnodelimit": SolverStatus.INSUFFICIENT_PROGRESS,
+        "sollimit": SolverStatus.MAX_ITERATIONS,
+        "bestsollimit": SolverStatus.MAX_ITERATIONS,
+        "restartlimit": SolverStatus.MAX_ITERATIONS,
+        "memlimit": SolverStatus.NUMERICAL_ERROR,
+        "gaplimit": SolverStatus.UNKNOWN,
+        "userinterrupt": SolverStatus.UNKNOWN,
+        "terminate": SolverStatus.UNKNOWN,
+        "unknown": SolverStatus.UNKNOWN,
     }
 )
 
@@ -74,3 +121,17 @@ def map_highs_status(code: int, message: str) -> SolverStatus:
     if status is SolverStatus.MAX_ITERATIONS and "time" in message.lower():
         return SolverStatus.TIME_LIMIT
     return status
+
+
+def map_clarabel_status(native_status: str) -> SolverStatus:
+    """Estado normalizado de un estado nativo de Clarabel (``UNKNOWN`` si no se reconoce)."""
+    return CLARABEL_STATUS_MAP.get(native_status.strip().lower(), SolverStatus.UNKNOWN)
+
+
+def map_scip_status(native_status: str) -> SolverStatus:
+    """Estado normalizado de un estado nativo de SCIP (``UNKNOWN`` si no se reconoce).
+
+    ``gaplimit`` se devuelve como ``UNKNOWN``: el backend lo promueve a ``OPTIMAL`` únicamente si
+    verifica que la brecha cumple la tolerancia configurada.
+    """
+    return SCIP_STATUS_MAP.get(native_status.strip().lower(), SolverStatus.UNKNOWN)

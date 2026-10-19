@@ -8,8 +8,8 @@ Motor profesional de optimización cuantitativa de carteras multi-escenario.
 - Plan por bloques: [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 - Historial: [`CHANGELOG.md`](CHANGELOG.md).
 
-Estado actual: **Bloque 3 (CandidateEngine, sustituciones y Global Candidate Frontier)** sobre el
-Bloque 2 (optimizador continuo y frontera eficiente de la composición actual fija) y el Bloque 1
+Estado actual: **Bloque 4 (escenarios, optimización robusta, cónica y validación EXACT_MIP)** sobre el
+Bloque 3 (CandidateEngine, sustituciones y Global Candidate Frontier), el Bloque 2 (optimizador continuo y frontera eficiente de la composición actual fija) y el Bloque 1
 (Foundation: configuración, datos, validación, retornos, covarianza y modelo de riesgo).
 
 - **Bloque 2:** frontera eficiente de la **composición actual fija** (solo cambian los pesos; los activos
@@ -24,14 +24,21 @@ Bloque 2 (optimizador continuo y frontera eficiente de la composición actual fi
   (composición actual) y la global (múltiples composiciones) son pipelines distintos y ambos, junto
   con la cartera actual, se pueden graficar desde `visualization_dataset`.
 
-Todavía **no** hay escenarios, SOCP/CVaR/robustez, MIQP, paralelismo, caché ni persistencia
-(Bloques 4-6). La cardinalidad del CandidateEngine se garantiza en la **generación discreta**; no es
-una formulación MIQP exacta.
+- **Bloque 4:** `ScenarioEngine` (10 tipos de escenario con choques configurables → `mu_s`, `Sigma_s`,
+  `cost_s`, `constraints_s`) y `MultiScenarioOptimizer` (ScenarioIndependent, ExpectedScenarioUtility,
+  WorstCase, BaseWithStressConstraints); Max Sharpe (Charnes–Cooper, SOCP), control de volatilidad (SOCP),
+  CVaR (Rockafellar–Uryasev) y optimización robusta (μ caja/elipsoidal, Σ escalada, shrinkage). El
+  `SolverRouter` envía QP→OSQP, LP→HiGHS, SOCP→Clarabel y MIQP/MISOCP→SCIP (solo en el modo de
+  validación EXACT_MIP, nunca en el bucle de producción). `NONCONVEX_RESEARCH` es solo arquitectura.
+
+Todavía **no** hay paralelismo, caché ni persistencia (Bloques 5-6), ni TrackingError/Beta/Factores,
+OAS/EWMA, Σ robusta por SDP ni algoritmos no convexos. En producción, la cardinalidad del CandidateEngine
+se garantiza en la **generación discreta**; la formulación MIQP exacta solo valida (`exact_mip_validation`).
 
 ## Requisitos
 
 - Python ≥ 3.11.
-- Dependencias de runtime: `numpy`, `scipy`, `pandas`, `pyarrow`, `osqp` (ver `pyproject.toml`).
+- Dependencias de runtime: `numpy`, `scipy`, `pandas`, `pyarrow`, `osqp`, `clarabel` (ver `pyproject.toml`). Opcional, grupo `exact-mip`: `pyscipopt` (solo para el modo de validación EXACT_MIP; sin él se diagnostica y no se sustituye por otro algoritmo).
 - Dependencias de desarrollo (grupo `dev`): `pytest`, `hypothesis`, `mypy`, `ruff`, `scikit-learn` (solo como referencia en tests).
 
 ## Instalación (entorno local, nunca global)
@@ -206,3 +213,33 @@ MinVariance.
 Reproduce el experimento de la auditoría: 96 fronteras sintéticas (N ∈ {5, 10, 20, 40}, 6 semillas,
 {GROSS, NET} × {malla de aversión al riesgo, malla de retorno objetivo}) e informa cuántas salen
 sanas, degradadas o sin frontera.
+
+## Uso: estrategias, escenarios y validación EXACT_MIP (Bloque 4)
+
+```python
+from portfolio_engine.frontiers.strategy_optimizer import StrategyOptimizer
+from portfolio_engine.scenarios import ScenarioEngine, MultiScenarioOptimizer
+
+# Max Sharpe, VolTarget, MinCVaR, CVaR-limited, Robust
+strategies = StrategyOptimizer(config)
+# mu_s, Sigma_s, cost_s, constraints_s por escenario
+scenarios = ScenarioEngine(config).build(
+    risk_model, universe, costs, config.constraints, spec, definitions
+)
+# el modo multiescenario se elige con el método (no es una clave de configuración)
+multi = MultiScenarioOptimizer(config)
+```
+
+Los parámetros numéricos proceden de las secciones `[conic]`, `[sharpe]`, `[cvar]`, `[exact_mip]`,
+`[robust]` y `[scenarios]` de `config/default_engine.toml`; las definiciones de escenario se cargan con
+`load_scenario_definitions`. Consultar las firmas exactas en los tests de `tests/unit/scenarios/` y
+`tests/unit/optimizers/`.
+
+## Benchmark de las formulaciones del Bloque 4
+
+```bash
+.venv/Scripts/python benchmarks/scripts/block4_formulations.py --universe 10 20 --held 8 --seed 7
+```
+
+Mide etapas reales (construcción de escenarios, formulación, solver, validación) y guarda el resultado con
+metadatos en `benchmarks/results/`. Un proceso, sin paralelismo: no es rendimiento de producción.

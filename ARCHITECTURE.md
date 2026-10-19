@@ -64,7 +64,7 @@ Orden de magnitud de memoria que condiciona el diseño: `Sigma_global` 700×700 
 | pytest | 9.0.1 | |
 | threadpoolctl | 3.6.0 | §60. |
 | hypothesis | **ausente** (no se instala globalmente) | Se incorpora como dependencia de desarrollo del entorno del proyecto cuando el Bloque 1 cree la gestión de dependencias (A-27). |
-| Solver MIQP | **ausente** | Referencia aprobada: SCIP / PySCIPOpt, a incorporar en el Bloque 4 como dependencia opcional del grupo EXACT_MIP; Gurobi/CPLEX/MOSEK solo opcionales (A-24). |
+| Solver MIQP | **ausente en PROMPT 0; instalado en el Bloque 4 (PySCIPOpt 6.2.1, grupo opcional)** | Referencia aprobada: SCIP / PySCIPOpt, a incorporar en el Bloque 4 como dependencia opcional del grupo EXACT_MIP; Gurobi/CPLEX/MOSEK solo opcionales (A-24). |
 | IPOPT (cyipopt) | **ausente** | No se incorporará mientras no exista un caso no convexo validado (A-25). |
 | Git | 2.50.1; repositorio inicializado con `git init` en el cierre de PROMPT 0 (rama `master`; commit baseline `e49c70e` "Phase 0 - architecture, specification and traceability baseline"; `core.autocrlf = true`) | Permite `GitCommit` (§70) y los commits por bloque de `README_USO.md` (A-26). |
 
@@ -393,6 +393,27 @@ históricos de auditoría no se alteran. Las decisiones llevan el prefijo `F3-`.
 | F3-06 | Diagnóstico | `SolveResult.recovery: RecoveryTrace \| None` (`models/solution.py`): estado y estado nativo del solver inicial, veredicto del LP, **todos** los intentos (`RecoveryAttempt`: estrategia, solver, estado, iteraciones, residuales primal/dual, escala, rechazo del validador) y resultado (`RecoveryOutcome`: `RECOVERED`, `CONFIRMED_INFEASIBLE`, `NOT_RECOVERED`). `SolveResult.iterations` y los tiempos suman **todos** los intentos, oráculo de HiGHS incluido (revisión post-merge P2-02; antes el oráculo se excluía de las iteraciones pero no de `solve_time`); `SolveResult.iterations_by_solver`, `FrontierSession.iterations_by_solver` y `FrontierDiagnostics.iterations_by_solver` desglosan por solver (OSQP, HiGHS). Sumar solvers distintos es una métrica agregada de actividad, no de esfuerzo computacional homogéneo | Los backends y `outputs/` no cambian |
 | F3-07 | Configuración | `SolverConfig.numerical_recovery` (bool) y `recovery_row_scales` (tuplas de escalas positivas; `[10.0, 1.0, 100.0]` en `config/default_engine.toml`, valores de ejemplo justificados en `REMEDIATION_F3_NUMERICAL.md` §5). Sin literales de negocio en el código. Las tolerancias del solver y de validación **no** se relajan | El `ConfigHash` cambia respecto a `block3-validated` porque el snapshot incorpora los dos campos nuevos (mismo criterio que F-5 para `ConstraintHash`); ningún resultado económico depende del hash |
 | F3-08 | Alcance | La recuperación no cubre la malla de `theta` (fila de retorno libre), MinVariance ni la etapa 2 de MaximumReturn (que usa su propia cara óptima, `R2-02`); esos caminos no mostraron el defecto en el barrido | `tests/unit/frontiers/test_numerical_recovery.py::test_the_risk_aversion_grid_and_the_extremes_are_outside_the_recovery` |
+
+### 3.6 Desviaciones y decisiones del Bloque 4 respecto al diseño original
+
+Registradas al implementar el Bloque 4 (2026-09-25, rama `block4-scenarios-robust-optimization`, sin commit).
+Ninguna sustituye Beam por Greedy, Global Frontier por una sola composición, Net por Gross − costes, SOCP por
+un QP incompatible ni MIQP por una heurística.
+
+| # | Diseño original | Implementado | Justificación |
+|---|---|---|---|
+| D-1 | `constraints/conic.py` con `VolatilityLimitConstraint` | Cono de volatilidad en `optimizers/formulations/conic.py` y `volatility.py`; factibilidad en `constraints/feasibility.py` | El cono es parte de la formulación (`ConicProblem`), no una restricción lineal compilable; evita un segundo compilador |
+| D-2 | `CrossCheckPolicy` con segundo solver | `cross_check_with_second_solver` + `CrossCheckReport` (API explícita); la política no se amplió | No se activa una verificación cruzada implícita en el bucle interno (coste y estados ambiguos) |
+| D-3 | Validación MIP en `candidates/` | `frontiers/exact_mip_validation.py` | Depende de las fronteras/composiciones; `candidates` no importa backends |
+| D-4 | `ScenarioConfig` con definiciones, probabilidades y modo | `ScenarioConfig` solo guarda tolerancias; definiciones en `config/scenario_definitions.py`; modo como argumento de API | Los choques son datos por escenario, no parámetros globales (`CFG-010` `PARTIAL`) |
+| D-5 | `SolverRouter.route(problem)` | `SolverRouter(..., inner_loop=...)` en el constructor | Los motores de producción rechazan EXACT_MIP y NONCONVEX (MIP-005) sin cambiar la firma de `route` |
+| D-6 | `volatility_limit` de `PortfolioSpec` | Se rechaza en las fronteras QP en lugar de ignorarse | Un parámetro no aplicado violaría la regla "nunca ignorar restricciones" |
+| D-7 | Sharpe/CVaR/robusto como módulos separados | Formulaciones en `optimizers/formulations/{sharpe,cvar,robust,multi_scenario,miqp}.py` sobre `ModelBuilder` | Un único ensamblador de problemas con variables auxiliares |
+
+Dependencias: `clarabel` es obligatoria (0.11.1); `pyscipopt` es opcional (grupo `exact-mip`, 6.2.1), y su
+ausencia se diagnostica, sin sustituir el algoritmo. El grafo de paquetes añade `scenarios` (sobre `models`,
+`config`, `constraints`, `metrics`, `data`; no importa backends) y `benchmark`; `clarabel` y `pyscipopt` solo se
+importan desde sus backends (test de arquitectura).
 
 ---
 
