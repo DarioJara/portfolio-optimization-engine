@@ -132,6 +132,7 @@ def host_info() -> dict[str, Any]:
         "cpu_governor": _governor(),
         "ram_total_bytes": memory.total,
         "ram_available_bytes_at_start": memory.available,
+        "swap_used_bytes_at_start": psutil.swap_memory().used,
         "system_cpu_percent_before": psutil.cpu_percent(interval=0.5),
         "load_note": "medido con psutil; no se consulta ningún servidor de base de datos",
     }
