@@ -244,7 +244,8 @@ Basada en MASTER_SPEC §81 ("estructura recomendada"), con **adiciones justifica
 │   │   ├── threading_control.py   # [B5.2] hilos BLAS por worker
 │   │   ├── worker.py              # [B5.2] WorkerInitializer, WorkerContext
 │   │   ├── executor.py            # [B5.2] SequentialExecutor, ParallelExecutor
-│   │   ├── shared_data.py         # [B5.3, pendiente]
+│   │   ├── shared_data.py         # [B5.3] publicación/adjunción de datos compartidos, huérfanos
+│   │   ├── operation_cache.py     # [B5.3] claves y caché por operación (por worker)
 │   │   └── determinism.py         # SequenceID, derivación de semillas (B3)
 │   ├── staging/                   # §68 (Bloque 6)
 │   │   ├── coordinator.py
@@ -513,6 +514,46 @@ temporal privado; el *initializer* solo recibe su ruta y su SHA-256 y verifica e
 (`readonly_float_array`), por lo que un mecanismo de memoria compartida no evitaría una copia privada por worker
 sin tocar B1–B4: la elección definitiva es de B5.3 (BEN-004). Cada worker verifica una huella de `mu` y `Σ` antes
 y después de cada lote (contaminación).
+
+### 3.8 Bloque 5.3: datos de mercado compartidos y caché de resultados
+
+Registrado al implementar el Bloque 5.3 (2026-10-20, rama `block5-shared-memory-cache`). Contratos: `MASTER_SPEC.md`
+§58-62, `BLOCK_5_3_EXECUTION_BRIEF.md`, `BLOCK_5_HPC_ARCHITECTURE.md` §7-8. **No** se modificó ningún algoritmo,
+solver, tolerancia, estado, restricción ni `EngineConfig.ConfigHash`; la caché se entrega desactivada.
+
+```
+Coordinador                                   Worker (spawn | forkserver)
+publish_snapshot(context, mode)               initialize_worker(handle, blas, cache_cfg)
+  BUNDLE_FILE  : pickle del contexto  ───►      attach_snapshot(handle) → verifica SHA-256 → ExecutionContext
+  FILE_MMAP    : cabecera + manifiesto +        (FILE_MMAP / SHARED_MEMORY: arrays = vistas de solo lectura
+                 datos en un fichero  ───►       sobre mmap / segmento; sin copia)
+  SHARED_MEMORY: cabecera + manifiesto +
+                 datos en un segmento ───►    run_batch → run_portfolio(..., cache=OperationCache | None)
+referencia = SnapshotHandle (≈ 0,2-0,6 KB, constante)     └ get_or_compute(CacheKey) → HIT: sin llamar al motor
+```
+
+| # | Diseño (B5.1 / brief) | Implementado | Justificación y medida |
+|---|---|---|---|
+| E-9 | `np.load`/`memmap` por array | `pickle` de protocolo 5 con *buffers* fuera de banda: cabecera pequeña + un bloque de datos (fichero con `mmap` o segmento `shared_memory`), alineado a 64 B, con SHA-256 por *buffer* | Los modelos de B1–B4 copian al **construir** (`readonly_float_array`); deserializar no ejecuta `__post_init__`, así que los arrays son vistas sin copia sin eludir ninguna validación. Medido: `sigma_backing = mmap` frente a `bytes` en el modo B5.2 |
+| E-10 | Referencia con ruta + hash | Referencia de **tamaño constante** (manifiesto de *buffers* en un fichero verificado por hash) | Con la tabla en la referencia crecería con el nº de arrays y volvería a acercarse al búfer del *pipe* de arranque de Windows (hallazgo E-8) |
+| E-11 | Modo por defecto «por benchmark» | `BUNDLE_FILE` (modo B5.2) sigue siendo el defecto; `FILE_MMAP` y `SHARED_MEMORY` son alternativas validadas | Ver «Resultados E4»: ninguna ventaja de arranque; ahorro de memoria = tamaño de los datos por worker (≈ 3,2 MB con N = 500, un 3 % del USS del worker) |
+| E-12 | Caché «por worker» | `OperationCache` por worker, **a nivel de operación del `WorkloadSpec`**, con `ResultCache` LRU (`max_entries`, `max_bytes`) que guarda *bytes* serializados y devuelve copias nuevas | El resultado de una operación es el objeto completo del motor y todas sus entradas se conocen antes de resolver. Desactivada por defecto (`[parallel.cache].enabled = false`) |
+| E-13 | Clave = componentes de CCH-002 | `CacheKey` = los diez componentes oficiales **más** `portfolio_id`, `operation_hash` y `snapshot_key` | Los resultados llevan el `PortfolioID`; la operación y sus parámetros y la huella de contenido de los datos completos no están en `MuSigmaVersion` |
+| E-14 | `ConstraintHash` | Hash de las **entradas** de las restricciones (configuración, mandato, composición explícita, NAV) | El `ConstraintHash` compilado depende de la composición y no existe antes de resolver |
+| E-15 | `ParallelConfig` | Nuevas claves obligatorias `shared_data_mode` y tabla `[parallel.cache]`; `MarketSnapshot.market_data_timestamp` opcional | Siguen fuera de `EngineConfig`/`ConfigHash`. Un timestamp ausente se registra como `UNSPECIFIED` en la clave |
+| E-16 | `STRATEGY_ROBUST` sin `mu_set` explícito (M-2) | `OperationSpec.mu_half_width`: semiancho `BOX` de `μ` por `AssetID`, convertido en `MuUncertaintySet` alineado con la composición | `ELLIPSOIDAL` (matriz `Ω` y su factor) sigue sin expresarse: M-2 queda `PARTIAL` |
+| E-17 | `psutil` no necesario | Extra opcional `bench` (`psutil>=5.9`); el código lo importa de forma perezosa | Solo mide RSS/USS/PSS en benchmarks |
+
+**No se cachea** (decisión de seguridad numérica): estados no definitivos (`MAX_ITERATIONS`, `TIME_LIMIT`,
+`NUMERICAL_ERROR`, `UNKNOWN`…), nada cuando hay un límite de tiempo de pared del solver (`solver` o `conic`),
+ni los informes de `EXACT_MIP`. Como `CurrentPortfolioStateHash` y el `PortfolioID` forman parte de la clave y los
+`PortfolioID` de una ejecución son únicos, **no hay aciertos entre carteras distintas**: los aciertos solo aparecen con
+operaciones repetidas dentro de un workload o en reejecuciones en un worker de larga vida.
+
+**Ciclo de vida y huérfanos (L-3).** El coordinador crea `portfolio_engine_run_*` con `owner.json` (PID) y lo elimina, junto
+con el segmento, en `finally` (con reintentos de borrado en Windows). `inventory_orphans` lista directorios y segmentos
+`pe_<pid>_*` (Linux, `/dev/shm`) cuyo PID ya no existe; `remove_orphans` los elimina. Verificado tras éxito, excepción y caída
+de worker.
 
 ---
 

@@ -1284,3 +1284,117 @@ Sin cambios de lógica de producción ni de tolerancias; `MASTER_SPEC.md` intact
 - Verificación: `pytest -q` **1668 passed** (654 s); `mypy --strict` sin errores (165 ficheros); `ruff check .` y
   `ruff format --check .` limpios (342 ficheros); `git diff --check` sin errores de espacios. Un gate intermedio previo a
   corregir la prueba de caída dio 2 fallos de esa prueba; se corrigió y se repitió el gate completo.
+
+---
+
+## [Bloque 5.3 — Datos de mercado compartidos y caché de resultados] — 2026-10-20
+
+Rama `block5-shared-memory-cache` (desde `main` = `539d4b7`, integración de B5.2). **Pendiente de auditoría independiente**
+(`AUDIT_REQUEST_BLOCK_5_3.md`); sin PR ni merge. Contratos: `BLOCK_5_3_EXECUTION_BRIEF.md`, `BLOCK_5_IMPLEMENTATION_PLAN.md`,
+`BLOCK_5_HPC_ARCHITECTURE.md` §7-9. No se modificó `MASTER_SPEC.md`, ni algoritmos, solvers, tolerancias, estados ni
+restricciones de B1–B4, ni `EngineConfig.ConfigHash`. Decisiones diferidas respetadas (D-03, D-04, D-06, D-08, D-10, D-11, D-12).
+
+### Baseline de no regresión (antes de modificar nada)
+
+Windows 11 / Python 3.13.6 (`.venv`), rama a `e00762e`: `pytest -q` **1668 passed, 1 skipped** (prueba `forkserver` solo
+Linux; 349 s), `mypy --strict` sin errores (165 ficheros), `ruff check` y `ruff format --check` limpios.
+
+### Añadido
+
+- `parallel/shared_data.py`: `SharedDataMode` {`BUNDLE_FILE` (B5.2, reserva), `FILE_MMAP`, `SHARED_MEMORY`}; `publish_snapshot`
+  / `attach_snapshot` con `pickle` de protocolo 5 y *buffers* fuera de banda (SHA-256 de cabecera, manifiesto y cada *buffer*,
+  alineación a 64 B), referencia de tamaño constante, arrays de solo lectura sin copia, limpieza en `finally` (con reintentos
+  de borrado en Windows), `owner.json` y `inventory_orphans`/`remove_orphans` (directorios y segmentos `pe_<pid>_*`).
+- `cache/keys.py`, `cache/result_cache.py`: `CacheKey` (10 componentes oficiales de CCH-002 + `portfolio_id`,
+  `operation_hash`, `snapshot_key`), `ResultCache` (LRU por entradas y bytes, copias nuevas, métricas).
+- `parallel/operation_cache.py`: `OperationCache` por worker a nivel de operación; solo estados definitivos; nada con límites
+  de tiempo de pared ni con `EXACT_MIP`.
+- `config/parallel_config.py`: `SharedDataMode`, `CacheConfig`; claves obligatorias `shared_data_mode` y `[parallel.cache]`
+  (`enabled = false` por defecto).
+- `STRATEGY_ROBUST`: `OperationSpec.mu_half_width` (incertidumbre `BOX` de `μ` por `AssetID`, M-2 parcial).
+- `MarketSnapshot.market_data_timestamp`; `RunResult.cache_metrics`/`publication`; `OperationOutcome.cache_event`;
+  `RunManifest.shared_data_mode`/`cache_enabled`; diagnósticos de worker (`attach_seconds`, `sigma_backing`, memoria).
+- Dependencia opcional `psutil` (extra `bench`) para RSS/USS/PSS; `benchmarks/scripts/shared_data_cache.py` (E4/E8);
+  `.github/workflows/b53-branch-ci.yml` (validación **temporal** en Ubuntu; se elimina antes de integrar).
+- Tests: `tests/unit/parallel/test_shared_data.py`, `test_operation_cache.py`, `tests/unit/cache/` (claves y almacén),
+  `tests/integration/test_shared_data_equivalence.py`; reglas de arquitectura (`cache`, constantes de formato).
+
+### Verificación
+
+Windows 11 / Python 3.13.6 sobre el código de B5.3 (`7d4632a`, sin cambios de lógica desde entonces salvo el punto 3 de
+«Linux»): `pytest -q -rs` **1757 passed, 2 skipped** (`forkserver` y el inventario de `/dev/shm`, solo Linux; 684 s),
+`mypy --strict portfolio_engine` sin errores (170 ficheros), `ruff check .` limpio, `ruff format --check .` (358 ficheros)
+y `git diff --check` limpios. Tras el commit `d3ecd53` se repitieron en Windows ruff, `ruff format --check`, mypy del módulo
+y los 27 tests de datos compartidos/equivalencia (27 passed, 1 skipped). Sobre el baseline (1668 + 1) hay 89 tests nuevos
+y ninguna regresión. El diff respecto de `539d4b7` no toca ningún módulo fuera de `parallel/`, `cache/` y `config/`, ni
+`tests/unit/scenarios`.
+
+### Resultados E4 (datos compartidos) y E8 (caché): medidas locales, sintéticas y pequeñas
+
+`benchmarks/results/shared_data_cache_20261020T100159Z.json` (Windows 11, Intel, Python 3.13.6, `spawn`, 1 hilo BLAS,
+2 repeticiones, universos de 50 y 500 activos, 8 carteras W0 con 160 puntos de frontera válidos por celda, T1 = 0 diferencias en
+las 18 celdas, 0 recursos residuales). **No es rendimiento de producción ni se extrapola.**
+
+| Medida | `BUNDLE_FILE` | `FILE_MMAP` | `SHARED_MEMORY` |
+|---|---|---|---|
+| Pool listo (1/2/4 workers), mín. | 6,2–8,2 s | 6,0–8,5 s | 5,7–8,0 s (el `import` de ≈ 5 s por worker domina; sin diferencia atribuible al modo) |
+| Adjunción dentro del worker (N = 500) | 44–55 ms | 95–103 ms | 64–78 ms (verificar el hash de cada *buffer* cuesta más que deserializar a este tamaño) |
+| Referencia por el pipe de arranque | 228 B | 559 B | 504 B (constante con el universo) |
+| USS por worker, N = 50 | 112,6–112,9 MB | 112,3–112,8 MB | 112,3–112,9 MB |
+| USS por worker, N = 500 | 115,9–116,0 MB | 112,6–113,5 MB | 112,7–113,4 MB |
+| Origen de la memoria de `Σ` | copia privada (`bytes`) | vista sobre `mmap` | vista sobre `mmap` del segmento |
+
+Lectura: los modos fuera de banda **sí evitan la copia privada** (`sigma_backing = mmap`) y la memoria privada por worker baja
+en torno al tamaño de los datos (≈ 3,2 MB con N = 500: `Σ` 2,0 MB + retornos 1,2 MB, un 3 % de los ≈ 113 MB que ocupa
+un worker); con N = 50 la diferencia es ruido. **No hay mejora de tiempo de arranque.** Por eso el modo por defecto sigue siendo
+`BUNDLE_FILE` (más simple y con el fallback incorporado); los otros dos son alternativas validadas cuando los datos compartidos
+sean grandes (muchos escenarios `Σ_s`: hipótesis, no medida). Ninguna cifra se extrapola a 22.000 carteras.
+
+E8 (secuencial, 12 carteras W0 NET, operación repetida `k` veces, mín. de 2): `k = 1` 0,96 s sin caché / 0,92 s con caché (264 llamadas
+al solver en ambos casos, 0 aciertos: el coste de serializar no es medible frente al ruido); `k = 2` 1,75 s → 0,97 s (528 → 264
+llamadas, 12 aciertos); `k = 4` 3,45 s → 1,03 s (1056 → 264 llamadas, 36 aciertos). Cada acierto elimina por completo las llamadas al
+solver; el resultado es idéntico (T1 = 0). 12 entradas ocupan ≈ 263 KB. Entre carteras distintas hay 0 aciertos por diseño.
+
+### Linux (GitHub Actions, workflow temporal `b53-branch-ci.yml`)
+
+Ubuntu 22.04, Python 3.11.17, numpy 2.4.6, scipy 1.17.1, clarabel 0.11.1, osqp 1.1.3, PySCIPOpt 6.3.0, psutil 7.2.2; runner de
+**1 CPU** (los tiempos con 2 y 4 workers no son representativos). Run `39414610396` sobre `d3ecd53`: `mypy --strict`, ruff,
+tests de `forkserver`/datos compartidos/caché y suite completa **1762 passed** (108 s); benchmark pequeño `spawn` y
+`forkserver` × 3 modos × {1, 2, 4} workers × N {50, 500}: **T1 = 0 en todas las celdas**, 160 puntos válidos por celda. Orden de
+magnitud: pool listo 0,7–1,3 s (el `import` es mucho más rápido que en Windows), adjunción 0,8–1,3 ms (N = 50) y 4–8 ms
+(N = 500), referencia 199/472/444 B, USS por worker con N = 500: 116 MB (`BUNDLE_FILE`) frente a 111–112 MB (`FILE_MMAP`,
+`SHARED_MEMORY`) en `spawn`; E8 `k = 4`: 0,44 s / 1056 llamadas sin caché frente a 0,13 s / 264 llamadas con 36 aciertos.
+
+Hallazgos:
+
+1. **Defecto corregido (`d3ecd53`)**: con Python < 3.13 el adjuntar un segmento en el worker lo registraba y anulaba en el
+   `resource_tracker` compartido, y el `unlink` del coordinador producía `KeyError` en el rastreador (visible en el run
+   `39409385018`, sin efecto sobre resultados ni limpieza). Los workers ya no lo registran; en el run `39414610396`
+   hay 0 líneas `KeyError`. El camino de Python ≥ 3.13 (`track=False`, usado en Windows) no cambia.
+2. **Intermitencia en B4 (no atribuible a B5.3, no resuelta)**: `test_single_solutions_satisfy_the_constraints_of_every_scenario`
+   y `test_worst_case_maximizes_the_minimum_scenario_utility` fallaron en ejecuciones previas de Linux. Sonda de 12 repeticiones
+   por commit, en dos runs: `539d4b7` (main, B5.2) **0/12 correctas** en ambos (runners AMD EPYC 9V74 y 7763; `is_valid_solution` falso; el
+   mensaje muestra dos utilidades del peor caso que difieren en ≈ 5·10⁻¹⁵) y la rama B5.3 **12/12 correctas** en ambos (Intel Xeon 6973P y 8573C). La
+   suite completa de B5.3, en un runner AMD EPYC 9V45, pasó. La CPU del runner no está controlada, de modo que no se puede
+   atribuir la diferencia ni a la CPU ni al código; B5.3 no toca ningún módulo ni test de B4. Queda como incidencia abierta para
+   la auditoría y para B5.4 (no se ha modificado ninguna tolerancia ni test de B4).
+3. El workflow temporal debe eliminarse antes de integrar.
+
+### Requisitos (ver `TRACEABILITY.md`)
+
+`VALIDATED`: PAR-004, PAR-005, CCH-001, CCH-002, CCH-003, CCH-004, CCH-005, CFG-011. Siguen `PARTIAL`: PAR-013, BEN-004,
+GOV-012. Estados: `NOT_IMPLEMENTED` 36, `PARTIAL` 42, `IMPLEMENTED` 0, `VALIDATED` 238 (total 316).
+
+### Limitaciones y deuda técnica (abiertas)
+
+- **No se calibra AUTO ni se mide la escala** (BEN-004 completo, B5.5); no hay medidas a 1.000+ carteras (D-12).
+- Los datos compartidos solo ahorran memoria del orden del tamaño de los datos por worker; el arranque (≈ 5 s de `import` por worker)
+  no mejora. La memoria compartida real con varios escenarios `Σ_s` no se ha medido.
+- La caché no produce aciertos entre carteras distintas (por diseño: `CurrentPortfolioStateHash` y `PortfolioID` en la clave) ni en
+  workers de un solo uso; su valor está en operaciones repetidas y reejecuciones en procesos de larga vida (B5.4+).
+- `mu_set` `ELLIPSOIDAL` sigue sin expresarse en el `WorkloadSpec` (M-2 parcial).
+- B5.4 abierto: M-1 (initializer sin corte), D-DET (detección tardía de la caída del último worker), L-1 (huella solo `mu`/`Σ`),
+  L-2 (mensajes sin truncar), L-4 (`os.environ`), reintentos, plazos y diario.
+- Los segmentos de memoria compartida huérfanos de Linux se inventarían pero nunca se eliminan automáticamente
+  (`remove_orphans` es una acción explícita).
+- Intermitencia **preexistente** de dos pruebas de B4 en Linux (véase «Linux»), no atribuible a B5.3.

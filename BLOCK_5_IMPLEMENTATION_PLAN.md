@@ -235,3 +235,21 @@ Estado de los requisitos propuestos (no oficiales; D-05):
 Hallazgo de rendimiento que condiciona B5.3–B5.5: el arranque de cada worker (≈5 s de `import` en `spawn`) domina a
 tamaños pequeños; el reparto del tiempo de CPU entre fases no se ha perfilado todavía (paso 1 de B5.2 del plan:
 pendiente, no se ha ejecutado `cProfile`).
+
+---
+
+## 9. Resultado de B5.3 (2026-10-20) y estado de los requisitos propuestos
+
+Rama `block5-shared-memory-cache`, pendiente de auditoría independiente (`AUDIT_REQUEST_BLOCK_5_3.md`). Detalle, cifras y
+límites en `CHANGELOG.md` (Bloque 5.3) y `ARCHITECTURE.md` §3.8.
+
+* Datos compartidos: `BUNDLE_FILE` (defecto, B5.2), `FILE_MMAP`, `SHARED_MEMORY`; referencia de tamaño constante; arrays de
+  solo lectura sin copia; limpieza e inventario de huérfanos. Sin ventaja de arranque; ahorro de memoria privada ≈ tamaño de los datos.
+* Caché por worker a nivel de operación, clave completa, límites y métricas; desactivada por defecto; sin aciertos entre carteras distintas.
+* Equivalencia T1 comprobada para los tres modos y con caché; ningún solver, tolerancia ni estado modificado.
+
+| ID | Estado tras B5.3 | Evidencia / pendiente |
+|---|---|---|
+| P-02 | PARTIAL | Memoria por worker medida con `psutil` (benchmarks); RSS del coordinador y presupuesto global siguen sin cerrarse (B5.4/B5.5) |
+| P-09 | CUMPLIDO con limitación | `STRATEGY_ROBUST` admite `mu_half_width` (`BOX`); `ELLIPSOIDAL` sigue sin expresarse (M-2 parcial) |
+| resto | Sin cambio | B5.4 abierto: M-1, D-DET, L-1, L-2, L-4, reintentos, plazos, diario |
