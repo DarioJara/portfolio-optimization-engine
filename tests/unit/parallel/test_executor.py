@@ -25,15 +25,14 @@ from portfolio_engine.models.universe_index import AssetIndex
 from portfolio_engine.parallel import worker as worker_module
 from portfolio_engine.parallel.batching import ParallelExecutionError
 from portfolio_engine.parallel.executor import ParallelExecutor, RunResult, SequentialExecutor
-from portfolio_engine.parallel.task import ExecutionContext, ExecutionStatus, PortfolioRequest
-from portfolio_engine.parallel.worker import (
+from portfolio_engine.parallel.shared_data import (
     WorkerBundle,
-    initialize_worker,
     load_worker_bundle,
     worker_bundle,
-    worker_diagnostics,
     write_worker_bundle,
 )
+from portfolio_engine.parallel.task import ExecutionContext, ExecutionStatus, PortfolioRequest
+from portfolio_engine.parallel.worker import initialize_worker, worker_diagnostics
 from portfolio_engine.parallel.workload import OperationKind, OperationSpec, WorkloadSpec
 from tests.fixtures.candidates import random_problem
 from tests.fixtures.parallel import (
@@ -298,10 +297,10 @@ def _rendezvous_initializer(
     root = Path(directory)
     real = worker_module.run_portfolio
 
-    def patched(request: PortfolioRequest, context: ExecutionContext) -> Any:
+    def patched(request: PortfolioRequest, context: ExecutionContext, **kwargs: Any) -> Any:
         portfolio_id = request.portfolio_id
         if portfolio_id not in (poison, healthy):
-            return real(request, context)
+            return real(request, context, **kwargs)
         mine, other = ("poison", "healthy") if portfolio_id == poison else ("healthy", "poison")
         (root / f"{mine}.started").write_text("x", encoding="utf-8")
         deadline = time.monotonic() + 120.0
@@ -312,7 +311,7 @@ def _rendezvous_initializer(
         if portfolio_id == poison:
             os._exit(1)
         time.sleep(hold)  # la cartera sana sigue «ejecutándose» durante ``hold`` segundos
-        return real(request, context)
+        return real(request, context, **kwargs)
 
     worker_module.run_portfolio = patched  # type: ignore[assignment]
 
@@ -631,3 +630,23 @@ def test_the_integrity_check_detects_lost_duplicated_and_swapped_results(
     swapped = dc.replace(results[1], portfolio_id=results[0].portfolio_id)
     with pytest.raises(ParallelExecutionError, match="pertenece a"):
         _verify_exactly_once(items, [results[0], swapped, *results[2:]])  # identidad cruzada
+
+
+def test_a_worker_crash_leaves_no_temporary_run_directories(
+    tmp_path: Path,
+    snapshot: Any,
+    requests: list[PortfolioRequest],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """L-3: tras una caída de worker (Windows retiene manejadores un instante) no quedan restos."""
+    from portfolio_engine.parallel.shared_data import RUN_DIR_PREFIX, inventory_orphans
+
+    flag = tmp_path / "die-once.flag"
+    flag.write_text("x", encoding="utf-8")
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+    run = _CrashingExecutor(
+        CONFIG, snapshot, parallel_config(workers=1, batch_size=3), flag=flag
+    ).run(requests)
+    assert any(r.execution_status is ExecutionStatus.WORKER_CRASHED for r in run.results)
+    assert [p for p in tmp_path.iterdir() if p.name.startswith(RUN_DIR_PREFIX)] == []
+    assert inventory_orphans(tmp_path, min_age_seconds=0.0).empty

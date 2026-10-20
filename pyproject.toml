@@ -24,6 +24,8 @@ dependencies = [
 [project.optional-dependencies]
 # EXACT_MIP en modo validación (enmienda E-24): SCIP como backend de referencia; nunca obligatorio.
 exact-mip = ["pyscipopt>=6"]
+# Medición de memoria (RSS/USS/PSS) en los benchmarks de B5.3; los tests no la necesitan.
+bench = ["psutil>=5.9"]
 # Desarrollo y tests. Nunca se instalan globalmente: usar el entorno local .venv.
 dev = [
     "pytest>=8",
@@ -55,7 +57,7 @@ warn_unreachable = true
 files = ["portfolio_engine"]
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "pyarrow.*", "scipy.*", "sklearn.*", "osqp.*", "clarabel.*", "pyscipopt.*", "threadpoolctl.*"]
+module = ["pandas.*", "pyarrow.*", "scipy.*", "sklearn.*", "osqp.*", "clarabel.*", "pyscipopt.*", "threadpoolctl.*", "psutil.*"]
 ignore_missing_imports = true
 
 [tool.ruff]

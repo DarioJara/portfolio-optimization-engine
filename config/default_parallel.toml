@@ -28,3 +28,16 @@ start_method = "SPAWN"
 blas_threads = 1
 # Reciclado preventivo de un worker tras N lotes. Omitido = sin reciclado.
 # max_tasks_per_child = 100
+# Entrega de los datos de mercado a los workers (B5.3, PAR-004):
+#   BUNDLE_FILE   - fichero de arranque deserializado por cada worker (modo B5.2; reserva).
+#   FILE_MMAP     - arrays en un fichero proyectado en memoria de solo lectura (mmap).
+#   SHARED_MEMORY - arrays en un segmento multiprocessing.shared_memory.
+# El valor por defecto se mantiene en BUNDLE_FILE hasta que el benchmark E4 justifique otro
+# (benchmarks/results/shared_data_cache_*.json); véase BLOCK_5_3_EXECUTION_BRIEF.md.
+shared_data_mode = "BUNDLE_FILE"
+
+# Caché de resultados por worker (CCH-001…005). DESACTIVADA por defecto: es la vía de rollback.
+[parallel.cache]
+enabled = false
+max_entries = 64
+max_bytes = 67108864

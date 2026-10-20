@@ -31,10 +31,11 @@ from collections.abc import Sequence
 from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
 from concurrent.futures.process import BrokenProcessPool
 from contextlib import ExitStack
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
+from portfolio_engine.cache import CacheMetrics, ResultCache
 from portfolio_engine.config import EngineConfig
-from portfolio_engine.config.parallel_config import ParallelConfig
+from portfolio_engine.config.parallel_config import CacheConfig, ParallelConfig
 from portfolio_engine.parallel.batching import (
     ParallelExecutionError,
     PortfolioBatch,
@@ -42,6 +43,12 @@ from portfolio_engine.parallel.batching import (
     canonical_order,
     make_batches,
     resolve_batch_size,
+)
+from portfolio_engine.parallel.operation_cache import OperationCache
+from portfolio_engine.parallel.shared_data import (
+    PublicationInfo,
+    SnapshotHandle,
+    publish_snapshot,
 )
 from portfolio_engine.parallel.task import (
     ExecutionContext,
@@ -55,11 +62,9 @@ from portfolio_engine.parallel.task import (
 from portfolio_engine.parallel.threading_control import worker_thread_environment
 from portfolio_engine.parallel.worker import (
     ResultBatch,
-    WorkerBundle,
     crashed_result,
     initialize_worker,
     run_batch,
-    worker_bundle,
 )
 from portfolio_engine.utils.hashing import canonical_json, sha256_hex
 
@@ -77,6 +82,8 @@ class RunManifest:
     batch_size: int
     start_method: str | None
     blas_threads: int | None
+    shared_data_mode: str | None
+    cache_enabled: bool
     python_version: str
     platform: str
     library_versions: tuple[tuple[str, str], ...]
@@ -91,6 +98,8 @@ class RunResult:
     elapsed_seconds: float
     batches: int
     pool_rebuilds: int
+    cache_metrics: CacheMetrics = field(default_factory=CacheMetrics)
+    publication: PublicationInfo | None = None
 
     def by_portfolio(self) -> dict[str, TaskResult]:
         """Resultados indexados por ``PortfolioID``."""
@@ -117,6 +126,7 @@ def _manifest(
     workers: int,
     batch_size: int,
     parallel: ParallelConfig | None,
+    cache_enabled: bool = False,
 ) -> RunManifest:
     versions = _library_versions()
     payload = {
@@ -128,6 +138,8 @@ def _manifest(
         "batch_size": batch_size,
         "start_method": None if parallel is None else parallel.start_method.value,
         "blas_threads": None if parallel is None else parallel.blas_threads,
+        "shared_data_mode": None if parallel is None else parallel.shared_data_mode.value,
+        "cache_enabled": cache_enabled,
         "versions": [list(item) for item in versions],
     }
     return RunManifest(
@@ -140,6 +152,8 @@ def _manifest(
         batch_size=batch_size,
         start_method=None if parallel is None else parallel.start_method.value,
         blas_threads=None if parallel is None else parallel.blas_threads,
+        shared_data_mode=None if parallel is None else parallel.shared_data_mode.value,
+        cache_enabled=cache_enabled,
         python_version=sys.version.split()[0],
         platform=platform.platform(),
         library_versions=versions,
@@ -172,8 +186,11 @@ def _verify_exactly_once(
 class SequentialExecutor:
     """Ejecutor de referencia: una cartera tras otra en el proceso actual."""
 
-    def __init__(self, config: EngineConfig, snapshot: MarketSnapshot) -> None:
+    def __init__(
+        self, config: EngineConfig, snapshot: MarketSnapshot, cache: CacheConfig | None = None
+    ) -> None:
         self._context = ExecutionContext.create(config, snapshot)
+        self._cache_config = cache
 
     @property
     def context(self) -> ExecutionContext:
@@ -181,16 +198,31 @@ class SequentialExecutor:
         return self._context
 
     def run(self, requests: Sequence[PortfolioRequest]) -> RunResult:
-        """Ejecuta todas las solicitudes y devuelve los resultados en orden canónico."""
+        """Ejecuta todas las solicitudes y devuelve los resultados en orden canónico.
+
+        Con ``cache`` activada se usa una caché de resultados para toda la ejecución.
+        """
         started = time.perf_counter()
         items = canonical_order(requests)
+        cache = None
+        if self._cache_config is not None and self._cache_config.enabled:
+            cache = OperationCache(
+                self._context,
+                ResultCache(self._cache_config.max_entries, self._cache_config.max_bytes),
+            )
         results = [
-            replace(run_portfolio(item.request, self._context), sequence_id=item.sequence_id)
+            replace(
+                run_portfolio(item.request, self._context, cache=cache),
+                sequence_id=item.sequence_id,
+            )
             for item in items
         ]
         ordered = _verify_exactly_once(items, results)
-        manifest = _manifest(self._context, len(items), "SEQUENTIAL", 1, 1, None)
-        return RunResult(ordered, manifest, time.perf_counter() - started, len(items), 0)
+        manifest = _manifest(self._context, len(items), "SEQUENTIAL", 1, 1, None, cache is not None)
+        metrics = CacheMetrics() if cache is None else cache.metrics
+        return RunResult(
+            ordered, manifest, time.perf_counter() - started, len(items), 0, metrics, None
+        )
 
 
 def _crash_error(batch: PortfolioBatch, cause: BaseException) -> TaskError:
@@ -216,19 +248,20 @@ class ParallelExecutor:
             )
         self._context = ExecutionContext.create(config, snapshot)
         self._parallel = parallel
+        self._cache_metrics = CacheMetrics()
 
     @property
     def context(self) -> ExecutionContext:
         """Contexto de ejecución (configuración, snapshot y hashes)."""
         return self._context
 
-    def _new_pool(self, bundle: WorkerBundle) -> ProcessPoolExecutor:
+    def _new_pool(self, bundle: SnapshotHandle) -> ProcessPoolExecutor:
         parallel = self._parallel
         return ProcessPoolExecutor(
             max_workers=parallel.workers,
             mp_context=multiprocessing.get_context(parallel.start_method.value),
             initializer=initialize_worker,
-            initargs=(bundle, parallel.blas_threads),
+            initargs=(bundle, parallel.blas_threads, parallel.cache),
             max_tasks_per_child=parallel.max_tasks_per_child,
         )
 
@@ -240,11 +273,16 @@ class ParallelExecutor:
         batch_size = resolve_batch_size(self._parallel, len(items)) if items else 0
         results: list[TaskResult] = []
         rebuilds = 0
+        self._cache_metrics = CacheMetrics()
+        publication: PublicationInfo | None = None
         if batches:
             with ExitStack() as stack:
                 stack.enter_context(worker_thread_environment(self._parallel.blas_threads))
-                bundle = stack.enter_context(worker_bundle(self._context))
-                rebuilds = self._execute(batches, results, bundle)
+                published = stack.enter_context(
+                    publish_snapshot(self._context, self._parallel.shared_data_mode)
+                )
+                publication = published.info
+                rebuilds = self._execute(batches, results, published.handle)
         ordered = _verify_exactly_once(items, results)
         manifest = _manifest(
             self._context,
@@ -253,13 +291,22 @@ class ParallelExecutor:
             self._parallel.workers,
             batch_size,
             self._parallel,
+            self._parallel.cache.enabled,
         )
-        return RunResult(ordered, manifest, time.perf_counter() - started, len(batches), rebuilds)
+        return RunResult(
+            ordered,
+            manifest,
+            time.perf_counter() - started,
+            len(batches),
+            rebuilds,
+            self._cache_metrics,
+            publication,
+        )
 
     # ----------------------------------------------------------------------------------- pool
 
     def _execute(
-        self, batches: Sequence[PortfolioBatch], results: list[TaskResult], bundle: WorkerBundle
+        self, batches: Sequence[PortfolioBatch], results: list[TaskResult], bundle: SnapshotHandle
     ) -> int:
         pending = deque(batches)
         in_flight: dict[Future[ResultBatch], PortfolioBatch] = {}
@@ -300,6 +347,7 @@ class ParallelExecutor:
             results.extend(self._failed(batch, error, ExecutionStatus.FAILED_EXCEPTION))
             return False
         results.extend(outcome.results)
+        self._cache_metrics = self._cache_metrics + outcome.cache
         return False
 
     def _failed(

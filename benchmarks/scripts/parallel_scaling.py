@@ -50,17 +50,14 @@ from portfolio_engine.parallel.executor import (  # noqa: E402
     RunResult,
     SequentialExecutor,
 )
+from portfolio_engine.parallel.shared_data import worker_bundle  # noqa: E402
 from portfolio_engine.parallel.task import (  # noqa: E402
     ExecutionContext,
     ExecutionStatus,
     PortfolioRequest,
 )
 from portfolio_engine.parallel.threading_control import worker_thread_environment  # noqa: E402
-from portfolio_engine.parallel.worker import (  # noqa: E402
-    initialize_worker,
-    worker_bundle,
-    worker_diagnostics,
-)
+from portfolio_engine.parallel.worker import initialize_worker, worker_diagnostics  # noqa: E402
 from tests.fixtures.candidates import random_problem  # noqa: E402
 from tests.fixtures.parallel import (  # noqa: E402
     class_workloads,

@@ -38,7 +38,7 @@ se garantiza en la **generación discreta**; la formulación MIQP exacta solo va
 ## Requisitos
 
 - Python ≥ 3.11.
-- Dependencias de runtime: `numpy`, `scipy`, `pandas`, `pyarrow`, `osqp`, `clarabel`, `threadpoolctl` (ver `pyproject.toml`). Opcional, grupo `exact-mip`: `pyscipopt` (solo para el modo de validación EXACT_MIP; sin él se diagnostica y no se sustituye por otro algoritmo).
+- Dependencias de runtime: `numpy`, `scipy`, `pandas`, `pyarrow`, `osqp`, `clarabel`, `threadpoolctl` (ver `pyproject.toml`). Opcional, grupo `bench`: `psutil` (medición de memoria en benchmarks). Opcional, grupo `exact-mip`: `pyscipopt` (solo para el modo de validación EXACT_MIP; sin él se diagnostica y no se sustituye por otro algoritmo).
 - Dependencias de desarrollo (grupo `dev`): `pytest`, `hypothesis`, `mypy`, `ruff`, `scikit-learn` (solo como referencia en tests).
 
 ## Instalación (entorno local, nunca global)
@@ -279,4 +279,34 @@ python benchmarks/scripts/parallel_scaling.py --workers 1 2 4 --repetitions 3 --
 Linux/macOS).
 
 Benchmark local y pequeño con datos sintéticos; verifica la equivalencia T1 en cada ejecución. No es
+rendimiento de producción.
+
+## Datos de mercado compartidos y caché de resultados (Bloque 5.3)
+
+`config/default_parallel.toml` elige cómo reciben los workers los datos de mercado inmutables
+(`shared_data_mode`: `BUNDLE_FILE` —modo de B5.2 y reserva—, `FILE_MMAP` o `SHARED_MEMORY`) y la caché de
+resultados por worker (`[parallel.cache]`, **desactivada por defecto**: `enabled = false` es el rollback inmediato).
+
+```python
+import dataclasses
+
+from portfolio_engine.config import SharedDataMode, load_parallel_config
+from portfolio_engine.parallel.executor import ParallelExecutor
+
+parallel = load_parallel_config("config/default_parallel.toml")
+parallel = dataclasses.replace(parallel, shared_data_mode=SharedDataMode.FILE_MMAP)
+run = ParallelExecutor(config, snapshot, parallel).run(requests)
+print(run.publication, run.cache_metrics)
+```
+
+Los modos fuera de banda entregan a los workers arrays de solo lectura sin copia; toda referencia se verifica por
+SHA-256 y los recursos se eliminan al terminar (también ante excepciones o caídas de worker). Un `ParallelExecutor.run`
+a la vez por proceso. Los resultados cacheados se identifican con una clave completa (`CurrentPortfolioStateHash`
+incluido) y no se comparten entre carteras distintas. Medidas y límites: `CHANGELOG.md` (Bloque 5.3).
+
+```bash
+python benchmarks/scripts/shared_data_cache.py --universe 50 500 --workers 1 2 4 --repetitions 2
+```
+
+Benchmark local y pequeño (E4 datos compartidos, E8 caché) con `psutil` (`pip install -e ".[bench]"`); no es
 rendimiento de producción.

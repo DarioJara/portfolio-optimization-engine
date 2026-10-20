@@ -51,7 +51,10 @@ ALLOWED_DEPENDENCIES: dict[str, set[str]] = {
         "frontiers",
         "scenarios",
         "risk",
+        "cache",
     },
+    # Bloque 5.3: la caché de resultados es de bajo nivel (claves canónicas y almacén acotado).
+    "cache": {"exceptions", "utils"},
     "costs": {"exceptions", "utils", "models", "config"},
     "metrics": {"exceptions", "utils", "models", "config", "costs"},
     "constraints": {"exceptions", "utils", "models", "config", "costs"},
@@ -119,11 +122,9 @@ ALLOWED_DEPENDENCIES: dict[str, set[str]] = {
 #: ``candidates``, ``frontiers/global_frontier.py``, ``constraints/integer.py`` y
 #: ``parallel/determinism.py``— se han implementado y ya no figuran aquí).
 LATER_BLOCK_PACKAGES = (
-    "parallel/shared_data.py",
     "parallel/journal.py",
     "staging",
     "persistence",
-    "cache",
     "engine.py",
 )
 
@@ -165,6 +166,19 @@ ALLOWED_NAMED_CONSTANTS = {
     ("models/costs.py", "BPS_PER_UNIT"),
     ("data/validation/market_data_validator.py", "MAD_TO_STD_NORMAL"),
     ("data/validation/report.py", "SUMMARY_ISSUES"),
+    # Bloque 5.3: constantes de formato/plataforma de los datos compartidos (no son parámetros
+    # de negocio): alineación de buffers, protocolo pickle 5 (PEP 574), tamaño del sufijo de nombre
+    # de segmento y constantes de la API de procesos de Windows.
+    ("parallel/shared_data.py", "ALIGNMENT"),
+    ("parallel/shared_data.py", "PICKLE_OUT_OF_BAND_PROTOCOL"),
+    ("parallel/shared_data.py", "SHM_TOKEN_BYTES"),
+    ("parallel/shared_data.py", "SHM_NAME_PARTS"),
+    ("parallel/shared_data.py", "WIN_PROCESS_QUERY_LIMITED_INFORMATION"),
+    ("parallel/shared_data.py", "WIN_STILL_ACTIVE"),
+    ("parallel/shared_data.py", "WIN_ERROR_ACCESS_DENIED"),
+    ("parallel/shared_data.py", "REMOVE_RETRIES"),
+    ("parallel/shared_data.py", "REMOVE_DELAY_SECONDS"),
+    ("parallel/worker.py", "MAX_BACKING_DEPTH"),
 }
 
 

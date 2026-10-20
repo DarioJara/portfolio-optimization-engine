@@ -11,6 +11,7 @@ import dataclasses
 import pickle
 from typing import Any
 
+import numpy as np
 import pytest
 
 from portfolio_engine.config import config_hash
@@ -27,11 +28,13 @@ from portfolio_engine.models.enums import (
     FrontierMethod,
     FrontierScope,
     MultiScenarioMode,
+    MuUncertaintyKind,
     SolverStatus,
 )
 from portfolio_engine.models.frontier import CompositionFrontierResult, GlobalFrontierResult
 from portfolio_engine.models.strategy import StrategyResult
 from portfolio_engine.optimizers import SCIP_AVAILABLE
+from portfolio_engine.optimizers.formulations.robust import MuUncertaintySet
 from portfolio_engine.parallel.task import (
     ExecutionContext,
     ExecutionStatus,
@@ -44,6 +47,7 @@ from portfolio_engine.parallel.task import (
 from portfolio_engine.parallel.workload import OperationKind, OperationSpec, WorkloadSpec
 from portfolio_engine.scenarios import MultiScenarioResult
 from tests.fixtures.parallel import (
+    BOX_HALF_WIDTH,
     class_workloads,
     compare_results,
     reference_requests,
@@ -181,6 +185,20 @@ def test_a_global_frontier_task_equals_calling_the_engine_directly(
         (
             "W4-ROBUST",
             lambda opt, problem, context: opt.robust(problem, GROSS, 3.0, covariance_scale_max=1.2),
+        ),
+        (
+            "W4-ROBUST-BOX",
+            lambda opt, problem, context: opt.robust(
+                problem,
+                GROSS,
+                3.0,
+                mu_set=MuUncertaintySet(
+                    MuUncertaintyKind.BOX,
+                    half_width=np.array(
+                        [dict(BOX_HALF_WIDTH)[asset_id] for asset_id in problem.state.asset_ids]
+                    ),
+                ),
+            ),
         ),
     ],
 )
@@ -490,3 +508,14 @@ def test_hashing_accepts_missing_data_marked_as_nan(p8: Any) -> None:
     form = stable_form({"a": float("nan"), "b": (1.5, float("inf")), "c": SolverStatus.OPTIMAL})
     assert canonical_json(form)  # serializable sin NaN literal
     assert stable_form(float("nan")) != stable_form(0.0)
+
+
+def test_box_uncertainty_must_cover_the_composition_assets(p8: Any) -> None:
+    problem, _, context = p8
+    covered = tuple((f"A{i:03d}", 0.01) for i in range(3))  # cubre solo A000..A002
+    ops = WorkloadSpec(
+        (OperationSpec(K.STRATEGY_ROBUST, GROSS, risk_aversion=3.0, mu_half_width=covered),)
+    )
+    result = run_portfolio(_request(problem, ops), context)
+    assert result.execution_status is ExecutionStatus.FAILED_INPUT_VALIDATION
+    assert result.error is not None and "no cubre los activos" in result.error.message

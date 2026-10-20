@@ -21,6 +21,8 @@ VALID: dict[str, Any] = {
     "max_in_flight_batches_per_worker": 2,
     "start_method": "SPAWN",
     "blas_threads": 1,
+    "shared_data_mode": "BUNDLE_FILE",
+    "cache": {"enabled": False, "max_entries": 8, "max_bytes": 1024},
 }
 
 
