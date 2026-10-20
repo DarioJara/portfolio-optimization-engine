@@ -3,6 +3,9 @@
 Fecha: 2026-10-20 · Rama: `block5-recovery-journal` · Base: `main` `bf74f974` (B5.3 integrado) ·
 Estado: **`B5_4_STATUS = READY_FOR_INDEPENDENT_AUDIT`** (con las limitaciones de §6; Linux no ejecutado).
 
+> **Actualización:** auditado (`AUDIT_BLOCK_5_4.md`, `PASS_WITH_CHANGES`) y remediado: véase `REMEDIATION_BLOCK_5_4.md`
+> (`FINAL_STATUS = READY_FOR_REAUDIT`; Linux ya ejecutado en CI). Este informe es el original, previo a la remediación.
+
 ## 1. Alcance
 
 * Bloque: **B5.4** (`BLOCK_5_IMPLEMENTATION_PLAN.md` §3, `BLOCK_5_4_EXECUTION_BRIEF.md`).

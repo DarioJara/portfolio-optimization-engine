@@ -2,6 +2,12 @@
 
 # Matriz de trazabilidad de requisitos — MASTER_SPEC.md
 
+> **Remediación B5.4 (2026-10-20):** tras `AUDIT_BLOCK_5_4.md` (`PASS_WITH_CHANGES`) se corrigieron M-1 (presupuesto de plazos separado),
+> L-1 (shards inválidos/profundos ⇒ `.corrupt`), L-2 (identidad de proceso antes de terminar nada) y L-4 (cambio incompatible documentado), y se
+> ejecutó y conservó la evidencia Linux (L-3; run `39466030525`: suite completa 1957 passed / 2 skipped, evidencia B5.4 56 passed). La CI Linux
+> descubrió además R-1 (`events.jsonl` con modo 0644), corregido. Detalle en `REMEDIATION_BLOCK_5_4.md`. **Estados sin cambio:** `P-05` y `PAR-013`
+> siguen `PARTIAL` hasta la re-auditoría; los 316 `RequirementID` conservan su recuento.
+>
 > **Estado B5.4 (2026-10-20):** recuperación de workers, reintentos con cuarentena, plazos, cancelación, diario local y reanudación implementados
 > en la rama `block5-recovery-journal` (sobre `main` `bf74f97`, con B5.3 integrado); pendiente de auditoría independiente (`REPORT_BLOCK_5_4.md`).
 > Suite completa: 1925 passed / 3 skipped (baseline 1775 / 2); `mypy --strict` y Ruff limpios. **Ningún estado oficial cambia**: el total

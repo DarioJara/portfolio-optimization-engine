@@ -673,7 +673,7 @@ limpiar, `inventory_orphans`/`remove_orphans` (B5.3) lo detectan (probado con un
 | ID | Estado tras B5.4 |
 |---|---|
 | M-1 (initializer sin corte; `submit` desprotegido) | **Cerrada**: cotas + captura en `submit` (pruebas con *initializer* que lanza, que muere y que se registra y muere) |
-| D-DET | **Cerrada** con vigilancia de PID (sin calentar el pool); validada en Windows; **no ejecutada en Linux** (CI) |
+| D-DET | **Cerrada** con vigilancia de PID (sin calentar el pool); validada en Windows y en Linux (CI, run `39466030525`) |
 | L-1 (huella solo `mu`/`Σ`) | **Parcial**: ahora cubre `mu`, `Σ`, costes y escenarios de retorno; universo y definiciones de escenario son dataclasses inmutables y no se vigilan |
 | L-2 (mensajes sin truncar) | **Cerrada** en worker, eventos y diario |
 | L-3 (restos tras muerte del coordinador) | **Cerrada** (marcas bajo `scratch_directory`; barrido probado) |
@@ -690,7 +690,24 @@ limpiar, `inventory_orphans`/`remove_orphans` (B5.3) lo detectan (probado con un
 * Un fallo de escritura del diario (disco lleno) aborta la ejecución con `OSError`: lo ya escrito sigue siendo reanudable.
 * Los tiempos de recuperación se miden (`RecoveryReport.recovery_seconds`) pero no hay umbral; dependen del arranque de `spawn`
   (≈ 5 s por worker en esta máquina; véase la memoria del proyecto sobre la bimodalidad de los tiempos).
-* Linux (`forkserver`, `/proc` zombis, `fcntl`): código escrito, **no ejecutado** aquí; lo valida el CI Ubuntu de la rama.
+* Linux (`forkserver`, `/proc` zombis, `fcntl`, permisos): **ejecutado en CI** tras la remediación (run `39466030525`, véase `REMEDIATION_BLOCK_5_4.md` §2).
+
+**Remediación tras `AUDIT_BLOCK_5_4.md` (`PASS_WITH_CHANGES`; detalle en `REMEDIATION_BLOCK_5_4.md`).**
+
+* **Presupuestos de reconstrucción separados (M-1).** `max_total_rebuilds` cuenta solo reconstrucciones **por fallo** de workers. Las
+  terminaciones intencionadas por plazo (`task_timeout_seconds`/`batch_timeout_seconds`) tienen su propia cota finita
+  (`DEADLINE_REBUILDS_PER_TASK = 2` por tarea: una finaliza la tarea como `TIMED_OUT`, otra descompone su lote) y no abortan carteras sanas.
+* **Identidad de procesos antes de terminar nada (L-2).** Cada worker registra `w.<pid>.<hora de creación>` (`GetProcessTimes` en Windows,
+  `starttime` de `/proc/<pid>/stat` en Linux). El supervisor solo termina un PID si es un hijo vivo del coordinador
+  (`multiprocessing.active_children()`) **y** su hora de creación coincide; un PID reutilizado por un proceso ajeno no se toca y la
+  vigilancia lo considera «desaparecido».
+* **Shards hostiles o inválidos (L-1).** Un *shard* con suma válida pero contenido inválido (dataclass que no valida, tipo ajeno,
+  anidamiento excesivo) se aparta como `.corrupt` y sus tareas se re-ejecutan. El códec rechaza más de `MAX_DEPTH = 200` niveles con un
+  recorrido no recursivo y traduce `RecursionError`.
+* **Cambio de configuración incompatible (L-4).** `[parallel.recovery]` es obligatoria desde B5.4; una configuración de B5.2/B5.3 falla con un
+  mensaje que remite a `config/default_parallel.toml`. No hay valores por defecto en el código (política del proyecto).
+* **Permisos (R-1, hallado por la evidencia Linux).** `events.jsonl` se crea con `0600`.
+* **Evidencia Linux (L-3).** `tests/integration/test_recovery_linux.py` y el paso de CI «B5.4 Linux recovery evidence»; run `39466030525`.
 
 ## 4. Grafo lógico de dependencias
 

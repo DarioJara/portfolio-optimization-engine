@@ -278,3 +278,8 @@ Rama `block5-recovery-journal` (sobre `main` `bf74f97`), pendiente de auditoría
 | P-09 | CUMPLIDO con limitación | Sin cambio (`ELLIPSOIDAL` sigue sin expresarse) |
 
 Deudas de B5.2/B5.3 asignadas a B5.4: M-1 y D-DET **cerradas**; L-2 y L-3 **cerradas**; L-1 **parcial**; L-4 **abierta**. B5.5 no iniciado.
+
+**Remediación tras `AUDIT_BLOCK_5_4.md`.** M-1, L-1, L-2 y L-4 corregidos; L-3 con evidencia Linux (CI run `39466030525`: 1957 passed, 2 skipped; 56
+pruebas específicas de B5.4 pasadas, incluidas `forkserver`, `flock`, permisos y zombis); R-1 (permisos de `events.jsonl`) hallado y corregido por esa
+evidencia. Estados: `P-01`, `P-03`, `P-04`, `P-06` **VALIDATED en Windows y Linux**; `P-05`, `P-07`, `P-08` siguen `PARTIAL` (sin cambio);
+`P-02` `PARTIAL`. Véase `REMEDIATION_BLOCK_5_4.md`.

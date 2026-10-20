@@ -1582,3 +1582,43 @@ solicitudes ni credenciales.
 - Sin benchmark de recuperación: solo `RecoveryReport.recovery_seconds` en las pruebas, sin umbral (los tiempos con `spawn` dependen del
   arranque de ≈ 5 s por worker y son bimodales en esta máquina). No se ejecutó ningún benchmark masivo ni en Arsys.
 - B5.5 (benchmarks de recuperación y escala, auditoría) no iniciado.
+
+---
+
+## [Bloque 5.4 — Remediación tras AUDIT_BLOCK_5_4] — 2026-10-20
+
+Auditoría independiente: `PASS_WITH_CHANGES` sobre `436a7eb` (0 BLOCKER, 0 HIGH, 1 MEDIUM, 4 LOW). Detalle y evidencia en
+`REMEDIATION_BLOCK_5_4.md`. Sin cambios en motores, solvers, tolerancias ni `MASTER_SPEC.md`; B5.5 no iniciado.
+
+### Corregido
+
+- **M-1** — los plazos vencidos ya no consumen `max_total_rebuilds`: presupuesto aparte, finito (`DEADLINE_REBUILDS_PER_TASK = 2` por tarea);
+  nuevo `RecoveryReport.deadline_rebuilds`. Regresiones: más plazos que el presupuesto de caídas dejan terminar a las carteras sanas
+  (pool simulado y procesos reales).
+- **L-2** — el supervisor solo termina procesos que son hijos vivos del coordinador y cuya hora de creación coincide con la registrada
+  (`w.<pid>.<inicio>`; `GetProcessTimes` / `starttime` de `/proc`); la vigilancia de caídas compara la misma identidad. Prueba con un
+  proceso ajeno real al que apuntan las marcas.
+- **L-1** — un *shard* con suma válida y contenido inválido o demasiado profundo se aparta como `.corrupt`; códec con `MAX_DEPTH = 200`
+  (recorrido no recursivo) y `RecursionError` traducido.
+- **L-4** — **cambio incompatible documentado**: `[parallel.recovery]` obligatoria (sin valores por defecto en el código); el error remite a
+  `config/default_parallel.toml`. Cualquier TOML de ejecución de B5.2/B5.3 debe añadir la sección.
+- **R-1** (nuevo, hallado por la CI Linux) — `events.jsonl` se creaba con modo `0644`; ahora `0600`. La prueba POSIX recorre todos los ficheros.
+
+### Añadido
+
+- `tests/integration/test_recovery_linux.py` (7 pruebas, solo Linux): `forkserver` con caída y veneno, plazos y reanudación; `flock` entre
+  procesos; permisos; zombis; identidad por `starttime`; ausencia de procesos hijo residuales.
+- Paso de CI «B5.4 Linux recovery evidence» con anotaciones verificables (entorno, resumen, fallos, pruebas pasadas) y `evidence/b5_4_remediation/`.
+- Constantes de formato adicionales en `ALLOWED_NAMED_CONSTANTS` (identidad de proceso, profundidad del códec, cota de plazos).
+
+### Pruebas (ejecutadas realmente)
+
+| Entorno | Resultado |
+|---|---|
+| Linux — GitHub Actions `ubuntu-22.04`, Python 3.11.17, run `39466030525` (cabeza `a2992ec`) | **suite completa 1957 passed, 2 skipped**; evidencia B5.4: **56 passed**; mypy `--strict`, Ruff check/format ✔ |
+| Windows 11 — Python 3.13.6, cabeza de la remediación (`a2992ec`) | **1946 passed, 10 skipped** (22 min 07 s); mypy `--strict` y Ruff limpios |
+
+### Limitaciones (abiertas)
+
+`P-05` y `PAR-013` siguen `PARTIAL` hasta la re-auditoría; H-1 de B4 (CPU del runner) abierto y no manifestado en este run; sin benchmark de
+recuperación (B5.5); la identidad por hora de creación solo existe en Windows y Linux.
