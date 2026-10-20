@@ -83,22 +83,25 @@ def _child_pids() -> list[int]:
     return found
 
 
+def _infrastructure_pids() -> set[int]:
+    """Hijos permanentes de ``multiprocessing`` (servidor forkserver y *resource tracker*)."""
+    from multiprocessing import forkserver, resource_tracker
+
+    candidates = (
+        getattr(forkserver._forkserver, "_forkserver_pid", None),
+        getattr(resource_tracker._resource_tracker, "_pid", None),
+    )
+    return {pid for pid in candidates if isinstance(pid, int)}
+
+
 def _settle_children(seconds: float = 30.0) -> list[int]:
-    """Espera a que no queden hijos (el servidor forkserver es un hijo permanente del proceso)."""
+    """Espera a que no queden hijos de workers (ignora la infraestructura de multiprocessing)."""
     deadline = time.monotonic() + seconds
-    forkserver = _forkserver_pid()
-    while time.monotonic() < deadline:
-        left = [pid for pid in _child_pids() if pid != forkserver]
-        if not left:
-            return []
+    while True:
+        left = [pid for pid in _child_pids() if pid not in _infrastructure_pids()]
+        if not left or time.monotonic() > deadline:
+            return left
         time.sleep(0.2)
-    return [pid for pid in _child_pids() if pid != forkserver]
-
-
-def _forkserver_pid() -> int | None:
-    from multiprocessing import forkserver
-
-    return getattr(forkserver._forkserver, "_forkserver_pid", None)  # type: ignore[no-any-return]
 
 
 # ------------------------------------------------------------------------------ forkserver
