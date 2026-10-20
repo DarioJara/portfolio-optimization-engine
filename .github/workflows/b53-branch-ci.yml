@@ -1,0 +1,50 @@
+name: B5.3 branch validation (Linux)
+
+# Validación TEMPORAL de la rama del Bloque 5.3 en Ubuntu (suite completa, forkserver y benchmark
+# pequeño con datos sintéticos). Se ejecuta solo al hacer push a la rama de B5.3 y se elimina antes
+# de la integración en main (la CI permanente es ci.yml). No accede a SQL Server ni a datos reales.
+on:
+  push:
+    branches: [block5-shared-memory-cache]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-py311:
+    name: Ubuntu / Python 3.11 (B5.3)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install package, tests, SCIP and benchmark extras
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[dev,exact-mip,bench]'
+      - name: Static checks
+        run: |
+          python -m mypy --strict portfolio_engine
+          python -m ruff check .
+          python -m ruff format --check .
+      - name: Shared data and forkserver tests
+        run: python -m pytest -q tests/integration/test_forkserver_linux.py tests/integration/test_shared_data_equivalence.py tests/unit/parallel/test_shared_data.py tests/unit/cache tests/unit/parallel/test_operation_cache.py
+      - name: Full test suite
+        run: python -m pytest -q
+      - name: Local shared-data and cache benchmark (small, synthetic)
+        run: |
+          python benchmarks/scripts/shared_data_cache.py --universe 50 500 --workers 1 2 4 \
+            --start-methods spawn forkserver --repetitions 2 --seed 7 --out bench-results
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shared-data-cache-benchmark-linux
+          path: bench-results/*.json
+          if-no-files-found: error
