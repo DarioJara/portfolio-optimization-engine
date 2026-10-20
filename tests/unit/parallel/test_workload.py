@@ -181,3 +181,39 @@ def test_workloads_are_serializable() -> None:
         restored = pickle.loads(pickle.dumps(workload))
         assert restored.workload_hash == workload.workload_hash
         assert restored.problems() == ()
+
+
+@pytest.mark.parametrize(
+    "half_width, fragment",
+    [
+        ((), "no vacío"),
+        ((("A1", 0.1), ("A0", 0.1)), "ordenados"),
+        ((("A0", 0.1), ("A0", 0.2)), "únicos"),
+        ((("A0", -0.1),), ">= 0"),
+        ((("A0", float("nan")),), ">= 0"),
+        ((("A0", float("inf")),), ">= 0"),
+    ],
+)
+def test_the_box_mu_uncertainty_must_be_valid(
+    half_width: tuple[tuple[str, float], ...], fragment: str
+) -> None:
+    operation = OperationSpec(K.STRATEGY_ROBUST, GROSS, risk_aversion=3.0, mu_half_width=half_width)
+    assert any(fragment in problem for problem in _problems(operation))
+
+
+def test_the_box_mu_uncertainty_only_applies_to_the_robust_strategy() -> None:
+    valid = (("A0", 0.1), ("A1", 0.2))
+    assert (
+        _problems(OperationSpec(K.STRATEGY_ROBUST, GROSS, risk_aversion=3.0, mu_half_width=valid))
+        == ()
+    )
+    other = OperationSpec(K.STRATEGY_MAX_SHARPE, GROSS, mu_half_width=valid)
+    assert any("'mu_half_width'" in p and "no aplica" in p for p in _problems(other))
+    zero = OperationSpec(K.STRATEGY_ROBUST, GROSS, risk_aversion=3.0, mu_half_width=(("A0", 0.0),))
+    assert _problems(zero) == ()  # δ = 0 es una incertidumbre nula pero válida
+
+
+def test_the_half_width_is_part_of_the_workload_identity() -> None:
+    base = OperationSpec(K.STRATEGY_ROBUST, GROSS, risk_aversion=3.0, mu_half_width=(("A0", 0.1),))
+    changed = dataclasses.replace(base, mu_half_width=(("A0", 0.2),))
+    assert WorkloadSpec((base,)).workload_hash != WorkloadSpec((changed,)).workload_hash

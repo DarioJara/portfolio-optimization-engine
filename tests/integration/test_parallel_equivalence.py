@@ -63,7 +63,9 @@ def _pairs(
 ) -> list[tuple[TaskResult, TaskResult]]:
     universe, _ = class_workloads()[label]
     sequential, parallel = runs[universe]
-    seq = {r.portfolio_id: r for r in sequential.results if r.portfolio_id.startswith(f"{label}-")}
+    seq = {
+        r.portfolio_id: r for r in sequential.results if r.portfolio_id.rsplit("-", 1)[0] == label
+    }
     par = parallel.by_portfolio()
     assert len(seq) == PER_CLASS
     return [(seq[pid], par[pid]) for pid in sorted(seq)]
