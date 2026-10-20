@@ -1,0 +1,40 @@
+name: Portfolio Engine CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-py311:
+    name: Ubuntu / Python 3.11
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install package, tests and optional SCIP backend
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[dev,exact-mip]'
+      - name: Static checks
+        run: |
+          python -m mypy --strict portfolio_engine
+          python -m ruff check .
+          python -m ruff format --check .
+      - name: Linux forkserver smoke test
+        run: python -m pytest -q tests/integration/test_forkserver_linux.py
+      - name: Full test suite
+        run: python -m pytest -q
