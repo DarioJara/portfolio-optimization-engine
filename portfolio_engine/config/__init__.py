@@ -21,8 +21,10 @@ from portfolio_engine.config.frontier_config import FrontierConfig
 from portfolio_engine.config.hashing import config_hash, config_snapshot, config_to_dict
 from portfolio_engine.config.loader import load_engine_config
 from portfolio_engine.config.parallel_config import (
+    CacheConfig,
     ParallelConfig,
     ProcessStartMethod,
+    SharedDataMode,
     load_parallel_config,
 )
 from portfolio_engine.config.return_config import ReturnConfig
@@ -47,6 +49,7 @@ __all__ = (
     "AssetShock",
     "BenchmarkConfig",
     "CVaRConfig",
+    "CacheConfig",
     "CandidateConfig",
     "ConicSolverConfig",
     "ConstraintConfig",
@@ -70,6 +73,7 @@ __all__ = (
     "ScenarioConfig",
     "ScenarioDefinition",
     "ScreeningWeights",
+    "SharedDataMode",
     "SharpeConfig",
     "SolverConfig",
     "StressLimits",

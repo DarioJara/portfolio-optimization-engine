@@ -22,11 +22,13 @@ STRATEGY_VOL_TARGET         W4   ``StrategyOptimizer.volatility_target``
 EXACT_MIP_VALIDATION        W5   ``ExactMIPValidator.validate_heuristic``
 ========================  =====  ==============================================================
 
-Capacidad pendiente: ``STRATEGY_ROBUST`` no admite un ``mu_set`` explícito (``MuUncertaintySet``
-con arrays por activo de una composición); solo ``covariance_scale_max`` o el conjunto derivado de
-``[robust]``. Un mandato con alpha externo y ``[robust].mu_uncertainty`` distinto de ``NONE`` falla
-con ``UnsupportedCombinationError`` (``FAILED_EXCEPTION``). Exponerlo exige una especificación
-serializable de la incertidumbre (B5.3/B5.4); el motor robusto de B4 no se modifica.
+Incertidumbre de ``μ`` en ``STRATEGY_ROBUST`` (B5.3, M-2): ``mu_half_width`` es una especificación
+serializable del conjunto ``BOX`` (semiancho ``δ_i`` por ``AssetID``); la tarea la convierte en un
+``MuUncertaintySet`` alineado con la composición. Sin ``mu_half_width`` se usa el conjunto
+derivado de ``[robust]``, que con alpha externo y ``mu_uncertainty`` distinto de ``NONE`` falla
+con ``UnsupportedCombinationError`` (``FAILED_EXCEPTION``). Pendiente: la incertidumbre
+``ELLIPSOIDAL`` (matriz ``Ω`` y su factor), que no se expresa de forma declarativa; el motor
+robusto de B4 no se modifica.
 
 Diferencia respecto del borrador de diseño (``BLOCK_5_HPC_ARCHITECTURE.md`` §14.3): la búsqueda de
 candidatos y la construcción de escenarios no son operaciones separadas, porque los motores las
@@ -112,6 +114,7 @@ class OperationSpec:
     max_cvar: float | None = None
     volatility_limit: float | None = None
     covariance_scale_max: float | None = None
+    mu_half_width: tuple[tuple[str, float], ...] | None = None
 
     @property
     def workload_class(self) -> str:
@@ -140,7 +143,7 @@ _OPTIONAL: Mapping[OperationKind, frozenset[str]] = MappingProxyType(
             {"method", "scope", "include_max_sharpe", "risk_aversion"}
         ),
         OperationKind.STRATEGY_CVAR: frozenset({"max_cvar", "risk_aversion", "volatility_limit"}),
-        OperationKind.STRATEGY_ROBUST: frozenset({"covariance_scale_max"}),
+        OperationKind.STRATEGY_ROBUST: frozenset({"covariance_scale_max", "mu_half_width"}),
         OperationKind.STRATEGY_MAX_SHARPE: frozenset({"volatility_limit"}),
         OperationKind.STRATEGY_VOL_TARGET: frozenset({"volatility_limit", "risk_aversion"}),
         OperationKind.EXACT_MIP_VALIDATION: frozenset({"volatility_limit"}),
@@ -156,12 +159,26 @@ _PARAMETERS = (
     "max_cvar",
     "volatility_limit",
     "covariance_scale_max",
+    "mu_half_width",
 )
 
 
 def _provided(operation: OperationSpec, name: str) -> bool:
     value = getattr(operation, name)
     return bool(value) if name == "include_max_sharpe" else value is not None
+
+
+def _half_width_problems(label: str, half_width: tuple[tuple[str, float], ...] | None) -> list[str]:
+    """Validez de la incertidumbre ``BOX`` de ``μ``: ``δ_i`` finito y ``>= 0``, AssetID únicos."""
+    if half_width is None:
+        return []
+    found: list[str] = []
+    ids = [asset_id for asset_id, _ in half_width]
+    if not half_width or ids != sorted(set(ids)):
+        found.append(f"{label}: 'mu_half_width' debe ser no vacío, con AssetID únicos y ordenados.")
+    if any(not math.isfinite(value) or value < 0.0 for _, value in half_width):
+        found.append(f"{label}: 'mu_half_width' exige valores finitos y >= 0.")
+    return found
 
 
 def _operation_problems(position: int, operation: OperationSpec) -> list[str]:
@@ -181,6 +198,7 @@ def _operation_problems(position: int, operation: OperationSpec) -> list[str]:
             problems.append(f"{label}: falta el parámetro obligatorio '{name}'.")
         elif provided and name not in allowed:
             problems.append(f"{label}: el parámetro '{name}' no aplica a esta operación.")
+    problems.extend(_half_width_problems(label, operation.mu_half_width))
     for name in ("risk_aversion", "max_cvar", "volatility_limit", "covariance_scale_max"):
         value = getattr(operation, name)
         if value is not None and (not math.isfinite(value) or value <= 0.0):

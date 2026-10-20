@@ -20,13 +20,14 @@ Invariantes de diseño:
 
 from __future__ import annotations
 
-import dataclasses
 import time
 import traceback
-from collections.abc import Mapping
 from dataclasses import dataclass
-from enum import Enum, StrEnum
+from enum import StrEnum
 
+import numpy as np
+
+from portfolio_engine.cache import CacheEvent
 from portfolio_engine.config import EngineConfig, ScenarioDefinition, config_hash
 from portfolio_engine.exceptions import PortfolioEngineError
 from portfolio_engine.frontiers import (
@@ -41,19 +42,16 @@ from portfolio_engine.models.asset import Universe
 from portfolio_engine.models.composition import CandidateComposition
 from portfolio_engine.models.costs import AssetCostVector
 from portfolio_engine.models.cvar import ReturnScenarioSet
-from portfolio_engine.models.enums import FrontierScope, MultiScenarioMode
+from portfolio_engine.models.enums import FrontierScope, MultiScenarioMode, MuUncertaintyKind
 from portfolio_engine.models.frontier import CompositionFrontierResult, GlobalFrontierResult
 from portfolio_engine.models.portfolio import CurrentPortfolioState, PortfolioSpec
 from portfolio_engine.models.risk_model import RiskModel
 from portfolio_engine.models.strategy import StrategyResult
+from portfolio_engine.optimizers.formulations.robust import MuUncertaintySet
+from portfolio_engine.parallel.operation_cache import OperationCache, stable_form
 from portfolio_engine.parallel.workload import OperationKind, OperationSpec, WorkloadSpec
 from portfolio_engine.scenarios import MultiScenarioOptimizer, MultiScenarioResult, ScenarioEngine
-from portfolio_engine.utils.hashing import (
-    canonical_float,
-    canonical_json,
-    hash_float_array,
-    sha256_hex,
-)
+from portfolio_engine.utils.hashing import canonical_json, hash_float_array, sha256_hex
 
 #: Resultado de una operación: el objeto que devuelve el motor, sin transformar.
 OperationResult = (
@@ -63,26 +61,6 @@ OperationResult = (
     | MultiScenarioResult
     | HeuristicGapReport
 )
-
-
-def stable_form(value: object) -> object:
-    """Forma canónica de un dato de entrada para hashing (admite ``NaN`` e infinitos).
-
-    Dataclasses → diccionarios; enums → nombre; tuplas y mapeos → estructuras ordenadas; floats →
-    ``float.hex`` exacto (a diferencia de ``canonical_json``, no rechaza ``NaN``, que en los
-    metadatos del universo significa «dato ausente»).
-    """
-    if dataclasses.is_dataclass(value) and not isinstance(value, type):
-        return {f.name: stable_form(getattr(value, f.name)) for f in dataclasses.fields(value)}
-    if isinstance(value, Enum):
-        return value.name
-    if isinstance(value, float):
-        return canonical_float(value)
-    if isinstance(value, Mapping):
-        return {str(key): stable_form(item) for key, item in sorted(value.items())}
-    if isinstance(value, (tuple, list)):
-        return [stable_form(item) for item in value]
-    return value
 
 
 class ExecutionStatus(StrEnum):
@@ -109,6 +87,9 @@ class MarketSnapshot:
         return_scenarios: escenarios de retorno para CVaR (``None`` si no se usa CVaR).
         scenario_definitions: definiciones de escenario del multiescenario (vacío si no se usa).
         base_scenario_id: ``ScenarioID`` del escenario base de las fronteras y estrategias.
+        market_data_timestamp: fecha/hora de los datos de mercado (``MarketDataTimestamp``, §31)
+            tal como la informa el origen de datos; ``None`` = no informada (la clave de caché lo
+            registra de forma explícita).
     """
 
     risk_model: RiskModel
@@ -117,6 +98,7 @@ class MarketSnapshot:
     return_scenarios: ReturnScenarioSet | None
     scenario_definitions: tuple[ScenarioDefinition, ...]
     base_scenario_id: str
+    market_data_timestamp: str | None = None
 
     @property
     def snapshot_key(self) -> str:
@@ -145,6 +127,7 @@ class MarketSnapshot:
             "return_scenarios": returns,
             "scenario_definitions": [stable_form(d) for d in self.scenario_definitions],
             "base_scenario_id": self.base_scenario_id,
+            "market_data_timestamp": self.market_data_timestamp,
         }
         return sha256_hex(canonical_json(payload))
 
@@ -223,6 +206,7 @@ class OperationOutcome:
     result: OperationResult | None
     error: TaskError | None
     elapsed_seconds: float
+    cache_event: CacheEvent = CacheEvent.DISABLED
 
 
 @dataclass(frozen=True, eq=False, slots=True)
@@ -301,6 +285,16 @@ def _workload_data_problems(request: PortfolioRequest, snapshot: MarketSnapshot)
         found.append("El workload usa CVaR y el snapshot no contiene escenarios de retorno.")
     if workload.requires_scenario_definitions() and not snapshot.scenario_definitions:
         found.append("El workload usa multiescenario y el snapshot no define escenarios.")
+    for position, operation in enumerate(workload.operations):
+        if operation.mu_half_width is not None:
+            missing = sorted(
+                set(_composition_ids(request)) - {a for a, _ in operation.mu_half_width}
+            )
+            if missing:
+                found.append(
+                    f"operations[{position}] ({operation.kind.value}): 'mu_half_width' no cubre "
+                    f"los activos de la composición: {missing}"
+                )
     if request.composition_asset_ids is not None:
         for position, operation in enumerate(workload.operations):
             searches = operation.kind is OperationKind.GLOBAL_FRONTIER or (
@@ -433,6 +427,7 @@ def _run_operation(
             problem,
             operation.treatment,
             operation.risk_aversion,
+            mu_set=_mu_set(operation, request),
             covariance_scale_max=operation.covariance_scale_max,
         )
     if kind is OperationKind.STRATEGY_MAX_SHARPE:
@@ -447,6 +442,22 @@ def _run_operation(
             risk_aversion=operation.risk_aversion,
         )
     return _run_exact_mip(operation, request, context, earlier)
+
+
+def _composition_ids(request: PortfolioRequest) -> tuple[str, ...]:
+    """Activos de la composición que optimizan las estrategias (explícita o cartera actual)."""
+    if request.composition_asset_ids is not None:
+        return request.composition_asset_ids
+    return tuple(request.state.asset_ids)
+
+
+def _mu_set(operation: OperationSpec, request: PortfolioRequest) -> MuUncertaintySet | None:
+    """Conjunto ``BOX`` de ``μ`` alineado con la composición (``None`` si no se especificó)."""
+    if operation.mu_half_width is None:
+        return None
+    by_asset = dict(operation.mu_half_width)
+    half_width = np.array([by_asset[asset_id] for asset_id in _composition_ids(request)])
+    return MuUncertaintySet(MuUncertaintyKind.BOX, half_width=half_width)
 
 
 def _run_exact_mip(
@@ -486,13 +497,21 @@ def _error(error: BaseException, index: int | None) -> TaskError:
     )
 
 
-def run_portfolio(request: PortfolioRequest, context: ExecutionContext) -> TaskResult:
+def run_portfolio(
+    request: PortfolioRequest,
+    context: ExecutionContext,
+    *,
+    cache: OperationCache | None = None,
+) -> TaskResult:
     """Ejecuta el workload de ``request`` de forma secuencial y devuelve su :class:`TaskResult`.
 
     Nunca lanza por fallos de la cartera: los registra en el resultado. Las operaciones se
     ejecutan en orden y comparten únicamente el ``MarketSnapshot`` inmutable y los resultados de
     operaciones anteriores de la **misma** cartera (p. ej. las composiciones candidatas que usa la
     validación EXACT_MIP). Tras la primera excepción no se ejecutan las operaciones restantes.
+
+    Con ``cache`` (por worker; ``None`` = desactivada) cada operación se resuelve a través de la
+    caché de resultados: un acierto no invoca ningún motor (véase ``operation_cache``).
     """
     started = time.perf_counter()
     task_id = context.task_id(request)
@@ -522,8 +541,19 @@ def run_portfolio(request: PortfolioRequest, context: ExecutionContext) -> TaskR
     outcomes: list[OperationOutcome] = []
     for index, operation in enumerate(request.workload.operations):
         op_started = time.perf_counter()
+        event = CacheEvent.DISABLED
         try:
-            result = _run_operation(operation, request, context, tuple(outcomes))
+            if cache is None:
+                result = _run_operation(operation, request, context, tuple(outcomes))
+            else:
+                done = tuple(outcomes)
+
+                def compute(
+                    op: OperationSpec = operation, prior: tuple[OperationOutcome, ...] = done
+                ) -> OperationResult:
+                    return _run_operation(op, request, context, prior)
+
+                result, event = cache.run(request, index, compute)
         except Exception as error:  # límite de aislamiento: un fallo no afecta a otras carteras
             failure = _error(error, index)
             outcomes.append(
@@ -534,7 +564,7 @@ def run_portfolio(request: PortfolioRequest, context: ExecutionContext) -> TaskR
             return finish(ExecutionStatus.FAILED_EXCEPTION, tuple(outcomes), failure)
         outcomes.append(
             OperationOutcome(
-                index, operation.kind, True, result, None, time.perf_counter() - op_started
+                index, operation.kind, True, result, None, time.perf_counter() - op_started, event
             )
         )
     return finish(ExecutionStatus.COMPLETED, tuple(outcomes), None)
