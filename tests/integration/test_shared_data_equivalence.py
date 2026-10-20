@@ -84,6 +84,36 @@ def test_every_shared_data_mode_matches_the_sequential_reference(
     assert inventory_orphans(tmp_path, min_age_seconds=0.0).empty
 
 
+MULTI_SCENARIO_LABELS = ("W2-INDEPENDENT", "W2-EXPECTED", "W2-WORST-CASE", "W2-STRESS")
+
+
+@pytest.fixture(scope="module")
+def multi_scenario_setup() -> tuple[Any, list[PortfolioRequest], RunResult]:
+    """Auditoría B5.3 (L-6): la clase W2 (multiescenario) también viaja por los modos de datos."""
+    problem, snapshot = reference_universes(CONFIG)["p4"]
+    requests: list[PortfolioRequest] = []
+    for label in MULTI_SCENARIO_LABELS:
+        _, workload = class_workloads()[label]
+        requests.extend(requests_for(problem, workload, 2, seed=len(label), prefix=f"{label}-"))
+    return snapshot, requests, SequentialExecutor(CONFIG, snapshot).run(requests)
+
+
+@pytest.mark.parametrize("mode", list(SharedDataMode), ids=lambda m: m.value)
+def test_multi_scenario_results_match_in_every_shared_data_mode(
+    mode: SharedDataMode,
+    multi_scenario_setup: tuple[Any, list[PortfolioRequest], RunResult],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    snapshot, requests, reference = multi_scenario_setup
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+    config = dataclasses.replace(parallel_config(workers=2, batch_size=2), shared_data_mode=mode)
+    run = ParallelExecutor(CONFIG, snapshot, config).run(requests)
+    _assert_equivalent(run, reference)
+    assert all(r.execution_status is ExecutionStatus.COMPLETED for r in run.results)
+    assert list(tmp_path.iterdir()) == []
+
+
 @pytest.mark.skipif(not SCIP_AVAILABLE, reason="PySCIPOpt (opcional, E-24) no instalado")
 @pytest.mark.parametrize("mode", [SharedDataMode.FILE_MMAP, SharedDataMode.SHARED_MEMORY])
 def test_exact_mip_works_over_shared_arrays(

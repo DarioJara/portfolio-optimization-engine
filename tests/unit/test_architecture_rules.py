@@ -175,6 +175,7 @@ ALLOWED_NAMED_CONSTANTS = {
     ("parallel/shared_data.py", "SHM_NAME_PARTS"),
     ("parallel/shared_data.py", "WIN_PROCESS_QUERY_LIMITED_INFORMATION"),
     ("parallel/shared_data.py", "WIN_STILL_ACTIVE"),
+    ("parallel/shared_data.py", "WIN_ERROR_ACCESS_DENIED"),
     ("parallel/shared_data.py", "REMOVE_RETRIES"),
     ("parallel/shared_data.py", "REMOVE_DELAY_SECONDS"),
     ("parallel/worker.py", "MAX_BACKING_DEPTH"),

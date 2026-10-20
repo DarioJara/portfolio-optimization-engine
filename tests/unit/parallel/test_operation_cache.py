@@ -20,6 +20,7 @@ from portfolio_engine.models.enums import (
     FrontierMethod,
     SolverStatus,
 )
+from portfolio_engine.models.frontier import GlobalFrontierResult
 from portfolio_engine.models.strategy import StrategyResult
 from portfolio_engine.parallel.executor import SequentialExecutor
 from portfolio_engine.parallel.operation_cache import FINAL_STATUSES, OperationCache
@@ -335,6 +336,29 @@ def test_only_final_solver_states_are_cacheable(problem: Any, snapshot: Any) -> 
         SolverStatus.OPTIMAL_INACCURATE,
         SolverStatus.INFEASIBLE,
     } == FINAL_STATUSES
+
+
+def test_a_global_frontier_with_a_non_final_continuous_frontier_is_not_cached(
+    problem: Any, snapshot: Any
+) -> None:
+    """Regresión B5.3 / M-1: ``continuous`` no está en ``composition_results``."""
+    op = OperationSpec(K.GLOBAL_FRONTIER, GROSS, method=RISK)
+    result = run_portfolio(base_request(problem, workload(op)), context_of(snapshot))
+    glob = result.operations[0].result
+    assert isinstance(glob, GlobalFrontierResult)
+    continuous = glob.continuous
+    assert continuous is not None and continuous.points
+    assert all(continuous is not inner for inner in glob.composition_results)
+    predicate = OperationCache(context_of(snapshot), ResultCache(2, 10**8)).cacheable(op)
+    assert predicate(glob)
+    broken = dataclasses.replace(
+        continuous,
+        points=(
+            dataclasses.replace(continuous.points[0], status=SolverStatus.MAX_ITERATIONS),
+            *continuous.points[1:],
+        ),
+    )
+    assert not predicate(dataclasses.replace(glob, continuous=broken))
 
 
 def test_wall_clock_limits_and_mip_reports_are_never_cached(problem: Any, snapshot: Any) -> None:

@@ -41,6 +41,7 @@ Seguridad e integridad:
 from __future__ import annotations
 
 import contextlib
+import ctypes
 import hashlib
 import json
 import mmap
@@ -48,13 +49,16 @@ import os
 import pickle
 import secrets
 import shutil
+import string
 import tempfile
 import time
-from collections.abc import Iterator
+import warnings
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from multiprocessing import resource_tracker, shared_memory
 from pathlib import Path
+from typing import Any
 
 from portfolio_engine.config.parallel_config import SharedDataMode
 from portfolio_engine.exceptions import PortfolioEngineError
@@ -75,6 +79,7 @@ REMOVE_DELAY_SECONDS = 0.1
 #: Windows: ``PROCESS_QUERY_LIMITED_INFORMATION`` y código de salida ``STILL_ACTIVE``.
 WIN_PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 WIN_STILL_ACTIVE = 259
+WIN_ERROR_ACCESS_DENIED = 5
 RUN_DIR_PREFIX = "portfolio_engine_run_"
 SHM_PREFIX = "pe_"
 OWNER_FILE = "owner.json"
@@ -238,15 +243,32 @@ def _publish_out_of_band(
                 handle.write(raw)
     else:
         assert shm_name is not None
+        if SHM_DIRECTORY.is_dir() and shutil.disk_usage(SHM_DIRECTORY).free < total:
+            raise SharedDataError(  # un segmento sin espacio real termina en SIGBUS al escribirlo
+                f"{SHM_DIRECTORY} sin espacio para {total} B: use FILE_MMAP o amplíe el espacio."
+            )
         segment = shared_memory.SharedMemory(name=shm_name, create=True, size=total)
-        target = segment.buf
-        assert target is not None
-        for ref, raw in zip(refs, raws, strict=True):
-            target[ref.offset : ref.offset + ref.length] = raw
+        try:
+            target = segment.buf
+            assert target is not None
+            for ref, raw in zip(refs, raws, strict=True):
+                target[ref.offset : ref.offset + ref.length] = raw
+        except BaseException:
+            segment.close()  # el llamador aún no conoce el segmento: lo libera esta función
+            with contextlib.suppress(FileNotFoundError):
+                segment.unlink()
+            raise
         location = shm_name
     manifest = json.dumps([[ref.offset, ref.length, ref.sha256] for ref in refs]).encode()
     manifest_path = directory / MANIFEST_FILE
-    manifest_path.write_bytes(manifest)
+    try:
+        manifest_path.write_bytes(manifest)
+    except BaseException:
+        if segment is not None:
+            segment.close()
+            with contextlib.suppress(FileNotFoundError):
+                segment.unlink()
+        raise
     handle_obj = SharedSnapshotHandle(
         mode=mode,
         header_path=str(header_path),
@@ -296,7 +318,13 @@ def publish_snapshot(
             segment.close()
             with contextlib.suppress(FileNotFoundError):  # ya eliminado
                 segment.unlink()
-        _remove_tree(directory)
+        if not _remove_tree(directory):
+            warnings.warn(
+                f"No se pudo eliminar el directorio temporal {directory}; "
+                "puede eliminarse con remove_orphans(inventory_orphans(...)).",
+                ResourceWarning,
+                stacklevel=2,
+            )
 
 
 # ------------------------------------------------------------------------------------ adjuntar
@@ -390,19 +418,30 @@ def attach_snapshot(handle: SnapshotHandle) -> tuple[ExecutionContext, Attachmen
 # ------------------------------------------------------------------------------------ huérfanos
 
 
+def nt_pid_alive(kernel: Any, pid: int, last_error: Callable[[], int]) -> bool:
+    """Existencia de un proceso en Windows con la API ``kernel`` (inyectable para pruebas).
+
+    ``OpenProcess`` falla con «acceso denegado» para procesos vivos privilegiados: eso significa
+    **vivo**. Cualquier otro error (típicamente ``ERROR_INVALID_PARAMETER``) = no existe.
+    """
+    process = kernel.OpenProcess(WIN_PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+    if not process:
+        return bool(last_error() == WIN_ERROR_ACCESS_DENIED)
+    code = ctypes.c_ulong()
+    ok = kernel.GetExitCodeProcess(process, ctypes.byref(code))
+    kernel.CloseHandle(process)
+    return bool(ok) and code.value == WIN_STILL_ACTIVE
+
+
 def pid_alive(pid: int) -> bool:
     """``True`` si existe un proceso con ese PID (sin matar ni señalizar nada)."""
     if os.name == "nt":
-        import ctypes
-
-        kernel = ctypes.windll.kernel32  # type: ignore[attr-defined,unused-ignore]
-        process = kernel.OpenProcess(WIN_PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
-        if not process:
-            return False
-        code = ctypes.c_ulong()
-        ok = kernel.GetExitCodeProcess(process, ctypes.byref(code))
-        kernel.CloseHandle(process)
-        return bool(ok) and code.value == WIN_STILL_ACTIVE
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined,unused-ignore]
+        kernel.OpenProcess.restype = ctypes.c_void_p
+        kernel.OpenProcess.argtypes = (ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong)
+        kernel.GetExitCodeProcess.argtypes = (ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong))
+        kernel.CloseHandle.argtypes = (ctypes.c_void_p,)
+        return nt_pid_alive(kernel, pid, ctypes.get_last_error)
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
@@ -433,6 +472,11 @@ def _owner_pid(directory: Path) -> int | None:
         return None
 
 
+def _is_token(text: str) -> bool:
+    """``True`` si ``text`` tiene la forma del sufijo aleatorio de ``publish_snapshot``."""
+    return len(text) == 2 * SHM_TOKEN_BYTES and all(c in string.hexdigits.lower() for c in text)
+
+
 def inventory_orphans(root: Path | None = None, *, min_age_seconds: float) -> OrphanInventory:
     """Lista directorios ``portfolio_engine_run_*`` y segmentos ``pe_*`` huérfanos.
 
@@ -457,7 +501,12 @@ def inventory_orphans(root: Path | None = None, *, min_age_seconds: float) -> Or
     if SHM_DIRECTORY.is_dir():
         for entry in sorted(SHM_DIRECTORY.glob(f"{SHM_PREFIX}*")):
             parts = entry.name.split("_")
-            if len(parts) >= SHM_NAME_PARTS and parts[1].isdigit() and not pid_alive(int(parts[1])):
+            if (
+                len(parts) == SHM_NAME_PARTS
+                and parts[1].isdigit()
+                and _is_token(parts[2])
+                and not pid_alive(int(parts[1]))
+            ):
                 segments.append(entry.name)
     return OrphanInventory(tuple(directories), tuple(segments))
 

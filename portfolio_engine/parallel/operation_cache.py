@@ -127,8 +127,11 @@ def _statuses_final(result: object) -> bool:
     if isinstance(result, CompositionFrontierResult):
         return all(point.status in FINAL_STATUSES for point in result.points)
     if isinstance(result, GlobalFrontierResult):
-        return all(point.point.status in FINAL_STATUSES for point in result.points) and all(
-            _statuses_final(inner) for inner in result.composition_results
+        # ``continuous`` no forma parte de ``composition_results``: se comprueba aparte.
+        return (
+            all(point.point.status in FINAL_STATUSES for point in result.points)
+            and all(_statuses_final(inner) for inner in result.composition_results)
+            and (result.continuous is None or _statuses_final(result.continuous))
         )
     if isinstance(result, StrategyResult):
         return result.status in FINAL_STATUSES
