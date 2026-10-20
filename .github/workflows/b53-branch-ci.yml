@@ -3,6 +3,7 @@ name: B5.3 branch validation (Linux)
 # Validación TEMPORAL de la rama del Bloque 5.3 en Ubuntu (suite completa, forkserver y benchmark
 # pequeño con datos sintéticos). Se ejecuta solo al hacer push a la rama de B5.3 y se elimina antes
 # de la integración en main (la CI permanente es ci.yml). No accede a SQL Server ni a datos reales.
+# Los resultados se publican como anotaciones (legibles sin descargar artefactos) y como artefacto.
 on:
   push:
     branches: [block5-shared-memory-cache]
@@ -30,6 +31,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e '.[dev,exact-mip,bench]'
+      - name: Environment
+        run: |
+          echo "::notice title=env::$(python --version) | $(uname -sr) | cpus=$(nproc) | $(lscpu | grep 'Model name' | sed 's/  */ /g')"
+          echo "::notice title=env-libs::$(python -m pip list 2>/dev/null | grep -i -E '^(numpy|scipy|osqp|clarabel|pyscipopt|threadpoolctl|psutil) ' | tr '\n' ';' | sed 's/  */ /g')"
       - name: Static checks
         run: |
           python -m mypy --strict portfolio_engine
@@ -38,11 +43,21 @@ jobs:
       - name: Shared data and forkserver tests
         run: python -m pytest -q tests/integration/test_forkserver_linux.py tests/integration/test_shared_data_equivalence.py tests/unit/parallel/test_shared_data.py tests/unit/cache tests/unit/parallel/test_operation_cache.py
       - name: Full test suite
-        run: python -m pytest -q
+        shell: bash
+        run: |
+          python -m pytest -q -rs 2>&1 | tee pytest-full.txt
+          status=${PIPESTATUS[0]}
+          echo "::notice title=pytest-linux::$(tail -n 1 pytest-full.txt)"
+          grep '^SKIPPED' pytest-full.txt | while IFS= read -r line; do echo "::notice title=pytest-skip::$line"; done
+          exit $status
       - name: Local shared-data and cache benchmark (small, synthetic)
+        shell: bash
         run: |
           python benchmarks/scripts/shared_data_cache.py --universe 50 500 --workers 1 2 4 \
-            --start-methods spawn forkserver --repetitions 2 --seed 7 --out bench-results
+            --start-methods spawn forkserver --repetitions 2 --seed 7 --out bench-results 2>&1 | tee bench.txt
+          status=${PIPESTATUS[0]}
+          while IFS= read -r line; do echo "::notice title=bench::$line"; done < bench.txt
+          exit $status
       - uses: actions/upload-artifact@v4
         with:
           name: shared-data-cache-benchmark-linux
