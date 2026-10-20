@@ -66,3 +66,46 @@ jobs:
           name: shared-data-cache-benchmark-linux
           path: bench-results/*.json
           if-no-files-found: error
+
+  b4-flake-probe:
+    # Sonda de reproducibilidad: dos pruebas numéricas de B4 (multiescenario) fallaron de forma
+    # intermitente en Linux en esta rama sin tocar su código. Se repiten sobre el commit de main de
+    # B5.2 y sobre esta rama para separar un defecto previo de una regresión de B5.3.
+    name: B4 multi-scenario flake probe (${{ matrix.label }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: main-b52
+            ref: 539d4b7e37384921dfbfe2a51a3c52d809ba5517
+          - label: b53-branch
+            ref: ${{ github.sha }}
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[dev,exact-mip]'
+      - name: Repeat the two tests
+        shell: bash
+        run: |
+          set +e
+          echo "::notice title=probe-env::${{ matrix.label }} | $(git rev-parse --short HEAD) | $(python -m pip list 2>/dev/null | grep -i -E '^(numpy|scipy|clarabel|osqp) ' | tr '\n' ';' | sed 's/  */ /g') | $(lscpu | grep 'Model name' | sed 's/  */ /g')"
+          passed=0; failed=0
+          for i in $(seq 1 12); do
+            python -m pytest -q -p no:cacheprovider "tests/unit/scenarios/test_multi_scenario.py::test_single_solutions_satisfy_the_constraints_of_every_scenario" "tests/unit/scenarios/test_multi_scenario.py::test_worst_case_maximizes_the_minimum_scenario_utility" > probe.txt 2>&1
+            if [ $? -eq 0 ]; then passed=$((passed+1)); else failed=$((failed+1)); grep -E '^E  ' probe.txt | head -3 | while IFS= read -r line; do echo "::warning title=probe-error-${{ matrix.label }}::$line"; done; fi
+          done
+          echo "::notice title=probe-result::${{ matrix.label }} passed=$passed failed=$failed of 12"
