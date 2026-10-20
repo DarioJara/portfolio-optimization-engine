@@ -1433,7 +1433,9 @@ se desactivó ni relajó ningún test. No se inició B5.4.
 ### Verificación (Windows 11, Python 3.13.6)
 
 Sobre `8a18102`: `pytest -q -rs` **1775 passed, 2 skipped** (909 s; los 2 skips son Linux-only), `mypy --strict portfolio_engine` limpio
-(170 ficheros), `ruff check .` y `ruff format --check .` (359 ficheros) limpios. Sobre el commit final, véase la última sección.
+(170 ficheros), `ruff check .` y `ruff format --check .` (359 ficheros) limpios. Sobre el árbol final (`d121a75`, mismo código que `bcada73`): `pytest -q -rs` **1775 passed, 2 skipped** (864 s), `mypy --strict` en las
+plataformas Windows y Linux, `ruff check .` y `ruff format --check .` limpios, y `ci.yml` (Linux) en verde en el run 39430640797.
+T1: las pruebas de equivalencia por modo (incluida W2) y con caché pasan con 0 diferencias; el benchmark regenerado da T1 = 0 en las 18 celdas.
 La CI de Linux detectó además un fallo real de tipado que Windows no ve (`ctypes.get_last_error` en `mypy --strict` con la plataforma
 Linux): corregido en `bcada73`; desde ahora `mypy --strict --platform linux` se ejecuta también en local.
 
@@ -1460,7 +1462,7 @@ temporal o de `ci.yml`; «sonda» = 12 repeticiones de los dos tests de B4 sobre
 | 39428998923 | `bcada73` | suite | EPYC 7763 | **failure**: 2 failed, **1776 passed**, 2 skipped (solo fallan los dos tests de B4) |
 | ídem | `539d4b7` / rama | sonda | EPYC 7763 / EPYC 7763 | **0/12** / **0/12** |
 | 39429009105 | `bcada73` | `ci.yml` (PR #7) | no registrada | **failure** en *Full test suite* (sin anotaciones de detalle; su runner no se registra) |
-@@FINALROWS@@
+| 39430640797 | `d121a75` | `ci.yml` (PR #7) | no registrada | success |
 
 Lectura, sin atribuir una causa:
 
