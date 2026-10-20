@@ -13,6 +13,7 @@ from tests.fixtures.synthetic import universe_frame
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG_PATH = REPO_ROOT / "config" / "default_engine.toml"
+DEFAULT_PARALLEL_CONFIG_PATH = REPO_ROOT / "config" / "default_parallel.toml"
 
 
 @pytest.fixture(scope="session")
