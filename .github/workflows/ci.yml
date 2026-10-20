@@ -46,10 +46,17 @@ jobs:
           python -m pytest -v -rA -p no:cacheprovider tests/integration/test_recovery_linux.py tests/unit/parallel/test_markers.py tests/unit/parallel/test_journal.py tests/integration/test_forkserver_linux.py 2>&1 | tee b54-linux.txt
           status=${PIPESTATUS[0]}
           env_line="$(uname -sr) | $(python --version) | uid=$(id -u) | $(lscpu | grep 'Model name' | sed 's/  */ /g')"
-          results="$(grep -E '^(PASSED|FAILED|ERROR|SKIPPED) ' b54-linux.txt | cut -c1-160 | paste -sd ';')"
+          not_passed="$(grep -E '^(FAILED|ERROR|SKIPPED) ' b54-linux.txt | cut -c1-200 | paste -sd ';' | cut -c1-3900)"
+          failures="$(grep -E '^E ' b54-linux.txt | cut -c1-160 | head -n 25 | paste -sd '|' | cut -c1-3900)"
+          passed="$(grep -E '^PASSED ' b54-linux.txt | sed -e 's#PASSED tests/[a-z_]*/##' -e 's#parallel/##' | paste -sd ';')"
+          passed_count="$(grep -cE '^PASSED ' b54-linux.txt)"
           echo "::notice title=b54-linux-env::${env_line}"
           echo "::notice title=b54-linux-summary::$(tail -n 1 b54-linux.txt)"
-          echo "::notice title=b54-linux-tests::${results}"
+          echo "::notice title=b54-linux-passed-count::${passed_count}"
+          echo "::notice title=b54-linux-not-passed::${not_passed}"
+          echo "::warning title=b54-linux-failure-lines::${failures}"
+          echo "::notice title=b54-linux-passed-1::$(echo "${passed}" | cut -c1-3900)"
+          echo "::notice title=b54-linux-passed-2::$(echo "${passed}" | cut -c3901-7800)"
           exit $status
       - name: Runner CPU (diagnostic)
         run: echo "::notice title=runner-cpu::$(lscpu | grep 'Model name' | sed 's/  */ /g')"

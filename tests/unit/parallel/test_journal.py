@@ -378,8 +378,8 @@ def test_posix_permissions_are_private(
 ) -> None:
     _write(tmp_path / "j", reference)
     assert (tmp_path / "j").stat().st_mode & 0o077 == 0
-    for path in (tmp_path / "j").rglob("*.json"):
-        assert path.stat().st_mode & 0o077 == 0
+    for path in (tmp_path / "j").rglob("*"):  # también events.jsonl y .lock
+        assert path.stat().st_mode & 0o077 == 0, path
 
 
 def test_events_are_checksummed_and_a_truncated_tail_is_tolerated(

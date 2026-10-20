@@ -566,9 +566,13 @@ class RunJournal:
     def event(self, kind: str, **data: str | int | float | bool) -> None:
         """Añade un evento de recuperación (sin datos de cartera)."""
         if self._events is None:
-            self._events = open(  # noqa: SIM115 - se cierra en close()
-                self._directory / EVENTS_FILE, "ab"
+            # Permisos privados desde la creación (hallazgo de la CI Linux: ``open`` daba 0644).
+            descriptor = os.open(
+                self._directory / EVENTS_FILE,
+                os.O_WRONLY | os.O_CREAT | os.O_APPEND,
+                PRIVATE_FILE_MODE,
             )
+            self._events = os.fdopen(descriptor, "ab")
         self._event_count += 1
         body = {
             "seq": self._event_count,
