@@ -309,11 +309,20 @@ def _attach_segment(name: str) -> shared_memory.SharedMemory:
             name=name, create=False, track=False
         )
     except TypeError:
-        segment = shared_memory.SharedMemory(name=name, create=False)
-        if os.name == "posix":  # evita que el rastreador lo elimine al salir el worker
-            name_in_tracker = segment._name  # type: ignore[attr-defined,unused-ignore]
-            resource_tracker.unregister(name_in_tracker, "shared_memory")
-        return segment
+        # Python < 3.13: adjuntar registra el segmento en el rastreador, compartido con el
+        # coordinador. Registrarlo (y anularlo) borraría el registro del propietario y el
+        # `unlink` del coordinador daría un KeyError en el rastreador; por eso no se registra.
+        original = resource_tracker.register
+
+        def register_except_shared_memory(name: str, rtype: str) -> None:
+            if rtype != "shared_memory":
+                original(name, rtype)
+
+        resource_tracker.register = register_except_shared_memory  # type: ignore[assignment]
+        try:
+            return shared_memory.SharedMemory(name=name, create=False)
+        finally:
+            resource_tracker.register = original
 
 
 @dataclass(slots=True)
