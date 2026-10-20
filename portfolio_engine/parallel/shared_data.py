@@ -441,7 +441,8 @@ def pid_alive(pid: int) -> bool:
         kernel.OpenProcess.argtypes = (ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong)
         kernel.GetExitCodeProcess.argtypes = (ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong))
         kernel.CloseHandle.argtypes = (ctypes.c_void_p,)
-        return nt_pid_alive(kernel, pid, ctypes.get_last_error)
+        last_error = ctypes.get_last_error  # type: ignore[attr-defined,unused-ignore]
+        return nt_pid_alive(kernel, pid, last_error)
     try:
         os.kill(pid, 0)
     except ProcessLookupError:

@@ -1358,7 +1358,7 @@ solver; el resultado es idéntico (T1 = 0). 12 entradas ocupan ≈ 263 KB. Entre
 ### Linux (GitHub Actions, workflow temporal `b53-branch-ci.yml`)
 
 Ubuntu 22.04, Python 3.11.17, numpy 2.4.6, scipy 1.17.1, clarabel 0.11.1, osqp 1.1.3, PySCIPOpt 6.3.0, psutil 7.2.2; runner de
-**1 CPU** (los tiempos con 2 y 4 workers no son representativos). Run `39414610396` sobre `d3ecd53`: `mypy --strict`, ruff,
+**1 CPU** (los tiempos con 2 y 4 workers no son representativos). Run `39414610396` sobre `d3ecd53` (runner AMD EPYC 9V45, donde los dos tests de B4 no fallaron): `mypy --strict`, ruff,
 tests de `forkserver`/datos compartidos/caché y suite completa **1762 passed** (108 s); benchmark pequeño `spawn` y
 `forkserver` × 3 modos × {1, 2, 4} workers × N {50, 500}: **T1 = 0 en todas las celdas**, 160 puntos válidos por celda. Orden de
 magnitud: pool listo 0,7–1,3 s (el `import` es mucho más rápido que en Windows), adjunción 0,8–1,3 ms (N = 50) y 4–8 ms
@@ -1371,14 +1371,10 @@ Hallazgos:
    `resource_tracker` compartido, y el `unlink` del coordinador producía `KeyError` en el rastreador (visible en el run
    `39409385018`, sin efecto sobre resultados ni limpieza). Los workers ya no lo registran; en el run `39414610396`
    hay 0 líneas `KeyError`. El camino de Python ≥ 3.13 (`track=False`, usado en Windows) no cambia.
-2. **Intermitencia en B4 (no atribuible a B5.3, no resuelta)**: `test_single_solutions_satisfy_the_constraints_of_every_scenario`
-   y `test_worst_case_maximizes_the_minimum_scenario_utility` fallaron en ejecuciones previas de Linux. Sonda de 12 repeticiones
-   por commit, en dos runs: `539d4b7` (main, B5.2) **0/12 correctas** en ambos (runners AMD EPYC 9V74 y 7763; `is_valid_solution` falso; el
-   mensaje muestra dos utilidades del peor caso que difieren en ≈ 5·10⁻¹⁵) y la rama B5.3 **12/12 correctas** en ambos (Intel Xeon 6973P y 8573C). La
-   suite completa de B5.3, en un runner AMD EPYC 9V45, pasó. La CPU del runner no está controlada, de modo que no se puede
-   atribuir la diferencia ni a la CPU ni al código; B5.3 no toca ningún módulo ni test de B4. Queda como incidencia abierta para
-   la auditoría y para B5.4 (no se ha modificado ninguna tolerancia ni test de B4).
-3. El workflow temporal debe eliminarse antes de integrar.
+2. **Intermitencia en dos tests de B4 (causa indeterminada)**: véase «Historial completo de CI» en la entrada de remediación
+   de B5.3. **Corrección (auditoría M-3):** la comparación «main 0/12 frente a rama 12/12» que figuraba aquí era una coincidencia de
+   runners y se retira; en un run posterior (`39415376791`) el resultado se invirtió (main 12/12, rama 0/12).
+3. El workflow temporal se eliminó antes de integrar (véase la remediación).
 
 ### Requisitos (ver `TRACEABILITY.md`)
 
