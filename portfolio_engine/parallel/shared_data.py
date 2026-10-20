@@ -216,6 +216,22 @@ def _write_owner(directory: Path, mode: SharedDataMode, shm_name: str | None) ->
     (directory / OWNER_FILE).write_text(json.dumps(owner), encoding="utf-8")
 
 
+@contextlib.contextmanager
+def scratch_directory(*, root: Path | None = None) -> Iterator[Path]:
+    """Directorio de trabajo de una ejecución, con propietario, eliminado al salir (Bloque 5.4).
+
+    Tiene el prefijo ``portfolio_engine_run_`` y un ``owner.json``, de modo que si el coordinador
+    muere sin limpiar, ``inventory_orphans``/``remove_orphans`` lo detectan como cualquier otro
+    resto de una ejecución.
+    """
+    directory = Path(tempfile.mkdtemp(prefix=RUN_DIR_PREFIX, dir=root))
+    try:
+        _write_owner(directory, SharedDataMode.BUNDLE_FILE, None)
+        yield directory
+    finally:
+        _remove_tree(directory)
+
+
 def _publish_out_of_band(
     directory: Path, context: ExecutionContext, mode: SharedDataMode, shm_name: str | None
 ) -> tuple[SharedSnapshotHandle, shared_memory.SharedMemory | None]:

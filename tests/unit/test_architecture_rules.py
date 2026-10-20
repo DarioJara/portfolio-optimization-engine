@@ -122,7 +122,8 @@ ALLOWED_DEPENDENCIES: dict[str, set[str]] = {
 #: ``candidates``, ``frontiers/global_frontier.py``, ``constraints/integer.py`` y
 #: ``parallel/determinism.py``— se han implementado y ya no figuran aquí).
 LATER_BLOCK_PACKAGES = (
-    "parallel/journal.py",
+    # B5.4 entregó ``parallel/journal.py`` (diario local de recuperación): ya no es «posterior».
+    # La persistencia SQL/empresarial sigue siendo del Bloque 6 (``staging``/``persistence``).
     "staging",
     "persistence",
     "engine.py",
@@ -179,6 +180,23 @@ ALLOWED_NAMED_CONSTANTS = {
     ("parallel/shared_data.py", "REMOVE_RETRIES"),
     ("parallel/shared_data.py", "REMOVE_DELAY_SECONDS"),
     ("parallel/worker.py", "MAX_BACKING_DEPTH"),
+    # Bloque 5.4: constantes de formato del diario y de las marcas de progreso (no son parámetros
+    # de negocio): número de partes de un array/par del códec JSON, anchuras de nombres de fichero,
+    # longitud del sufijo aleatorio, permisos privados POSIX y campos del nombre de una marca.
+    ("parallel/codec.py", "ARRAY_PARTS"),
+    ("parallel/codec.py", "PAIR_PARTS"),
+    ("parallel/codec.py", "MAX_DEPTH"),
+    ("parallel/markers.py", "LINUX_STARTTIME_INDEX"),
+    ("parallel/markers.py", "WIN_PROCESS_QUERY_LIMITED_INFORMATION"),
+    ("parallel/markers.py", "FILETIME_HIGH_SHIFT"),
+    ("parallel/markers.py", "FILETIME_COUNT"),
+    ("parallel/supervisor.py", "DEADLINE_REBUILDS_PER_TASK"),
+    ("parallel/journal.py", "SEQUENCE_DIGITS"),
+    ("parallel/journal.py", "SHA_PREFIX_CHARS"),
+    ("parallel/journal.py", "TOKEN_BYTES"),
+    ("parallel/journal.py", "PRIVATE_DIRECTORY_MODE"),
+    ("parallel/journal.py", "PRIVATE_FILE_MODE"),
+    ("parallel/markers.py", "TASK_FIELDS"),
 }
 
 
@@ -388,6 +406,52 @@ def test_parallel_package_never_uses_implicit_cpu_count_or_external_systems() ->
             if ast.unparse(call.func) in forbidden_calls
         )
     assert not offenders, offenders
+
+
+#: Módulos que pueden usar ``pickle.load(s)``: leen únicamente bytes que el propio proceso
+#: coordinador creó (caché en memoria) o un fichero propio verificado por SHA-256 antes de
+#: deserializar (arranque de los workers).
+PICKLE_LOAD_ALLOWED = {"cache/result_cache.py", "parallel/shared_data.py"}
+
+
+def test_pickle_is_never_loaded_from_external_sources() -> None:
+    """C-25 / P-05: ningún ``pickle.load(s)`` de ficheros externos; el diario es JSON.
+
+    ``pickle`` solo se deserializa en los módulos de ``PICKLE_LOAD_ALLOWED`` (bytes propios o
+    ficheros propios con hash verificado). Ningún otro módulo —en particular el diario, el códec,
+    el supervisor, el ejecutor y la CLI— puede importar ``pickle``, ``marshal`` ni ``shelve``.
+    """
+    offenders = []
+    for path in _python_files():
+        relative = _relative(path)
+        if relative in PICKLE_LOAD_ALLOWED:
+            continue
+        offenders.extend(
+            f"{relative}: import {imported}"
+            for imported in _imports(path)
+            if imported.split(".")[0] in {"pickle", "marshal", "shelve", "dill", "cloudpickle"}
+        )
+        offenders.extend(
+            f"{relative}:{call.lineno} {ast.unparse(call.func)}"
+            for call in _calls(path)
+            if ast.unparse(call.func).split(".")[-1] in {"loads", "load"}
+            and ast.unparse(call.func).split(".")[0] in {"pickle", "marshal", "shelve"}
+        )
+    assert not offenders, offenders
+
+
+def test_the_journal_decodes_only_through_the_allow_listed_codec() -> None:
+    """El diario no usa ``eval``/``exec``/``compile`` ni ``importlib`` fuera del códec."""
+    for module in ("parallel/journal.py", "parallel/codec.py", "parallel/cli.py"):
+        names = {ast.unparse(call.func) for call in _calls(PACKAGE_ROOT / module)}
+        assert not names & {"eval", "exec", "compile", "__import__"}, module
+    importers = [
+        _relative(path)
+        for path in _python_files()
+        if _relative(path).startswith("parallel/")
+        and any(imported == "importlib" for imported in _imports(path))
+    ]
+    assert "parallel/journal.py" not in importers and "parallel/cli.py" not in importers
 
 
 def test_no_module_level_mutable_state() -> None:

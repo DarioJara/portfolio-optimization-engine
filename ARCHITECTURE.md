@@ -246,6 +246,10 @@ Basada en MASTER_SPEC §81 ("estructura recomendada"), con **adiciones justifica
 │   │   ├── executor.py            # [B5.2] SequentialExecutor, ParallelExecutor
 │   │   ├── shared_data.py         # [B5.3] publicación/adjunción de datos compartidos, huérfanos
 │   │   ├── operation_cache.py     # [B5.3] claves y caché por operación (por worker)
+│   │   ├── supervisor.py          # [B5.4] caídas, cuarentena, plazos, cancelación, cotas
+│   │   ├── markers.py             # [B5.4] marcas de progreso/registro de workers (D-DET)
+│   │   ├── journal.py, codec.py   # [B5.4] diario local JSON no ejecutable y su códec
+│   │   ├── protocols.py, cli.py   # [B5.4] contratos desacoplados; CLI `journal-info`
 │   │   └── determinism.py         # SequenceID, derivación de semillas (B3)
 │   ├── staging/                   # §68 (Bloque 6)
 │   │   ├── coordinator.py
@@ -459,7 +463,9 @@ ParallelExecutor(config, snapshot, ParallelConfig).run(requests) -> RunResult
 | E-7 | `threadpoolctl` transitivo (vía scikit-learn) | Dependencia directa de runtime (`>=3.5,<4`); `psutil` no se añade (no se necesita en B5.2) | D-09; PAR-007 |
 | E-8 | Snapshot por argumentos del *initializer* | Fichero de arranque hash-verificado (`WorkerBundle`); el *initializer* recibe solo ruta y SHA-256 | Medido: con `spawn` en Windows el padre se bloquea al escribir en el *pipe* de arranque un payload mayor que su búfer hasta que el hijo importa `__main__`, lo que **serializaba** el arranque de los workers (1 → 4 workers: 6,1 s → 22,8 s con 25 KB; 5,3 s con 100 B en la sonda). Con el fichero el arranque pasa a 6,0 → 7,1 s. El mecanismo definitivo de datos compartidos sigue siendo B5.3 |
 
-**Semántica de `WORKER_CRASHED` (verificada con `test_a_crash_mid_task_marks_every_in_flight_batch_as_worker_crashed`).** Con `ProcessPoolExecutor`, la
+> **Superada en B5.4 (véase §3.9):** los lotes en vuelo ya no se marcan `WORKER_CRASHED` en bloque; el texto siguiente es el histórico de B5.2.
+
+**Semántica de `WORKER_CRASHED` (B5.2, histórico; la prueba citada se reescribió en B5.4 como `test_a_poison_task_is_quarantined_and_healthy_neighbours_complete`).** Con `ProcessPoolExecutor`, la
 muerte de un worker rompe el pool completo: **todos los lotes en vuelo** (hasta `workers ×
 max_in_flight_batches_per_worker` lotes, es decir, hasta ese número × `batch_size` carteras) se marcan
 `WORKER_CRASHED`, con `operations=()` (se pierde también lo ya calculado dentro de esos lotes) y sin reintento. La
@@ -565,6 +571,143 @@ con el segmento, en `finally` (con reintentos de borrado en Windows). `inventory
 de worker.
 
 ---
+
+### 3.9 Bloque 5.4: recuperación, plazos, cancelación, diario y reanudación
+
+Registrado al implementar el Bloque 5.4 (2026-10-20, rama `block5-recovery-journal`, sobre `main` `bf74f97` con B5.3 integrado).
+Contratos: `MASTER_SPEC.md` §56-61 (sin cambios) y `BLOCK_5_IMPLEMENTATION_PLAN.md` §3 (B5.4). **No** se modificó ningún motor, solver,
+tolerancia ni estado de B1–B4; `parallel.enabled`/caché/memoria compartida de B5.3 intactos. Persistencia SQL, red y orquestación
+remota quedan fuera (Bloque 6).
+
+```
+ParallelExecutor.run(requests, journal=JournalSpec|None, control=RunControl|None, progress=ProgressReporter|None, sink=ResultSink|None)
+    canonical_order → [diario] restaurar lo restaurable (SKIPPED_BY_RESUME en la contabilidad) → make_batches(solo lo pendiente)
+    → publish_snapshot + scratch_directory (marcas de progreso)
+    → BatchSupervisor(hooks).run(batches)            # parallel/supervisor.py
+          pool = new_pool()  (initializer supervisado: se registra en marks/, captura su propio fallo)
+          submit  ≤ max_in_flight   |  sospechosas: UNA a una
+          poll:   collect  |  plazos (tarea/lote)  |  vigilancia de PID (D-DET)
+          rota?   recover: recoger terminados → terminar workers por PID → shutdown → repartir lotes afectados → aplicar cotas
+    → _verify_exactly_once + RunAccounting (enviadas = Σ estados finales)
+```
+
+**Módulos nuevos** (`parallel/`): `supervisor.py` (política), `markers.py` (marcas de progreso), `journal.py` + `codec.py` (diario JSON
+no ejecutable), `protocols.py` (contratos y versiones locales), `cli.py` (`journal-info`). **Tocados**: `executor.py` (delegación en el
+supervisor, diario, contabilidad), `worker.py` (initializer supervisado, marcas, acotado de errores, huella ampliada),
+`task.py` (`ExecutionStatus`), `shared_data.py` (`scratch_directory`), `config/parallel_config.py` (`RecoveryConfig`),
+`config/default_parallel.toml`.
+
+**Contrato de errores (P-01).** `ExecutionStatus` es independiente de `SolverStatus` y nunca lo reetiqueta (un `TIME_LIMIT`/`INFEASIBLE`
+del solver es una tarea `COMPLETED`; probado en secuencial y paralelo):
+
+| Estado | Significado | ¿Se restaura al reanudar? |
+|---|---|---|
+| `COMPLETED` | todas las operaciones terminaron | sí |
+| `FAILED_INPUT_VALIDATION` | entrada inválida; ningún motor se ejecutó | sí (determinista) |
+| `FAILED_EXCEPTION` | excepción de un motor (fallo de **tarea**) | no (puede ser del entorno: se re-ejecuta) |
+| `WORKER_CRASHED` | la tarea mató a su worker en `max_task_attempts` intentos **aislados** (venenosa confirmada) | no |
+| `WORKER_INIT_FAILED` | el *initializer* falla de forma consistente (fallo de **entorno**) | no |
+| `TIMED_OUT` | la tarea (o su lote unitario) superó el plazo | no |
+| `CANCELLED` | cancelada antes de concluir | no |
+| `ABORTED` | el supervisor agotó sus cotas antes de que la tarea tuviera un intento concluyente | no |
+| `SKIPPED_BY_RESUME` | solo en `RunAccounting`: el diario ya tenía el resultado (que conserva su estado original) | — |
+
+**Recuperación de caídas (P-03, P-06).** `ProcessPoolExecutor` rompe el pool entero y no dice qué tarea mató al worker. Cada worker
+declara con un fichero vacío (`t.<lote>.<posición>.<pid>`, `parallel/markers.py`) la tarea que va a ejecutar; el coordinador solo
+lista el directorio. Al romperse el pool: se recogen los lotes terminados; de los demás, **solo la tarea en curso de cada worker es
+sospechosa**; el resto de carteras (incluidas las que ya habían terminado dentro del lote perdido: son idempotentes) se reenvía
+intacto. Las sospechosas se ejecutan **una a una**; si una tarea sola mata su proceso `max_task_attempts` veces → `WORKER_CRASHED`;
+si no, se completa con el resultado de una ejecución sin fallos. Una cartera sana nunca queda `WORKER_CRASHED` por compartir lote o
+pool. **Cambio de semántica respecto a B5.2** (las pruebas que la fijaban se reescribieron): ya no se marcan «todos los lotes en
+vuelo».
+
+**Cotas (M-1: sin bucle infinito).** `max_rebuilds_without_progress`: caídas consecutivas *sin atribuir* a ninguna tarea (muerte antes
+de empezar una: *initializer* roto) y tareas venenosas consecutivas sin ningún resultado entre medias; `max_total_rebuilds`: cota
+absoluta. Al agotarlas todo lo pendiente queda `ABORTED` (o `WORKER_INIT_FAILED` si el initializer capturó una excepción) y la
+ejecución **devuelve** un resultado por cartera (no lanza). `pool.submit` sobre un pool roto se captura: el lote no enviado no se pierde.
+
+**Detección tardía (D-DET).** El pool puede no notar la muerte de un worker creado bajo demanda (observado en Windows, B5.2). Cada
+worker registra `w.<pid>` y lo borra al salir **limpiamente** (finalizador de `multiprocessing`); en cada sondeo, un PID registrado
+sin salida limpia y sin proceso (Linux: o zombi) se trata como caída sin esperar al pool. Probado con un worker que muere sin que el
+pool lo advierta y sin calentar el pool (`test_a_poison_task_is_found_even_without_warm_up`, `test_a_vanished_worker_is_detected_…`).
+
+**Plazos (P-04), tres capas.**
+
+| Capa | Dónde | Efecto |
+|---|---|---|
+| Solver | `solver.time_limit_seconds` de cada backend | `SolverStatus.TIME_LIMIT` dentro de una tarea `COMPLETED`; el supervisor no interviene |
+| Tarea | `recovery.task_timeout_seconds` | la cartera que supera el plazo desde que su worker la empieza → `TIMED_OUT`; **se termina el proceso del worker** (su PID consta en las marcas) |
+| Lote | `recovery.batch_timeout_seconds` | un lote de varias carteras que lo supera se **descompone en lotes unitarios** (nadie falla por compartir lote lento); un lote unitario que lo supera → `TIMED_OUT` |
+
+`ProcessPoolExecutor` no puede terminar una tarea individual: terminar un proceso rompe el pool, de modo que los lotes de los demás
+workers se **recalculan** (daño colateral = trabajo repetido, nunca carteras falladas). El tiempo se mide desde que el coordinador
+*observa* el inicio (resolución `supervision_poll_seconds`); una tarea que termina justo en el límite puede constar `TIMED_OUT`.
+
+**Cancelación.** `RunControl.cancel_requested()`: no se envía más trabajo; lo no enviado → `CANCELLED`; los lotes en vuelo disponen de
+`cancel_grace_seconds` para terminar (sus resultados **se conservan**) y luego se terminan sus workers (→ `CANCELLED`). Lo calculado
+dentro de un lote que no llegó a devolverse se pierde (el lote es la unidad de entrega).
+
+**Diario local (P-05, P-08).** Directorio con `manifest.json`, `shards/s-*.json` (append-only, un fichero por grupo de resultados
+restaurables), `events.jsonl` y `.lock`. Formato **no ejecutable**: JSON con el códec de `parallel/codec.py` (dataclasses, enums,
+arrays NumPy en base64, floats exactos, sin `pickle`; decodificación por lista blanca `portfolio_engine.*` solo dataclasses/enums;
+ida y vuelta exacta verificada para las 14 clases de workload). Cada fichero se escribe atómicamente (temporal + `fsync` +
+`os.replace`); cada *shard* lleva longitud y SHA-256 de su cuerpo; uno truncado/alterado se detecta, se aparta (`.corrupt`) y solo sus
+tareas se re-ejecutan. `RunManifest`/identidad del diario: formato, `ConfigHash`, `snapshot_key`, hash del código de `portfolio_engine`,
+versiones de librerías numéricas y de Python, hash del conjunto de `TaskID`; **cualquier diferencia rechaza la reanudación sin
+modificar el diario**. Un bloqueo del sistema operativo (`msvcrt`/`fcntl`, se libera si el proceso muere) impide dos coordinadores
+sobre el mismo diario; directorios distintos no colisionan. Opt-in doble: `recovery.journal_enabled` y `JournalSpec(directory)`.
+
+**Interfaces (P-07, D-10).** `parallel/protocols.py`: `MarketDataProvider`, `PortfolioRequestSource`, `ResultSink`, `RunControl`,
+`ProgressReporter` (+ implementaciones locales en memoria). CLI JSON local `python -m portfolio_engine.parallel.cli journal-info <dir>`
+(salida estable, solo lectura). Una CLI que *ejecute* optimizaciones exige cargadores de datos/solicitudes reales (Bloque 6).
+
+**Observabilidad segura (L-2).** Mensajes y trazas de error de las tareas se recortan en el worker a `recovery.max_message_chars`;
+eventos del supervisor y del diario acotados y sin identificadores de cartera; el diario no guarda solicitudes, configuración
+completa ni credenciales (sí **resultados** de optimización: es opt-in y en POSIX se crea con permisos `0700/0600`).
+
+**Limpieza.** Las marcas viven en `scratch_directory()` (prefijo `portfolio_engine_run_` + `owner.json`): si el coordinador muere sin
+limpiar, `inventory_orphans`/`remove_orphans` (B5.3) lo detectan (probado con un coordinador real terminado a mitad de ejecución).
+
+**Deudas de B5.2/B5.3 cerradas o actualizadas**
+
+| ID | Estado tras B5.4 |
+|---|---|
+| M-1 (initializer sin corte; `submit` desprotegido) | **Cerrada**: cotas + captura en `submit` (pruebas con *initializer* que lanza, que muere y que se registra y muere) |
+| D-DET | **Cerrada** con vigilancia de PID (sin calentar el pool); validada en Windows y en Linux (CI, run `39466030525`) |
+| L-1 (huella solo `mu`/`Σ`) | **Parcial**: ahora cubre `mu`, `Σ`, costes y escenarios de retorno; universo y definiciones de escenario son dataclasses inmutables y no se vigilan |
+| L-2 (mensajes sin truncar) | **Cerrada** en worker, eventos y diario |
+| L-3 (restos tras muerte del coordinador) | **Cerrada** (marcas bajo `scratch_directory`; barrido probado) |
+| L-4 (`os.environ`) | **Abierta**: `worker_thread_environment` sigue mutando el entorno del proceso; un `run()` a la vez por proceso (varios procesos coordinadores simultáneos sí funcionan: probado) |
+
+**Limitaciones declaradas (el requisito queda `PARTIAL` donde afecta).**
+
+* El diario cubre `ParallelExecutor`; `SequentialExecutor` no escribe ni reanuda diarios.
+* La unidad de entrega es el lote: lo calculado en un lote cuyo worker muere o se termina (plazo, cancelación) se recalcula o se
+  pierde; con lotes grandes el coste de una caída crece (los lotes unitarios de la cuarentena lo acotan).
+* Una caída atribuida a una tarea sana por un *kill* externo se corrige con el reintento aislado, pero si el mismo kill ocurre
+  `max_task_attempts` veces seguidas sobre la misma tarea quedará `WORKER_CRASHED` (no se distingue de una venenosa).
+* La integridad del diario protege de corrupción accidental, no de un atacante con acceso de escritura (sumas, no firmas).
+* Un fallo de escritura del diario (disco lleno) aborta la ejecución con `OSError`: lo ya escrito sigue siendo reanudable.
+* Los tiempos de recuperación se miden (`RecoveryReport.recovery_seconds`) pero no hay umbral; dependen del arranque de `spawn`
+  (≈ 5 s por worker en esta máquina; véase la memoria del proyecto sobre la bimodalidad de los tiempos).
+* Linux (`forkserver`, `/proc` zombis, `fcntl`, permisos): **ejecutado en CI** tras la remediación (run `39466030525`, véase `REMEDIATION_BLOCK_5_4.md` §2).
+
+**Remediación tras `AUDIT_BLOCK_5_4.md` (`PASS_WITH_CHANGES`; detalle en `REMEDIATION_BLOCK_5_4.md`).**
+
+* **Presupuestos de reconstrucción separados (M-1).** `max_total_rebuilds` cuenta solo reconstrucciones **por fallo** de workers. Las
+  terminaciones intencionadas por plazo (`task_timeout_seconds`/`batch_timeout_seconds`) tienen su propia cota finita
+  (`DEADLINE_REBUILDS_PER_TASK = 2` por tarea: una finaliza la tarea como `TIMED_OUT`, otra descompone su lote) y no abortan carteras sanas.
+* **Identidad de procesos antes de terminar nada (L-2).** Cada worker registra `w.<pid>.<hora de creación>` (`GetProcessTimes` en Windows,
+  `starttime` de `/proc/<pid>/stat` en Linux). El supervisor solo termina un PID si es un hijo vivo del coordinador
+  (`multiprocessing.active_children()`) **y** su hora de creación coincide; un PID reutilizado por un proceso ajeno no se toca y la
+  vigilancia lo considera «desaparecido».
+* **Shards hostiles o inválidos (L-1).** Un *shard* con suma válida pero contenido inválido (dataclass que no valida, tipo ajeno,
+  anidamiento excesivo) se aparta como `.corrupt` y sus tareas se re-ejecutan. El códec rechaza más de `MAX_DEPTH = 200` niveles con un
+  recorrido no recursivo y traduce `RecursionError`.
+* **Cambio de configuración incompatible (L-4).** `[parallel.recovery]` es obligatoria desde B5.4; una configuración de B5.2/B5.3 falla con un
+  mensaje que remite a `config/default_parallel.toml`. No hay valores por defecto en el código (política del proyecto).
+* **Permisos (R-1, hallado por la evidencia Linux).** `events.jsonl` se crea con `0600`.
+* **Evidencia Linux (L-3).** `tests/integration/test_recovery_linux.py` y el paso de CI «B5.4 Linux recovery evidence»; run `39466030525`.
 
 ## 4. Grafo lógico de dependencias
 

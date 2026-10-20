@@ -41,3 +41,25 @@ shared_data_mode = "BUNDLE_FILE"
 enabled = false
 max_entries = 64
 max_bytes = 67108864
+
+# Supervisión, reintentos, plazos y diario local (B5.4; P-03…P-06). EJEMPLO de desarrollo, sin
+# calibrar para producción (los plazos reales dependen del tamaño del problema; véase D-11).
+[parallel.recovery]
+# Intentos aislados que se conceden a una tarea sospechosa de una caída antes de ``WORKER_CRASHED``.
+max_task_attempts = 2
+# Caídas consecutivas sin atribuir a ninguna tarea, y tareas venenosas consecutivas sin ningún
+# resultado en medio, antes de abortar la ejecución.
+max_rebuilds_without_progress = 3
+# Cota absoluta de reconstrucciones por ejecución.
+max_total_rebuilds = 50
+# Periodo del sondeo del supervisor (segundos).
+supervision_poll_seconds = 0.5
+# Plazo de pared por cartera / por lote, en segundos. Omitidos = sin plazo.
+# task_timeout_seconds = 600.0
+# batch_timeout_seconds = 3600.0
+# Espera a los lotes en vuelo tras una cancelación antes de terminar sus workers.
+cancel_grace_seconds = 5.0
+# El diario solo se escribe si está habilitado Y se pasa un directorio explícito a ``run``.
+journal_enabled = false
+# Longitud máxima de los mensajes de error registrados (observabilidad acotada).
+max_message_chars = 500

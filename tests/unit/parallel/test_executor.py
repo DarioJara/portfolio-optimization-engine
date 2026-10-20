@@ -258,24 +258,27 @@ class _CrashingExecutor(ParallelExecutor):
         )
 
 
-def test_a_worker_crash_is_reported_and_the_run_continues(
-    tmp_path: Path, snapshot: Any, requests: list[PortfolioRequest]
+def test_a_worker_lost_in_the_initializer_is_recovered_without_losing_portfolios(
+    tmp_path: Path, snapshot: Any, requests: list[PortfolioRequest], sequential: RunResult
 ) -> None:
+    """B5.4: un worker que muere antes de ejecutar ninguna tarea no hace fallar a nadie.
+
+    En B5.2 los lotes en vuelo quedaban ``WORKER_CRASHED``; ahora nadie es sospechoso (ninguna tarea
+    había empezado), el pool se reconstruye y todas las carteras se completan como en la referencia.
+    """
     flag = tmp_path / "die-once.flag"
     flag.write_text("x", encoding="utf-8")
     executor = _CrashingExecutor(
         CONFIG, snapshot, parallel_config(workers=1, batch_size=3), flag=flag
     )
     run = executor.run(requests)
-    statuses = [r.execution_status for r in run.results]
-    assert len(run.results) == len(requests)  # exactamente un resultado por cartera
     assert [r.portfolio_id for r in run.results] == sorted(r.portfolio_id for r in requests)
-    assert ExecutionStatus.WORKER_CRASHED in statuses
+    assert all(r.execution_status is ExecutionStatus.COMPLETED for r in run.results)
     assert run.pool_rebuilds >= 1
-    crashed = [r for r in run.results if r.execution_status is ExecutionStatus.WORKER_CRASHED]
-    assert all(r.error is not None and r.operations == () for r in crashed)
-    assert all(s in {ExecutionStatus.COMPLETED, ExecutionStatus.WORKER_CRASHED} for s in statuses)
-    assert ExecutionStatus.COMPLETED in statuses  # el pool reconstruido terminó el trabajo
+    assert run.accounting is not None and run.accounting.balanced
+    assert run.recovery.poisoned_tasks == 0
+    for got, expected in zip(run.results, sequential.results, strict=True):
+        assert compare_results(expected, got).differences == [], got.portfolio_id
     assert multiprocessing.active_children() == []
 
 
@@ -310,7 +313,9 @@ def _rendezvous_initializer(
             time.sleep(0.02)
         if portfolio_id == poison:
             os._exit(1)
-        time.sleep(hold)  # la cartera sana sigue «ejecutándose» durante ``hold`` segundos
+        if not (root / "healthy.held").exists():
+            (root / "healthy.held").write_text("x", encoding="utf-8")
+            time.sleep(hold)  # solo la primera vez sigue «ejecutándose» durante ``hold`` segundos
         return real(request, context, **kwargs)
 
     worker_module.run_portfolio = patched  # type: ignore[assignment]
@@ -356,35 +361,49 @@ class _MidTaskCrashExecutor(ParallelExecutor):
         return pool
 
 
+def _assert_only_the_poison_fails(
+    run: RunResult, sequential: RunResult, poison_position: int
+) -> None:
+    ordered = [r.portfolio_id for r in run.results]
+    assert ordered == [r.portfolio_id for r in sequential.results]  # exactamente una vez
+    for position, (got, expected) in enumerate(zip(run.results, sequential.results, strict=True)):
+        if position == poison_position:
+            assert got.execution_status is ExecutionStatus.WORKER_CRASHED
+            assert got.operations == () and got.error is not None
+            assert got.error.error_type == "WorkerCrashed"
+        else:
+            assert got.execution_status is ExecutionStatus.COMPLETED, got.portfolio_id
+            assert compare_results(expected, got).differences == [], got.portfolio_id
+    assert run.accounting is not None and run.accounting.balanced
+    assert run.recovery.poisoned_tasks == 1 and run.recovery.isolated_retries >= 1
+    assert run.pool_rebuilds >= 1
+    assert multiprocessing.active_children() == []
+
+
 @pytest.mark.parametrize(
-    ("batch_size", "healthy_position", "crashed"),
-    [(1, 1, 2), (2, 2, 4)],
-    ids=["batch of 1", "batch of 2"],
+    ("batch_size", "healthy_position"), [(1, 1), (2, 2)], ids=["batch of 1", "batch of 2"]
 )
-def test_a_crash_mid_task_marks_every_in_flight_batch_as_worker_crashed(
+def test_a_poison_task_is_quarantined_and_healthy_neighbours_complete(
     tmp_path: Path,
     snapshot: Any,
     requests: list[PortfolioRequest],
     sequential: RunResult,
     batch_size: int,
     healthy_position: int,
-    crashed: int,
 ) -> None:
-    """Semántica ACTUAL de ``WORKER_CRASHED`` en B5.2 (auditoría H-1), sin reintentos.
+    """P-06/C-14: la tarea que mata su proceso queda ``WORKER_CRASHED``; las demás se completan.
 
     Con 2 workers y 1 lote en vuelo por worker, una cartera mata a su worker mientras otra cartera
-    sana corre en el otro. Un ``BrokenProcessPool`` invalida **todos los lotes en vuelo**, no solo
-    el
-    del worker caído: la cartera sana (y las que acompañan a ambas en sus lotes) quedan
-    ``WORKER_CRASHED`` sin reintento y sin operaciones. Las carteras aún no enviadas se completan en
-    el pool reconstruido y coinciden con la referencia secuencial (T1). Es un comportamiento a
-    mejorar en B5.4 (reintento y cuarentena); si se mejora, esta prueba debe actualizarse.
+    sana corre en el otro (y las que comparten sus lotes). Solo la tarea sospechosa se reintenta
+    sola; al matar de nuevo su proceso se declara venenosa tras ``max_task_attempts`` intentos.
+    El vecino sano, que en B5.2 quedaba ``WORKER_CRASHED``, termina con el resultado de la
+    ejecución secuencial (T1).
     """
     ordered = sorted(r.portfolio_id for r in requests)
     config = dataclasses.replace(
         parallel_config(workers=2, batch_size=batch_size), max_in_flight_batches_per_worker=1
     )
-    executor = _MidTaskCrashExecutor(
+    run = _MidTaskCrashExecutor(
         CONFIG,
         snapshot,
         config,
@@ -393,39 +412,24 @@ def test_a_crash_mid_task_marks_every_in_flight_batch_as_worker_crashed(
         healthy=ordered[healthy_position],
         hold=120.0,  # la cartera sana sigue en ejecución hasta que el pool se rompe
         warm_up=True,
-    )
-    run = executor.run(requests)
-    assert [r.portfolio_id for r in run.results] == ordered  # exactamente una vez, orden canónico
-    statuses = [r.execution_status for r in run.results]
-    assert statuses[:crashed] == [ExecutionStatus.WORKER_CRASHED] * crashed
-    assert statuses[crashed:] == [ExecutionStatus.COMPLETED] * (len(ordered) - crashed)
-    assert run.pool_rebuilds == 1
-    healthy = run.results[healthy_position]  # víctima inocente: no causó la caída
-    assert healthy.execution_status is ExecutionStatus.WORKER_CRASHED
-    for victim in run.results[:crashed]:
-        assert victim.operations == () and victim.worker_pid is None
-        assert victim.error is not None and "no devolvió resultado" in victim.error.message
-        assert victim.error.error_type == "BrokenProcessPool"
-    for got, expected in zip(run.results[crashed:], sequential.results[crashed:], strict=True):
-        assert compare_results(expected, got).differences == [], got.portfolio_id
-    assert multiprocessing.active_children() == []
+    ).run(requests)
+    _assert_only_the_poison_fails(run, sequential, 0)
+    assert run.recovery.crashes >= config.recovery.max_task_attempts
 
 
-def test_a_crash_without_warm_up_keeps_exactly_once_and_bounded_damage(
+def test_a_poison_task_is_found_even_without_warm_up(
     tmp_path: Path, snapshot: Any, requests: list[PortfolioRequest], sequential: RunResult
 ) -> None:
-    """Invariantes que valen aunque la detección de la caída se retrase (sin ``warm_up``).
+    """D-DET: sin calentar el pool, la detección tardía de la caída ya no pierde carteras.
 
-    No fija qué vecino sano resulta afectado (depende de cuándo detecta el pool la caída), solo lo
-    que debe cumplirse siempre: una salida por cartera en orden canónico, la cartera culpable y
-    su lote perdidos, daño máximo igual al de los lotes en vuelo, y toda cartera ``COMPLETED``
-    idéntica a la referencia secuencial (T1). Sin esperas por tiempo: la cartera sana retiene su
-    worker 2 s y la prueba termina cuando termina el pool.
+    En B5.2 podía quedar ``WORKER_CRASHED`` una cartera enviada *después* de la caída. Ahora la
+    vigilancia de procesos del supervisor trata «worker registrado, sin salida limpia y sin
+    proceso» como caída y las carteras no sospechosas se reenvían intactas.
     """
-    ordered = sorted(r.portfolio_id for r in requests)
     config = dataclasses.replace(
         parallel_config(workers=2, batch_size=1), max_in_flight_batches_per_worker=1
     )
+    ordered = sorted(r.portfolio_id for r in requests)
     run = _MidTaskCrashExecutor(
         CONFIG,
         snapshot,
@@ -436,24 +440,7 @@ def test_a_crash_without_warm_up_keeps_exactly_once_and_bounded_damage(
         hold=2.0,
         warm_up=False,
     ).run(requests)
-    assert [r.portfolio_id for r in run.results] == ordered
-    by_id = run.by_portfolio()
-    assert by_id[ordered[0]].execution_status is ExecutionStatus.WORKER_CRASHED  # la culpable
-    crashed = [r for r in run.results if r.execution_status is ExecutionStatus.WORKER_CRASHED]
-    assert 1 <= len(crashed) <= config.max_in_flight_batches + 1  # lotes en vuelo (+ envío tardío)
-    assert run.pool_rebuilds >= 1
-    for result in run.results:
-        if result.execution_status is ExecutionStatus.COMPLETED:
-            expected = dataclasses.replace(
-                sequential.by_portfolio()[result.portfolio_id], worker_pid=None
-            )
-            got = dataclasses.replace(result, worker_pid=None)
-            assert compare_results(expected, got).differences == [], result.portfolio_id
-        else:
-            assert result.execution_status is ExecutionStatus.WORKER_CRASHED
-            assert result.operations == () and result.error is not None
-            assert result.error.error_type == "BrokenProcessPool"
-    assert multiprocessing.active_children() == []
+    _assert_only_the_poison_fails(run, sequential, 0)
 
 
 # --------------------------------------------------------------------------- configuración
@@ -647,6 +634,6 @@ def test_a_worker_crash_leaves_no_temporary_run_directories(
     run = _CrashingExecutor(
         CONFIG, snapshot, parallel_config(workers=1, batch_size=3), flag=flag
     ).run(requests)
-    assert any(r.execution_status is ExecutionStatus.WORKER_CRASHED for r in run.results)
+    assert run.pool_rebuilds >= 1  # hubo caída y recuperación
     assert [p for p in tmp_path.iterdir() if p.name.startswith(RUN_DIR_PREFIX)] == []
     assert inventory_orphans(tmp_path, min_age_seconds=0.0).empty

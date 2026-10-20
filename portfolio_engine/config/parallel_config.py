@@ -19,6 +19,7 @@ from portfolio_engine.config.loader import build_dataclass, read_toml
 from portfolio_engine.exceptions import ConfigError
 
 PARALLEL_SECTION = "parallel"
+RECOVERY_SECTION = "recovery"
 
 
 class ProcessStartMethod(StrEnum):
@@ -76,6 +77,63 @@ class CacheConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class RecoveryConfig:
+    """Supervisión, reintentos, plazos y diario del ejecutor (Bloque 5.4; P-03…P-06).
+
+    Attributes:
+        max_task_attempts: intentos **aislados** (una tarea sola en el pool) que se permiten a una
+            tarea sospechosa de una caída antes de declararla ``WORKER_CRASHED`` (``>= 1``).
+        max_rebuilds_without_progress: tope (``>= 1``) de caídas consecutivas **sin atribuir a
+            ninguna tarea** y de tareas venenosas consecutivas, en ambos casos sin ningún resultado
+            recibido en medio; al alcanzarlo la ejecución se aborta.
+        max_total_rebuilds: cota absoluta de reconstrucciones **por fallo** de workers por ejecución
+            (``>= 1``). Las terminaciones intencionadas por plazo tienen un presupuesto aparte,
+            acotado por el número de tareas, y no consumen esta cota.
+        supervision_poll_seconds: periodo del sondeo del supervisor (plazos, vigilancia de
+            procesos, cancelación); ``> 0``.
+        task_timeout_seconds: plazo de pared de **una cartera** desde que su worker la empieza
+            (omitido = sin plazo). Se hace cumplir terminando el worker.
+        batch_timeout_seconds: plazo de pared de **un lote** desde que su worker lo empieza
+            (omitido = sin plazo). Un lote de varias carteras que lo agota se descompone en lotes
+            unitarios; un lote unitario que lo agota termina ``TIMED_OUT``.
+        cancel_grace_seconds: tras una cancelación, tiempo (``>= 0``) que se espera a los lotes en
+            vuelo antes de terminar sus workers.
+        journal_enabled: permite escribir el diario local (``false``: ``journal`` se rechaza).
+        max_message_chars: longitud máxima de los mensajes de error en eventos y resultados
+            sintéticos (observabilidad acotada); ``>= 1``.
+    """
+
+    max_task_attempts: int
+    max_rebuilds_without_progress: int
+    max_total_rebuilds: int
+    supervision_poll_seconds: float
+    task_timeout_seconds: float | None
+    batch_timeout_seconds: float | None
+    cancel_grace_seconds: float
+    journal_enabled: bool
+    max_message_chars: int
+
+    def __post_init__(self) -> None:
+        _require_at_least_one(self.max_task_attempts, "parallel.recovery.max_task_attempts")
+        _require_at_least_one(
+            self.max_rebuilds_without_progress, "parallel.recovery.max_rebuilds_without_progress"
+        )
+        _require_at_least_one(self.max_total_rebuilds, "parallel.recovery.max_total_rebuilds")
+        _require_at_least_one(self.max_message_chars, "parallel.recovery.max_message_chars")
+        _require_positive(
+            self.supervision_poll_seconds, "parallel.recovery.supervision_poll_seconds"
+        )
+        if self.task_timeout_seconds is not None:
+            _require_positive(self.task_timeout_seconds, "parallel.recovery.task_timeout_seconds")
+        if self.batch_timeout_seconds is not None:
+            _require_positive(self.batch_timeout_seconds, "parallel.recovery.batch_timeout_seconds")
+        if isinstance(self.cancel_grace_seconds, bool) or self.cancel_grace_seconds < 0:
+            raise ConfigError("parallel.recovery.cancel_grace_seconds debe ser >= 0.")
+        if not isinstance(self.journal_enabled, bool):
+            raise ConfigError("parallel.recovery.journal_enabled debe ser booleano.")
+
+
+@dataclass(frozen=True, slots=True)
 class ParallelConfig:
     """Ajustes del ejecutor paralelo.
 
@@ -92,6 +150,7 @@ class ParallelConfig:
         max_tasks_per_child: lotes tras los cuales un worker se recicla (``None`` = sin reciclado).
         shared_data_mode: cómo se entregan los datos de mercado a los workers.
         cache: caché de resultados por worker (desactivada por defecto).
+        recovery: supervisión, reintentos, plazos y diario (Bloque 5.4).
     """
 
     workers: int
@@ -104,6 +163,7 @@ class ParallelConfig:
     max_tasks_per_child: int | None
     shared_data_mode: SharedDataMode
     cache: CacheConfig
+    recovery: RecoveryConfig
 
     def __post_init__(self) -> None:
         _require_at_least_one(self.workers, "parallel.workers")
@@ -126,6 +186,11 @@ class ParallelConfig:
         return self.workers * self.max_in_flight_batches_per_worker
 
 
+def _require_positive(value: float, name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not value > 0:
+        raise ConfigError(f"{name} debe ser un número > 0 (recibido {value!r}).")
+
+
 def _require_at_least_one(value: int, name: str) -> None:
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
         raise ConfigError(f"{name} debe ser un entero >= 1 (recibido {value!r}).")
@@ -141,4 +206,11 @@ def load_parallel_config(source: str | Path | Mapping[str, Any]) -> ParallelConf
         raise ConfigError(f"Secciones desconocidas en la configuración paralela: {unknown}")
     if PARALLEL_SECTION not in raw:
         raise ConfigError(f"Sección de configuración ausente: [{PARALLEL_SECTION}]")
-    return build_dataclass(ParallelConfig, raw[PARALLEL_SECTION], PARALLEL_SECTION)
+    section = raw[PARALLEL_SECTION]
+    if isinstance(section, Mapping) and RECOVERY_SECTION not in section:
+        raise ConfigError(
+            f"Falta la sección [{PARALLEL_SECTION}.{RECOVERY_SECTION}], obligatoria desde el "
+            "Bloque 5.4 (cambio incompatible con las configuraciones de B5.2/B5.3). Cópiela de "
+            "config/default_parallel.toml: sus claves no tienen valores por defecto en el código."
+        )
+    return build_dataclass(ParallelConfig, section, PARALLEL_SECTION)

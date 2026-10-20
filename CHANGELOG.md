@@ -1492,3 +1492,133 @@ GOV-012. Recuento 316 = 238 `VALIDATED` / 42 `PARTIAL` / 36 `NOT_IMPLEMENTED` / 
 H-1 (fragilidad numérica B4 dependiente del hardware, fuera del alcance); L-1; ELLIPSOIDAL (M-2 del diseño, parcial); B5.4 (M-1 del
 initializer, D-DET, L-2 del diseño, L-4, reintentos, plazos, diario); reproducir en Linux real `forkserver`, `/dev/shm` y Python 3.13
 `track=False` fuera de CI; el workflow temporal ya está eliminado.
+
+---
+
+## [Bloque 5.4 — Recuperación de workers, reintentos, plazos, cancelación, diario y reanudación] — 2026-10-20
+
+Rama `block5-recovery-journal`, sobre `main` `bf74f97` (B5.3 integrado; merge sin conflictos). Pendiente de auditoría independiente. Diseño y
+semántica completa en `ARCHITECTURE.md` §3.9; informe en `REPORT_BLOCK_5_4.md`.
+
+### Alcance
+
+`RequirementID` oficiales afectados: `PAR-011` (completo), `PAR-013`, `BEN-001` (sin cambio de estado). Propuestos (D-05): `P-01`, `P-03`…`P-08`.
+Módulos permitidos: `parallel/{supervisor,markers,journal,codec,protocols,cli}.py` (nuevos), `parallel/{executor,worker,task,shared_data}.py`,
+`config/parallel_config.py`, `config/default_parallel.toml`, tests y documentación. **Fuera de alcance y no tocados:** `MASTER_SPEC.md`, B1–B4
+(motores, solvers, tolerancias), caché y memoria compartida de B5.3 (solo se añadió `scratch_directory` a `shared_data.py`), persistencia SQL, red,
+`engine.py` y B5.5 (benchmarks masivos, auditoría). Sin Arsys, sin datos reales, sin cargas ≥ 1.000.
+
+### Baseline de no regresión
+
+Sobre el árbol integrado antes de modificar nada (`.venv`, Python 3.13.6, Windows 11): **1775 passed, 2 skipped** (13 min 20 s).
+
+### Añadido
+
+- **`parallel/supervisor.py` — `BatchSupervisor`**: recuperación de caídas con cuarentena (solo la tarea en curso de cada worker es
+  sospechosa y se reintenta **sola**; `WORKER_CRASHED` solo tras `max_task_attempts` intentos aislados), reenvío intacto de las carteras
+  no sospechosas, captura de `BrokenProcessPool` también en `submit`, cotas de reconstrucción (sin bucle infinito), plazos por tarea y por
+  lote con terminación del proceso del worker, cancelación con periodo de gracia, vigilancia de PID (D-DET). `RecoveryReport` con
+  contadores, eventos acotados y tiempo de recuperación.
+- **`parallel/markers.py`**: marcas de progreso por nombre de fichero (`w.<pid>`, `t.<lote>.<pos>.<pid>`); sin canales compartidos ni claves
+  privadas de `ProcessPoolExecutor`.
+- **`parallel/journal.py` + `parallel/codec.py`**: diario local no ejecutable (JSON; sin `pickle`), escritura atómica, sumas SHA-256,
+  manifiesto con identidad (`ConfigHash`, `snapshot_key`, hash del código, versiones, hash del conjunto de `TaskID`), reanudación
+  verificada (rechazo sin modificar el diario), bloqueo del sistema operativo, eventos con suma por línea, `inspect_journal`.
+- **`parallel/protocols.py`**: `MarketDataProvider`, `PortfolioRequestSource`, `ResultSink`, `RunControl`, `ProgressReporter` + versiones locales.
+- **`parallel/cli.py`**: `python -m portfolio_engine.parallel.cli journal-info <dir>` (JSON estable, solo lectura).
+- `ExecutionStatus`: `WORKER_INIT_FAILED`, `TIMED_OUT`, `CANCELLED`, `ABORTED`, `SKIPPED_BY_RESUME` (este último solo en la contabilidad).
+- `RunAccounting` (enviadas = Σ estados finales, verificado en cada ejecución), `JournalSpec`, `RunResult.{accounting,recovery,journal_scan,resumed_task_ids}`.
+- `ParallelExecutor.run(requests, *, journal, control, progress, sink)`.
+- `RecoveryConfig` (`[parallel.recovery]` en `default_parallel.toml`): sin valores por defecto en el código; plazos opcionales; diario
+  desactivado por defecto (opt-in doble: configuración + directorio explícito).
+- `shared_data.scratch_directory` (marcas bajo el barrido de huérfanos de B5.3).
+- Worker: *initializer* supervisado (captura su propio fallo → `WorkerInitializationError`), marcas por tarea, mensajes y trazas acotados
+  (L-2), huella ampliada a costes y escenarios de retorno (L-1 parcial).
+
+### Cambiado (semántica de B5.2, documentada y justificada)
+
+- Una caída de worker **ya no** marca `WORKER_CRASHED` a todos los lotes en vuelo. Las cinco pruebas que fijaban esa semántica
+  (`test_a_worker_crash_is_reported…`, `test_a_crash_mid_task_marks_every_in_flight_batch_as_worker_crashed[×2]`,
+  `test_a_crash_without_warm_up_keeps_exactly_once_and_bounded_damage`, `…leaves_no_temporary_run_directories`) se reescribieron
+  (su propio docstring pedía actualizarlas si se mejoraba): ahora esperan `COMPLETED` para toda cartera sana, T1 contra la referencia
+  secuencial y `WORKER_CRASHED` solo para la venenosa confirmada.
+- `test_no_later_block_packages_exist`: `parallel/journal.py` deja de figurar como módulo de un bloque posterior (lo entrega B5.4);
+  `staging`, `persistence` y `engine.py` siguen prohibidos.
+- `ALLOWED_NAMED_CONSTANTS`: 8 constantes de formato del diario, del códec y de las marcas (anchuras, permisos, partes de un par); ningún
+  parámetro de negocio.
+
+### Pruebas (ejecutadas realmente, `.venv`, Windows 11, Python 3.13.6)
+
+| Conjunto | Resultado |
+|---|---|
+| Suite completa tras el bloque | **1925 passed, 3 skipped** (19 min 20 s); +150 pruebas respecto al baseline; 0 regresiones |
+| Skipped | `test_forkserver_linux` y `test_shared_data` (`/dev/shm`), solo Linux, ya omitidos; `test_journal` (permisos POSIX), nuevo, solo POSIX |
+| `mypy --strict portfolio_engine` | sin errores (176 ficheros) |
+| `ruff check .` / `ruff format --check portfolio_engine tests benchmarks` | limpios (no se ejecutó `ruff format .` en la raíz) |
+| Equivalencia T1 | `test_parallel_equivalence.py`, `test_determinism.py`, `test_shared_data_equivalence.py` (sin cambios, en la suite completa) y, en B5.4, comparación T1 contra la referencia secuencial en cada prueba de recuperación; el códec reconstruye las 14 clases de workload con **0 floats distintos** (tolerancia 0) |
+
+Pruebas nuevas por área: `test_supervisor.py` (pool simulado: cuarentena, intentos, cotas, plazos, cancelación y 12 patrones aleatorios de
+caídas con invariante de conteo), `tests/integration/test_recovery.py` (procesos reales: workers 1/2/3, tarea venenosa, *initializer* roto ×3,
+plazos de tarea y de lote, cancelación, diario y reanudación, muerte real del coordinador, dos coordinadores simultáneos, `TIME_LIMIT` del
+solver), `test_journal.py`, `test_codec.py`, `test_markers.py`, `test_protocols.py`, ampliaciones de `test_parallel_config.py`, `test_worker.py`
+y dos reglas nuevas en `test_architecture_rules.py` (sin `pickle.load` de fuentes externas; el diario no usa `eval`/`exec`).
+
+### Criterios de la tarea
+
+Cada `TaskID` una sola vez (`RunAccounting.balanced`, `_verify_exactly_once`); la caída de un worker no falla carteras sanas; un *initializer*
+siempre roto termina con cotas (`WORKER_INIT_FAILED`/`ABORTED`, 2 reconstrucciones en las pruebas); reanudar con otra fuente, configuración,
+snapshot o código se rechaza sin tocar el diario; la equivalencia T1 y los estados exactos se conservan; el diario no contiene `pickle`,
+solicitudes ni credenciales.
+
+### Limitaciones y deuda (abiertas; los requisitos afectados quedan `PARTIAL`)
+
+- **Linux no ejecutado** (`forkserver`, zombis vía `/proc`, `fcntl`, permisos 0700): `ci.yml` solo corre en PR/push a `main` y no se ha
+  lanzado. H-1 de B4 (fragilidad dependiente del CPU del runner) sigue abierto y puede volver rojo ese job con independencia de B5.4.
+- El diario cubre `ParallelExecutor`, no `SequentialExecutor`. El contrato exacto del diario (D-04) sigue siendo una propuesta no aprobada.
+- La unidad de entrega es el lote: lo calculado dentro de un lote cuyo worker se termina se recalcula (o se pierde si se cancela).
+- Un kill externo repetido `max_task_attempts` veces sobre la misma tarea es indistinguible de una venenosa.
+- Plazos medidos desde que el coordinador observa el inicio (resolución `supervision_poll_seconds`).
+- L-1 parcial (universo y definiciones de escenario no se vigilan); L-4 abierta (`os.environ`: un `run()` a la vez por proceso).
+- Sin benchmark de recuperación: solo `RecoveryReport.recovery_seconds` en las pruebas, sin umbral (los tiempos con `spawn` dependen del
+  arranque de ≈ 5 s por worker y son bimodales en esta máquina). No se ejecutó ningún benchmark masivo ni en Arsys.
+- B5.5 (benchmarks de recuperación y escala, auditoría) no iniciado.
+
+---
+
+## [Bloque 5.4 — Remediación tras AUDIT_BLOCK_5_4] — 2026-10-20
+
+Auditoría independiente: `PASS_WITH_CHANGES` sobre `436a7eb` (0 BLOCKER, 0 HIGH, 1 MEDIUM, 4 LOW). Detalle y evidencia en
+`REMEDIATION_BLOCK_5_4.md`. Sin cambios en motores, solvers, tolerancias ni `MASTER_SPEC.md`; B5.5 no iniciado.
+
+### Corregido
+
+- **M-1** — los plazos vencidos ya no consumen `max_total_rebuilds`: presupuesto aparte, finito (`DEADLINE_REBUILDS_PER_TASK = 2` por tarea);
+  nuevo `RecoveryReport.deadline_rebuilds`. Regresiones: más plazos que el presupuesto de caídas dejan terminar a las carteras sanas
+  (pool simulado y procesos reales).
+- **L-2** — el supervisor solo termina procesos que son hijos vivos del coordinador y cuya hora de creación coincide con la registrada
+  (`w.<pid>.<inicio>`; `GetProcessTimes` / `starttime` de `/proc`); la vigilancia de caídas compara la misma identidad. Prueba con un
+  proceso ajeno real al que apuntan las marcas.
+- **L-1** — un *shard* con suma válida y contenido inválido o demasiado profundo se aparta como `.corrupt`; códec con `MAX_DEPTH = 200`
+  (recorrido no recursivo) y `RecursionError` traducido.
+- **L-4** — **cambio incompatible documentado**: `[parallel.recovery]` obligatoria (sin valores por defecto en el código); el error remite a
+  `config/default_parallel.toml`. Cualquier TOML de ejecución de B5.2/B5.3 debe añadir la sección.
+- **R-1** (nuevo, hallado por la CI Linux) — `events.jsonl` se creaba con modo `0644`; ahora `0600`. La prueba POSIX recorre todos los ficheros.
+
+### Añadido
+
+- `tests/integration/test_recovery_linux.py` (7 pruebas, solo Linux): `forkserver` con caída y veneno, plazos y reanudación; `flock` entre
+  procesos; permisos; zombis; identidad por `starttime`; ausencia de procesos hijo residuales.
+- Paso de CI «B5.4 Linux recovery evidence» con anotaciones verificables (entorno, resumen, fallos, pruebas pasadas) y `evidence/b5_4_remediation/`.
+- Constantes de formato adicionales en `ALLOWED_NAMED_CONSTANTS` (identidad de proceso, profundidad del códec, cota de plazos).
+
+### Pruebas (ejecutadas realmente)
+
+| Entorno | Resultado |
+|---|---|
+| Linux — GitHub Actions `ubuntu-22.04`, Python 3.11.17, run `39466030525` (cabeza `a2992ec`) | **suite completa 1957 passed, 2 skipped**; evidencia B5.4: **56 passed**; mypy `--strict`, Ruff check/format ✔ |
+| Windows 11 — Python 3.13.6, cabeza de la remediación (`a2992ec`) | **1946 passed, 10 skipped** (22 min 07 s); mypy `--strict` y Ruff limpios |
+
+### Limitaciones (abiertas)
+
+`P-05` y `PAR-013` siguen `PARTIAL` hasta la re-auditoría; H-1 de B4 (CPU del runner) abierto y no manifestado en este run; sin benchmark de
+recuperación (B5.5); la identidad por hora de creación solo existe en Windows y Linux.

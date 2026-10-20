@@ -256,3 +256,30 @@ límites en `CHANGELOG.md` (Bloque 5.3) y `ARCHITECTURE.md` §3.8.
 
 Remediación tras `AUDIT_BLOCK_5_3.md` (`PASS_WITH_CHANGES`): M-1…M-4 y L-2…L-7 corregidos (`CHANGELOG.md`, «Remediación tras
 AUDIT_BLOCK_5_3»); H-1 (fragilidad numérica B4 dependiente del runner) queda abierta fuera del alcance de B5.3.
+
+
+---
+
+## 10. Resultado de B5.4 (2026-10-20) y estado de los requisitos propuestos
+
+Rama `block5-recovery-journal` (sobre `main` `bf74f97`), pendiente de auditoría independiente. Detalle en `REPORT_BLOCK_5_4.md`,
+`CHANGELOG.md` (Bloque 5.4) y `ARCHITECTURE.md` §3.9. Evidencia: Windows 11 / Python 3.13.6; **Linux no ejecutado**.
+
+| ID | Estado tras B5.4 | Evidencia / pendiente |
+|---|---|---|
+| P-01 | VALIDATED (Windows) | `ExecutionStatus` con `WORKER_INIT_FAILED`, `TIMED_OUT`, `CANCELLED`, `ABORTED`, `SKIPPED_BY_RESUME`; independiente de `SolverStatus` (`test_a_solver_time_limit_is_a_solver_status_not_an_execution_failure`, secuencial ≡ paralelo T1) |
+| P-02 | PARTIAL | Sin cambio: RSS del coordinador y presupuesto global de memoria siguen sin cerrarse (B5.5) |
+| P-03 | VALIDATED (Windows) | `RunAccounting.balanced` y `_verify_exactly_once` en cada ejecución; `test_random_crash_patterns_keep_exactly_once_and_blame_only_the_poison` (12 semillas), `test_recovery.py` (workers 1/2/3, veneno, initializer, plazos, cancelación, reanudación). Los *kill* se inyectan con `os._exit` dentro del worker y con terminación de proceso por PID (plazos/cancelación); **no** se ejecutó un `kill -9` externo ni nada en Linux |
+| P-04 | VALIDATED (Windows) | Tres capas: solver (`TIME_LIMIT` preservado), tarea (`TIMED_OUT`, worker terminado) y lote (descomposición; unitario → `TIMED_OUT`); cancelación conserva lo completado y no envía más. Semántica y límites (resolución de sondeo, trabajo colateral recalculado) en `ARCHITECTURE.md` §3.9 |
+| P-05 | PARTIAL | Diario local JSON atómico, con sumas, apartado de *shards* dañados, reanudación verificada y bloqueo; coordinador real terminado a mitad y reanudado ≡ ejecución ininterrumpida (T1); dos coordinadores simultáneos sin colisión. **Pendiente:** contrato exacto D-04 sin aprobar; solo `ParallelExecutor`; integridad contra corrupción accidental, no contra manipulación; Linux |
+| P-06 | VALIDATED (Windows) | Cuarentena y reintentos aislados (`max_task_attempts`), tarea venenosa → `WORKER_CRASHED`, vecinas sanas completas (unitaria con pool simulado y con procesos reales, lotes de 1 y de 4) |
+| P-07 | PARTIAL | `parallel/protocols.py` (5 contratos + versiones locales) y regla de arquitectura (sin DB/HTTP/`pickle.load` externo); CLI local `journal-info`. **Falta** una CLI que ejecute optimizaciones desde JSON (exige cargadores reales: Bloque 6) |
+| P-08 | PARTIAL | `RunManifest` de B5.2 sin cambios; la identidad del diario añade hash del código, versiones y hash del conjunto de tareas. Sigue sin registrar el commit de Git/*dirty* (la biblioteca no invoca `git`) |
+| P-09 | CUMPLIDO con limitación | Sin cambio (`ELLIPSOIDAL` sigue sin expresarse) |
+
+Deudas de B5.2/B5.3 asignadas a B5.4: M-1 y D-DET **cerradas**; L-2 y L-3 **cerradas**; L-1 **parcial**; L-4 **abierta**. B5.5 no iniciado.
+
+**Remediación tras `AUDIT_BLOCK_5_4.md`.** M-1, L-1, L-2 y L-4 corregidos; L-3 con evidencia Linux (CI run `39466030525`: 1957 passed, 2 skipped; 56
+pruebas específicas de B5.4 pasadas, incluidas `forkserver`, `flock`, permisos y zombis); R-1 (permisos de `events.jsonl`) hallado y corregido por esa
+evidencia. Estados: `P-01`, `P-03`, `P-04`, `P-06` **VALIDATED en Windows y Linux**; `P-05`, `P-07`, `P-08` siguen `PARTIAL` (sin cambio);
+`P-02` `PARTIAL`. Véase `REMEDIATION_BLOCK_5_4.md`.
