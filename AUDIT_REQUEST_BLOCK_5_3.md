@@ -1,8 +1,8 @@
 # Solicitud de auditoría independiente — Bloque 5.3
 
-Rama: `block5-shared-memory-cache` (base `main` = `539d4b7`). **Esta auditoría NO ha sido realizada.** Este documento la
-solicita; hasta que un auditor independiente emita su informe (`AUDIT_BLOCK_5_3.md`), la implementación no debe declararse
-apta para integrar. No hay PR, merge ni tag.
+Rama: `block5-shared-memory-cache` (base `main` = `539d4b7`). **Solicitud original (la auditoría se realizó después: `AUDIT_BLOCK_5_3.md`, `PASS_WITH_CHANGES`; remediación en `CHANGELOG.md`).** Este documento la
+solicitó; hasta que un auditor independiente emita su informe (`AUDIT_BLOCK_5_3.md`), la implementación no debe declararse
+apta para integrar. Existe el PR #7 en borrador; no hay merge ni tag.
 
 ## 1. Alcance a auditar
 
@@ -64,7 +64,7 @@ Evidencia ya registrada: `CHANGELOG.md` (Bloque 5.3) y `TRACEABILITY.md`.
 - `mu_set` `ELLIPSOIDAL` pendiente (M-2). Abiertos para B5.4: M-1, D-DET, L-1, L-2, L-4.
 - Dos pruebas preexistentes de B4 (`tests/unit/scenarios/test_multi_scenario.py`) fallan de forma intermitente en Linux:
   véase el apartado «Linux» del `CHANGELOG.md`. No se modificaron.
-- `.github/workflows/b53-branch-ci.yml` es temporal y **debe eliminarse antes de integrar**.
+- `.github/workflows/b53-branch-ci.yml` era temporal y se eliminó en la remediación.
 - Sin cargas ≥ 1.000 carteras ni acceso a SQL Server/Arsys (D-12).
 
 ## 6. Veredictos esperados

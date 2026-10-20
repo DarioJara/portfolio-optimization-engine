@@ -253,3 +253,6 @@ límites en `CHANGELOG.md` (Bloque 5.3) y `ARCHITECTURE.md` §3.8.
 | P-02 | PARTIAL | Memoria por worker medida con `psutil` (benchmarks); RSS del coordinador y presupuesto global siguen sin cerrarse (B5.4/B5.5) |
 | P-09 | CUMPLIDO con limitación | `STRATEGY_ROBUST` admite `mu_half_width` (`BOX`); `ELLIPSOIDAL` sigue sin expresarse (M-2 parcial) |
 | resto | Sin cambio | B5.4 abierto: M-1, D-DET, L-1, L-2, L-4, reintentos, plazos, diario |
+
+Remediación tras `AUDIT_BLOCK_5_3.md` (`PASS_WITH_CHANGES`): M-1…M-4 y L-2…L-7 corregidos (`CHANGELOG.md`, «Remediación tras
+AUDIT_BLOCK_5_3»); H-1 (fragilidad numérica B4 dependiente del runner) queda abierta fuera del alcance de B5.3.

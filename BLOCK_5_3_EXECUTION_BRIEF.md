@@ -1,6 +1,6 @@
 # BLOQUE 5.3 — Guía de implementación verificable
 
-Estado: **IMPLEMENTADO, PENDIENTE DE AUDITORÍA INDEPENDIENTE** (ver `CHANGELOG.md`, Bloque 5.3, y `AUDIT_REQUEST_BLOCK_5_3.md`). Rama: `block5-shared-memory-cache`, creada desde el merge verificado de B5.2 (`539d4b7e37384921dfbfe2a51a3c52d809ba5517`).
+Estado: **IMPLEMENTADO Y AUDITADO (`PASS_WITH_CHANGES`, `AUDIT_BLOCK_5_3.md`); REMEDIACIÓN APLICADA, pendiente de merge por el usuario** (ver `CHANGELOG.md`, Bloque 5.3 y su remediación). Rama: `block5-shared-memory-cache`, creada desde el merge verificado de B5.2 (`539d4b7e37384921dfbfe2a51a3c52d809ba5517`).
 
 ## Contratos de referencia
 

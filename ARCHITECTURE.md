@@ -550,6 +550,15 @@ ni los informes de `EXACT_MIP`. Como `CurrentPortfolioStateHash` y el `Portfolio
 `PortfolioID` de una ejecución son únicos, **no hay aciertos entre carteras distintas**: los aciertos solo aparecen con
 operaciones repetidas dentro de un workload o en reejecuciones en un worker de larga vida.
 
+**Remediación de la auditoría (2026-10-20).** La comprobación de estados definitivos incluye `GlobalFrontierResult.continuous` (que
+no es parte de `composition_results`). `pid_alive` en Windows distingue «acceso denegado» (proceso vivo) de «parámetro inválido»
+(inexistente). Se libera el segmento si la publicación falla tras crearlo; un directorio que no se puede borrar emite `ResourceWarning`;
+`SHARED_MEMORY` falla con un `SharedDataError` claro si `/dev/shm` no tiene espacio (no degrada de modo en silencio); el inventario de
+`/dev/shm` exige el nombre `pe_<pid>_<12 hex>`. `OPTIMAL_INACCURATE` se considera definitivo y se cachea (determinista para la misma clave).
+`REMOVE_RETRIES`/`REMOVE_DELAY_SECONDS` son constantes de infraestructura, no parámetros financieros. **Límite de confianza (L-1):** los
+datos publicados (`FILE_MMAP`, segmento) son legibles y escribibles por el mismo usuario del sistema; la integridad se verifica al
+adjuntar (SHA-256 por *buffer*), no durante la vida del worker, y la huella de B5.2 solo cubre `μ`/`Σ` (deuda de B5.4).
+
 **Ciclo de vida y huérfanos (L-3).** El coordinador crea `portfolio_engine_run_*` con `owner.json` (PID) y lo elimina, junto
 con el segmento, en `finally` (con reintentos de borrado en Windows). `inventory_orphans` lista directorios y segmentos
 `pe_<pid>_*` (Linux, `/dev/shm`) cuyo PID ya no existe; `remove_orphans` los elimina. Verificado tras éxito, excepción y caída

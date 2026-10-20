@@ -1315,7 +1315,7 @@ Linux; 349 s), `mypy --strict` sin errores (165 ficheros), `ruff check` y `ruff 
 - `MarketSnapshot.market_data_timestamp`; `RunResult.cache_metrics`/`publication`; `OperationOutcome.cache_event`;
   `RunManifest.shared_data_mode`/`cache_enabled`; diagnósticos de worker (`attach_seconds`, `sigma_backing`, memoria).
 - Dependencia opcional `psutil` (extra `bench`) para RSS/USS/PSS; `benchmarks/scripts/shared_data_cache.py` (E4/E8);
-  `.github/workflows/b53-branch-ci.yml` (validación **temporal** en Ubuntu; se elimina antes de integrar).
+  `.github/workflows/b53-branch-ci.yml` (validación temporal en Ubuntu; **eliminado** en la remediación, véase abajo).
 - Tests: `tests/unit/parallel/test_shared_data.py`, `test_operation_cache.py`, `tests/unit/cache/` (claves y almacén),
   `tests/integration/test_shared_data_equivalence.py`; reglas de arquitectura (`cache`, constantes de formato).
 
@@ -1331,31 +1331,33 @@ y ninguna regresión. El diff respecto de `539d4b7` no toca ningún módulo fuer
 
 ### Resultados E4 (datos compartidos) y E8 (caché): medidas locales, sintéticas y pequeñas
 
-`benchmarks/results/shared_data_cache_20261020T100159Z.json` (Windows 11, Intel, Python 3.13.6, `spawn`, 1 hilo BLAS,
+`benchmarks/results/shared_data_cache_20261020T132518Z.json` (Windows 11, Intel, Python 3.13.6, `spawn`, 1 hilo BLAS,
 2 repeticiones, universos de 50 y 500 activos, 8 carteras W0 con 160 puntos de frontera válidos por celda, T1 = 0 diferencias en
 las 18 celdas, 0 recursos residuales). **No es rendimiento de producción ni se extrapola.**
 
 | Medida | `BUNDLE_FILE` | `FILE_MMAP` | `SHARED_MEMORY` |
 |---|---|---|---|
-| Pool listo (1/2/4 workers), mín. | 6,2–8,2 s | 6,0–8,5 s | 5,7–8,0 s (el `import` de ≈ 5 s por worker domina; sin diferencia atribuible al modo) |
-| Adjunción dentro del worker (N = 500) | 44–55 ms | 95–103 ms | 64–78 ms (verificar el hash de cada *buffer* cuesta más que deserializar a este tamaño) |
+| Pool listo (1/2/4 workers), mín. | 6,2–8,3 s | 6,3–9,0 s | 6,2–9,9 s (el `import` de ≈ 5 s por worker domina; sin diferencia atribuible al modo) |
+| Adjunción dentro del worker (N = 500) | 49–72 ms | 82–120 ms | 67–71 ms (verificar el hash de cada *buffer* cuesta más que deserializar a este tamaño) |
 | Referencia por el pipe de arranque | 228 B | 559 B | 504 B (constante con el universo) |
-| USS por worker, N = 50 | 112,6–112,9 MB | 112,3–112,8 MB | 112,3–112,9 MB |
-| USS por worker, N = 500 | 115,9–116,0 MB | 112,6–113,5 MB | 112,7–113,4 MB |
+| USS por worker, N = 50 | 111,8–112,8 MB | 112,4–112,9 MB | 112,2–113,0 MB |
+| USS por worker, N = 500 | 115,7–116,5 MB | 112,4–113,4 MB | 112,4–113,3 MB |
 | Origen de la memoria de `Σ` | copia privada (`bytes`) | vista sobre `mmap` | vista sobre `mmap` del segmento |
 
 Lectura: los modos fuera de banda **sí evitan la copia privada** (`sigma_backing = mmap`) y la memoria privada por worker baja
-en torno al tamaño de los datos (≈ 3,2 MB con N = 500: `Σ` 2,0 MB + retornos 1,2 MB, un 3 % de los ≈ 113 MB que ocupa
+en torno al tamaño de los datos (≈ 3 MB con N = 500: `Σ` 2,0 MB + retornos 1,2 MB, un 3 % de los ≈ 113 MB que ocupa
 un worker); con N = 50 la diferencia es ruido. **No hay mejora de tiempo de arranque.** Por eso el modo por defecto sigue siendo
 `BUNDLE_FILE` (más simple y con el fallback incorporado); los otros dos son alternativas validadas cuando los datos compartidos
 sean grandes (muchos escenarios `Σ_s`: hipótesis, no medida). Ninguna cifra se extrapola a 22.000 carteras.
 
-E8 (secuencial, 12 carteras W0 NET, operación repetida `k` veces, mín. de 2): `k = 1` 0,96 s sin caché / 0,92 s con caché (264 llamadas
-al solver en ambos casos, 0 aciertos: el coste de serializar no es medible frente al ruido); `k = 2` 1,75 s → 0,97 s (528 → 264
-llamadas, 12 aciertos); `k = 4` 3,45 s → 1,03 s (1056 → 264 llamadas, 36 aciertos). Cada acierto elimina por completo las llamadas al
+E8 (secuencial, 12 carteras W0 NET, operación repetida `k` veces, mín. de 2): `k = 1` 1,03 s sin caché / 0,99 s con caché (264 llamadas
+al solver en ambos casos, 0 aciertos: el coste de serializar no es medible frente al ruido); `k = 2` 1,93 s → 1,06 s (528 → 264
+llamadas, 12 aciertos); `k = 4` 3,65 s → 1,11 s (1056 → 264 llamadas, 36 aciertos). Cada acierto elimina por completo las llamadas al
 solver; el resultado es idéntico (T1 = 0). 12 entradas ocupan ≈ 263 KB. Entre carteras distintas hay 0 aciertos por diseño.
+Este JSON (`git_commit` = `bcada735…`, árbol limpio) sustituye al primero, que se generó con `e00762e+dirty` (auditoría L-7); los
+valores de las tablas de arriba son los del JSON nuevo.
 
-### Linux (GitHub Actions, workflow temporal `b53-branch-ci.yml`)
+### Linux (GitHub Actions, workflow temporal `b53-branch-ci.yml`, eliminado después)
 
 Ubuntu 22.04, Python 3.11.17, numpy 2.4.6, scipy 1.17.1, clarabel 0.11.1, osqp 1.1.3, PySCIPOpt 6.3.0, psutil 7.2.2; runner de
 **1 CPU** (los tiempos con 2 y 4 workers no son representativos). Run `39414610396` sobre `d3ecd53` (runner AMD EPYC 9V45, donde los dos tests de B4 no fallaron): `mypy --strict`, ruff,
@@ -1394,3 +1396,93 @@ GOV-012. Estados: `NOT_IMPLEMENTED` 36, `PARTIAL` 42, `IMPLEMENTED` 0, `VALIDATE
 - Los segmentos de memoria compartida huérfanos de Linux se inventarían pero nunca se eliminan automáticamente
   (`remove_orphans` es una acción explícita).
 - Intermitencia **preexistente** de dos pruebas de B4 en Linux (véase «Linux»), no atribuible a B5.3.
+
+---
+
+## [Bloque 5.3 — Remediación tras AUDIT_BLOCK_5_3] — 2026-10-20
+
+Rama `block5-shared-memory-cache`, PR #7 (borrador, sin merge). Informe: `AUDIT_BLOCK_5_3.md` (`PASS_WITH_CHANGES`: sin BLOCKER;
+M-1…M-4 obligatorios). No se modificó ningún algoritmo, solver, tolerancia, estado, `MASTER_SPEC.md` ni código/tests de B1–B4, y no
+se desactivó ni relajó ningún test. No se inició B5.4.
+
+### Hallazgos corregidos
+
+| Hallazgo | Corrección | Prueba |
+|---|---|---|
+| **M-1** `_statuses_final` ignoraba `GlobalFrontierResult.continuous` | Se comprueba también `continuous` (`parallel/operation_cache.py`) | `test_a_global_frontier_with_a_non_final_continuous_frontier_is_not_cached` (falla sin la corrección, verificado) |
+| **M-2** `pid_alive` (Windows) trataba «acceso denegado» como proceso muerto | `nt_pid_alive`: `ERROR_ACCESS_DENIED` (5) ⇒ vivo; cualquier otro fallo ⇒ no existe; `kernel32` con `use_last_error` y tipos de argumentos | 3 pruebas con un doble de `kernel32` (multiplataforma) + 2 reales en Windows: PID 4 (System) vivo, PID inexistente muerto; directorio de un proceso privilegiado vivo no es huérfano |
+| **M-3** Evidencia de CI incompleta | Historial completo de ejecuciones (abajo); se retira la comparación sesgada «main 0/12, rama 12/12» | — (documental) |
+| **M-4** Faltaban dos pruebas de aceptación de PAR-004 | `test_no_resources_leak_after_100_publish_cycles` (3 modos, la mitad con excepción, 0 residuos, un segmento nuevo por ciclo) y `test_resources_of_a_killed_coordinator_are_found_and_recovered` (`kill` de un coordinador real, inventario y `remove_orphans`) | `tests/unit/parallel/test_shared_data_lifecycle.py` |
+| **L-2** Segmento no liberado si fallaba la publicación | Liberación en `_publish_out_of_band` | `test_a_failure_after_creating_the_segment_does_not_leave_it_behind` |
+| **L-3** Fallo de borrado silencioso | `ResourceWarning` si no se puede eliminar el directorio | `test_a_directory_that_cannot_be_removed_is_reported` |
+| **L-4** `SHARED_MEMORY` sin comprobar espacio | `SharedDataError` claro antes de escribir si `/dev/shm` no tiene espacio (sin degradación silenciosa de modo) | `test_shared_memory_without_room_fails_before_writing` |
+| **L-5** Prefijo genérico en `/dev/shm` | El inventario exige `pe_<pid>_<12 hex>` | `test_only_segments_with_the_exact_name_shape_are_orphan_candidates` |
+| **L-6** W2 fuera de la equivalencia por modo | `test_multi_scenario_results_match_in_every_shared_data_mode` (W2 × 3 modos) | T1 = 0 |
+| **L-7** JSON de benchmark con árbol sucio | Regenerado con árbol limpio (`bcada735`); el anterior se elimina | `shared_data_cache_20261020T132518Z.json` |
+
+### Hallazgos LOW documentados y no cambiados (decisión consciente)
+
+- **L-1** (integridad solo en el momento de adjuntar; el fichero `FILE_MMAP` es escribible por el mismo usuario; la huella de B5.2 solo
+  cubre `μ`/`Σ`): el límite de confianza es el **mismo usuario del sistema**, igual que el del fichero de arranque de B5.2; marcar el fichero
+  de solo lectura rompería el borrado en Windows. Ampliar la huella sigue siendo la deuda L-1 de B5.4.
+- **L-8** `OPTIMAL_INACCURATE` se considera definitivo y se cachea: es determinista para la misma clave; se mantiene y queda documentado
+  (`ARCHITECTURE.md` §3.8). `REMOVE_RETRIES`/`REMOVE_DELAY_SECONDS` son constantes de infraestructura (no financieras), documentadas como tales.
+- **ConstraintHash**: la desviación E-14 (hash de las entradas) sigue documentada en `ARCHITECTURE.md`; formalizarla como enmienda de
+  `MASTER_SPEC.md` requiere decisión del propietario y no se hace aquí.
+
+### Verificación (Windows 11, Python 3.13.6)
+
+Sobre `8a18102`: `pytest -q -rs` **1775 passed, 2 skipped** (909 s; los 2 skips son Linux-only), `mypy --strict portfolio_engine` limpio
+(170 ficheros), `ruff check .` y `ruff format --check .` (359 ficheros) limpios. Sobre el commit final, véase la última sección.
+La CI de Linux detectó además un fallo real de tipado que Windows no ve (`ctypes.get_last_error` en `mypy --strict` con la plataforma
+Linux): corregido en `bcada73`; desde ahora `mypy --strict --platform linux` se ejecuta también en local.
+
+### Historial completo de CI (GitHub Actions, rama `block5-shared-memory-cache`)
+
+Todos los runs ejecutados sobre la rama, incluidos los fallidos. «Suite» = job Ubuntu 22.04 / Python 3.11 (1 CPU) del workflow
+temporal o de `ci.yml`; «sonda» = 12 repeticiones de los dos tests de B4 sobre `539d4b7` (main) y sobre el commit de la rama.
+
+| Run | Commit | Job | CPU del runner | Resultado |
+|---|---|---|---|---|
+| 39407121823 | `d5a17fb` | suite | no registrada (workflow aún sin anotaciones) | success |
+| 39407952385 | `dfc9c69` | suite | EPYC 7763 | **failure** (exit 1; sin detalle de tests en las anotaciones) |
+| 39408612070 | `a600ae0` | suite | EPYC 7763 | **failure**: 2 failed, 1760 passed (los dos tests de B4) |
+| 39409385018 | `7d4632a` | suite | EPYC 9V45 | success (1762 passed) |
+| ídem | `539d4b7` / rama | sonda | EPYC 9V74 / Xeon 6973P | **0/12** / 12/12 |
+| 39414610396 | `d3ecd53` | suite | EPYC 9V45 | success (1762 passed) |
+| ídem | `539d4b7` / rama | sonda | EPYC 7763 / Xeon 8573C | **0/12** / 12/12 |
+| 39415376791 | `ff835d0` | suite | EPYC 7763 | **failure**: 2 failed, 1760 passed (los dos tests de B4) |
+| ídem | `539d4b7` / rama | sonda | EPYC 9V74 / EPYC 7763 | 12/12 / **0/12** |
+| 39415881644 | `ff835d0` | `ci.yml` (PR #7) | no registrada | success |
+| 39426793670 | `8a18102` | suite | Xeon 8573C | **failure** en *Static checks* (`mypy --strict` en Linux: `ctypes.get_last_error`) |
+| ídem | `539d4b7` / rama | sonda | Xeon 6973P / EPYC 7763 | 12/12 / **0/12** |
+| 39426799994 | `8a18102` | `ci.yml` (PR #7) | no registrada | **failure** en *Static checks* (el mismo error de tipado) |
+| 39428998923 | `bcada73` | suite | EPYC 7763 | **failure**: 2 failed, **1776 passed**, 2 skipped (solo fallan los dos tests de B4) |
+| ídem | `539d4b7` / rama | sonda | EPYC 7763 / EPYC 7763 | **0/12** / **0/12** |
+| 39429009105 | `bcada73` | `ci.yml` (PR #7) | no registrada | **failure** en *Full test suite* (sin anotaciones de detalle; su runner no se registra) |
+@@FINALROWS@@
+
+Lectura, sin atribuir una causa:
+
+- Los dos tests (`test_single_solutions_satisfy_the_constraints_of_every_scenario`, `test_worst_case_maximizes_the_minimum_scenario_utility`)
+  son de `tests/unit/scenarios/test_multi_scenario.py` (B4). **B5.3 no toca ningún módulo ni test de B4** (el diff frente a `539d4b7` solo
+  alcanza `parallel/`, `cache/`, `config/`, tests nuevos, benchmarks y documentación).
+- En el run `39428998923`, **el commit `539d4b7` (main) y la rama fallan 0/12 en el mismo tipo de CPU (EPYC 7763)**: el fallo no lo
+  introduce B5.3. Todas las observaciones sobre EPYC 7763 (siete) fallaron, para ambos árboles; sobre Xeon y EPYC 9V45 no se observó el fallo;
+  `539d4b7` en EPYC 9V74 dio 0/12 y después 12/12. La CPU del runner **no se controla** y es una correlación observada, no una causa
+  demostrada: no se ha determinado el mecanismo (el mensaje muestra dos utilidades del peor caso que difieren en ≈ 5·10⁻¹⁵ y, en el
+  otro test, «Positive directional derivative» del oráculo SLSQP del propio test).
+- Un intento local del auditor con núcleos OpenBLAS forzados (Haswell, Sandybridge, Nehalem, Katmai) no reprodujo el fallo.
+- Consecuencia: la CI permanente (`ci.yml`) puede salir en rojo en función del runner sorteado, también para B5.4. **No se han relajado
+  tolerancias ni desactivado tests.** Queda abierta la remediación B4 independiente propuesta por la auditoría (H-1).
+
+### Estado de requisitos
+
+Sin cambios de estado respecto a la entrada anterior: `VALIDATED` PAR-004, PAR-005, CCH-001…005, CFG-011; `PARTIAL` PAR-013, BEN-004,
+GOV-012. Recuento 316 = 238 `VALIDATED` / 42 `PARTIAL` / 36 `NOT_IMPLEMENTED` / 0 `IMPLEMENTED`.
+
+### Deuda abierta tras la remediación
+
+H-1 (fragilidad numérica B4 dependiente del hardware, fuera del alcance); L-1; ELLIPSOIDAL (M-2 del diseño, parcial); B5.4 (M-1 del
+initializer, D-DET, L-2 del diseño, L-4, reintentos, plazos, diario); reproducir en Linux real `forkserver`, `/dev/shm` y Python 3.13
+`track=False` fuera de CI; el workflow temporal ya está eliminado.
