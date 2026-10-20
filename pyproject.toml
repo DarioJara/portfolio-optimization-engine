@@ -17,6 +17,8 @@ dependencies = [
     "pyarrow>=14",
     "osqp>=1.1,<2",
     "clarabel>=0.11,<1",
+    # Bloque 5.2: control de hilos BLAS/OpenMP por worker (PAR-007).
+    "threadpoolctl>=3.5,<4",
 ]
 
 [project.optional-dependencies]
@@ -53,7 +55,7 @@ warn_unreachable = true
 files = ["portfolio_engine"]
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "pyarrow.*", "scipy.*", "sklearn.*", "osqp.*", "clarabel.*", "pyscipopt.*"]
+module = ["pandas.*", "pyarrow.*", "scipy.*", "sklearn.*", "osqp.*", "clarabel.*", "pyscipopt.*", "threadpoolctl.*"]
 ignore_missing_imports = true
 
 [tool.ruff]

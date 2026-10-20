@@ -1,0 +1,30 @@
+# Configuración de EJEMPLO del ejecutor paralelo (Bloque 5.2; MASTER_SPEC §56-61, CFG-011).
+#
+# Fichero independiente de ``default_engine.toml``: son ajustes de EJECUCIÓN (no matemáticos) y no
+# deben entrar en el ``ConfigHash`` del motor ni en las claves de caché. Como en el resto de la
+# configuración, no hay valores por defecto en el código: toda clave obligatoria debe estar presente
+# y las opcionales omitidas valen "no configurado".
+#
+# Los valores de este fichero son un EJEMPLO para desarrollo y pruebas. NO son una recomendación de
+# producción: el dimensionamiento de workers y de memoria en el servidor (reserva para SQL Server y
+# otros servicios) se decide tras benchmarks controlados (decisión diferida D-11).
+
+[parallel]
+# Número de procesos worker. Nunca se deduce de ``os.cpu_count()`` (PAR-012).
+workers = 2
+# Carteras por lote. Si se omite, se usa el modo AUTO (PAR-003):
+#   ceil(n_carteras / (workers * auto_batches_per_worker)), acotado a [1, max_batch_size].
+# batch_size = 5
+auto_batches_per_worker = 4
+max_batch_size = 50
+# Lotes simultáneamente en vuelo por worker (contrapresión; cola acotada).
+max_in_flight_batches_per_worker = 2
+# Método de arranque de procesos: SPAWN o FORKSERVER (solo Linux/Unix).
+# SPAWN está probado únicamente en Windows (B5.2). FORKSERVER NO ESTÁ VALIDADO: no se ha ejecutado
+# ninguna prueba en Linux; no se declara compatibilidad hasta ejecutarlas.
+# ``fork`` no se admite: es inseguro con librerías con hilos (BLAS, solvers).
+start_method = "SPAWN"
+# Hilos numéricos (BLAS/OpenMP) por worker. Línea base: 1 (MASTER_SPEC §60).
+blas_threads = 1
+# Reciclado preventivo de un worker tras N lotes. Omitido = sin reciclado.
+# max_tasks_per_child = 100
