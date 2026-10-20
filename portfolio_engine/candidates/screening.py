@@ -349,9 +349,7 @@ class CandidateScreening:
                 f"Señales de screening ausentes para las posiciones globales {names} "
                 "(política ERROR)."
             )
-        excluded = np.asarray(
-            blocking & (policy is MissingSignalPolicy.EXCLUDE), dtype=np.bool_
-        )
+        excluded = np.asarray(blocking & (policy is MissingSignalPolicy.EXCLUDE), dtype=np.bool_)
         normalized, missing = _normalize_rows(raw, ~excluded, config.normalization)
         filled = np.where(
             missing & self._active[:, np.newaxis], neutral_value(config.normalization), normalized
