@@ -45,14 +45,17 @@ jobs:
       - name: Full test suite
         shell: bash
         run: |
-          python -m pytest -q -rs 2>&1 | tee pytest-full.txt
+          set +e
+          python -m pytest -q -rsf --durations=10 2>&1 | tee pytest-full.txt
           status=${PIPESTATUS[0]}
-          echo "::notice title=pytest-linux::$(tail -n 1 pytest-full.txt)"
-          grep '^SKIPPED' pytest-full.txt | while IFS= read -r line; do echo "::notice title=pytest-skip::$line"; done
+          echo "::notice title=pytest-linux::$(grep -E '^[0-9]+ (passed|failed)|passed|failed' pytest-full.txt | tail -n 1)"
+          grep -E '^(SKIPPED|FAILED|ERROR)' pytest-full.txt | while IFS= read -r line; do echo "::warning title=pytest-detail::$line"; done
+          grep -E '^E  ' pytest-full.txt | head -40 | while IFS= read -r line; do echo "::warning title=pytest-error::$line"; done
           exit $status
       - name: Local shared-data and cache benchmark (small, synthetic)
         shell: bash
         run: |
+          set +e
           python benchmarks/scripts/shared_data_cache.py --universe 50 500 --workers 1 2 4 \
             --start-methods spawn forkserver --repetitions 2 --seed 7 --out bench-results 2>&1 | tee bench.txt
           status=${PIPESTATUS[0]}
