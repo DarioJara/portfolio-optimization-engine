@@ -1,0 +1,347 @@
+{
+  "metadata": {
+    "benchmark": "parallel_scaling",
+    "evidence_for": [
+      "BEN-001",
+      "BEN-002",
+      "BEN-004 (parcial)",
+      "BEN-006",
+      "PAR-008"
+    ],
+    "execution_timestamp_utc": "20261019T205808Z",
+    "git_commit": "271eaebb3bde1369879e5c2c2e4a2eeecda77dc1+dirty",
+    "engine_config_hash": "5d3cdc5e0e0c32c70fd6fac2ace95862172b2c5af9e346dc3b80a03973e33630",
+    "snapshot_key": "cea36b17b06a877482fd3bea351f52ee73de8fbd278a4dfc36a17eb1b1414612",
+    "random_seed": 7,
+    "universe_assets": 8,
+    "mix_is_an_engineering_assumption": true,
+    "mix": {
+      "W0-GROSS-RISK": 6,
+      "W0-NET-TARGET": 6,
+      "W1-GLOBAL-NET": 2,
+      "W3-MIN-CVAR": 4,
+      "W4-ROBUST": 2,
+      "W4-MAX-SHARPE": 2,
+      "W4-VOL-TARGET": 2
+    },
+    "portfolios": 24,
+    "repetitions": 3,
+    "start_method": "spawn",
+    "blas_threads_per_worker": 1,
+    "python": "3.13.6",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel",
+    "logical_cpus_informational": 16,
+    "versions": {
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "osqp": "1.1.3",
+      "clarabel": "0.11.1",
+      "pyscipopt": "6.2.1",
+      "threadpoolctl": "3.7.0"
+    },
+    "work_counter_frontier_solver_iterations": 68206,
+    "note": "Medici\u00f3n local y peque\u00f1a (no es Arsys). Tiempos bimodales de esta m\u00e1quina: se informan m\u00ednimo y mediana. No son rendimiento de producci\u00f3n ni se extrapolan. Una ejecuci\u00f3n con diferencias T1 frente a la secuencial NO es una medici\u00f3n v\u00e1lida."
+  },
+  "sequential": {
+    "wall_seconds_samples": [
+      3.187970699975267,
+      2.693808500014711,
+      2.741110499948263
+    ],
+    "wall_seconds_min": 2.693808500014711,
+    "wall_seconds_median": 2.741110499948263,
+    "wall_seconds": 2.693808500014711,
+    "portfolios": 24,
+    "portfolios_per_second": 8.909319277843593,
+    "task_latency_seconds": {
+      "p": {
+        "50.0": 0.04268694997881539,
+        "95.0": 0.7926310800248738,
+        "99.0": 0.9473605699691688
+      },
+      "max": 0.9547161999507807,
+      "mean": 0.11262088333023712
+    },
+    "sum_task_compute_seconds": 2.702901199925691,
+    "compute_occupancy": 1.0033754069418557,
+    "max_worker_busy_seconds": 2.702901199925691,
+    "overhead_estimate_seconds": -0.009092699910979718,
+    "distinct_worker_pids": 0,
+    "statuses": {
+      "COMPLETED": 24,
+      "FAILED_INPUT_VALIDATION": 0,
+      "FAILED_EXCEPTION": 0,
+      "WORKER_CRASHED": 0
+    }
+  },
+  "parallel": [
+    {
+      "workers": 1,
+      "batch_size": "1",
+      "effective_batch_size": 1,
+      "batches": 24,
+      "wall_seconds_samples": [
+        9.221320000011474,
+        9.117750899982639,
+        9.330562300048769
+      ],
+      "wall_seconds_min": 9.117750899982639,
+      "wall_seconds_median": 9.221320000011474,
+      "speedup_vs_sequential_min": 0.29544659966745096,
+      "speedup_vs_sequential_median": 0.2972579305289104,
+      "efficiency_min": 0.29544659966745096,
+      "t1_differences_vs_sequential": 0,
+      "valid_measurement": true,
+      "wall_seconds": 9.117750899982639,
+      "portfolios": 24,
+      "portfolios_per_second": 2.632228085990559,
+      "task_latency_seconds": {
+        "p": {
+          "50.0": 0.044286850024946034,
+          "95.0": 0.8218290249962574,
+          "99.0": 0.9792645399778849
+        },
+        "max": 0.9866571999737062,
+        "mean": 0.11681868749534867
+      },
+      "sum_task_compute_seconds": 2.803648499888368,
+      "compute_occupancy": 0.30749343019381087,
+      "max_worker_busy_seconds": 2.803648499888368,
+      "overhead_estimate_seconds": 6.314102400094271,
+      "distinct_worker_pids": 1,
+      "statuses": {
+        "COMPLETED": 24,
+        "FAILED_INPUT_VALIDATION": 0,
+        "FAILED_EXCEPTION": 0,
+        "WORKER_CRASHED": 0
+      }
+    },
+    {
+      "workers": 1,
+      "batch_size": "AUTO",
+      "effective_batch_size": 6,
+      "batches": 4,
+      "wall_seconds_samples": [
+        9.534820500004571,
+        9.501400600012857,
+        9.009067599952687
+      ],
+      "wall_seconds_min": 9.009067599952687,
+      "wall_seconds_median": 9.501400600012857,
+      "speedup_vs_sequential_min": 0.29901079885657184,
+      "speedup_vs_sequential_median": 0.28849541402817536,
+      "efficiency_min": 0.29901079885657184,
+      "t1_differences_vs_sequential": 0,
+      "valid_measurement": true,
+      "wall_seconds": 9.009067599952687,
+      "portfolios": 24,
+      "portfolios_per_second": 2.6639826745362685,
+      "task_latency_seconds": {
+        "p": {
+          "50.0": 0.043446449999464676,
+          "95.0": 0.8103414549928838,
+          "99.0": 0.9850686840218259
+        },
+        "max": 0.9976955000311136,
+        "mean": 0.11512884166828978
+      },
+      "sum_task_compute_seconds": 2.7630922000389546,
+      "compute_occupancy": 0.3067012395437532,
+      "max_worker_busy_seconds": 2.7630922000389546,
+      "overhead_estimate_seconds": 6.245975399913732,
+      "distinct_worker_pids": 1,
+      "statuses": {
+        "COMPLETED": 24,
+        "FAILED_INPUT_VALIDATION": 0,
+        "FAILED_EXCEPTION": 0,
+        "WORKER_CRASHED": 0
+      }
+    },
+    {
+      "workers": 2,
+      "batch_size": "1",
+      "effective_batch_size": 1,
+      "batches": 24,
+      "wall_seconds_samples": [
+        14.262416300014593,
+        14.414157999970485,
+        13.61834580003051
+      ],
+      "wall_seconds_min": 13.61834580003051,
+      "wall_seconds_median": 14.262416300014593,
+      "speedup_vs_sequential_min": 0.19780732106308213,
+      "speedup_vs_sequential_median": 0.19219117169826677,
+      "efficiency_min": 0.09890366053154107,
+      "t1_differences_vs_sequential": 0,
+      "valid_measurement": true,
+      "wall_seconds": 13.61834580003051,
+      "portfolios": 24,
+      "portfolios_per_second": 1.7623285788459147,
+      "task_latency_seconds": {
+        "p": {
+          "50.0": 0.05181909998646006,
+          "95.0": 1.0062384949793317,
+          "99.0": 1.1801991280174116
+        },
+        "max": 1.1835747000295669,
+        "mean": 0.1403988833311208
+      },
+      "sum_task_compute_seconds": 3.369573199946899,
+      "compute_occupancy": 0.12371448226624374,
+      "max_worker_busy_seconds": 1.8410231999587268,
+      "overhead_estimate_seconds": 11.777322600071784,
+      "distinct_worker_pids": 2,
+      "statuses": {
+        "COMPLETED": 24,
+        "FAILED_INPUT_VALIDATION": 0,
+        "FAILED_EXCEPTION": 0,
+        "WORKER_CRASHED": 0
+      }
+    },
+    {
+      "workers": 2,
+      "batch_size": "AUTO",
+      "effective_batch_size": 3,
+      "batches": 8,
+      "wall_seconds_samples": [
+        14.679253399954177,
+        15.507501200016122,
+        15.964145899983123
+      ],
+      "wall_seconds_min": 14.679253399954177,
+      "wall_seconds_median": 15.507501200016122,
+      "speedup_vs_sequential_min": 0.1835112744918703,
+      "speedup_vs_sequential_median": 0.17676029584607825,
+      "efficiency_min": 0.09175563724593515,
+      "t1_differences_vs_sequential": 0,
+      "valid_measurement": true,
+      "wall_seconds": 14.679253399954177,
+      "portfolios": 24,
+      "portfolios_per_second": 1.634960535532067,
+      "task_latency_seconds": {
+        "p": {
+          "50.0": 0.05340040000737645,
+          "95.0": 0.9509859600046162,
+          "99.0": 1.13590426202456
+        },
+        "max": 1.1454678000300191,
+        "mean": 0.13836357916685907
+      },
+      "sum_task_compute_seconds": 3.320725900004618,
+      "compute_occupancy": 0.11310949574639075,
+      "max_worker_busy_seconds": 2.8440360000822693,
+      "overhead_estimate_seconds": 11.835217399871908,
+      "distinct_worker_pids": 2,
+      "statuses": {
+        "COMPLETED": 24,
+        "FAILED_INPUT_VALIDATION": 0,
+        "FAILED_EXCEPTION": 0,
+        "WORKER_CRASHED": 0
+      }
+    },
+    {
+      "workers": 4,
+      "batch_size": "1",
+      "effective_batch_size": 1,
+      "batches": 24,
+      "wall_seconds_samples": [
+        24.598577600030694,
+        32.5849263999844,
+        28.83768679999048
+      ],
+      "wall_seconds_min": 24.598577600030694,
+      "wall_seconds_median": 28.83768679999048,
+      "speedup_vs_sequential_min": 0.10951074260535087,
+      "speedup_vs_sequential_median": 0.09505306437925418,
+      "efficiency_min": 0.02737768565133772,
+      "t1_differences_vs_sequential": 0,
+      "valid_measurement": true,
+      "wall_seconds": 24.598577600030694,
+      "portfolios": 24,
+      "portfolios_per_second": 0.9756661702248204,
+      "task_latency_seconds": {
+        "p": {
+          "50.0": 0.05748534997110255,
+          "95.0": 1.02399844000465,
+          "99.0": 1.1990390880336053
+        },
+        "max": 1.2018461000407115,
+        "mean": 0.14633672499621753
+      },
+      "sum_task_compute_seconds": 3.5120813999092206,
+      "compute_occupancy": 0.035693948010075575,
+      "max_worker_busy_seconds": 1.7270929999649525,
+      "overhead_estimate_seconds": 22.87148460006574,
+      "distinct_worker_pids": 4,
+      "statuses": {
+        "COMPLETED": 24,
+        "FAILED_INPUT_VALIDATION": 0,
+        "FAILED_EXCEPTION": 0,
+        "WORKER_CRASHED": 0
+      }
+    },
+    {
+      "workers": 4,
+      "batch_size": "AUTO",
+      "effective_batch_size": 2,
+      "batches": 12,
+      "wall_seconds_samples": [
+        23.42457969998941,
+        23.530901799967978,
+        22.669070000003558
+      ],
+      "wall_seconds_min": 22.669070000003558,
+      "wall_seconds_median": 23.42457969998941,
+      "speedup_vs_sequential_min": 0.11883189297197849,
+      "speedup_vs_sequential_median": 0.11701855636494099,
+      "efficiency_min": 0.029707973242994623,
+      "t1_differences_vs_sequential": 0,
+      "valid_measurement": true,
+      "wall_seconds": 22.669070000003558,
+      "portfolios": 24,
+      "portfolios_per_second": 1.0587112748778946,
+      "task_latency_seconds": {
+        "p": {
+          "50.0": 0.05265204998431727,
+          "95.0": 0.8697112250199988,
+          "99.0": 1.0818351610016543
+        },
+        "max": 1.1033123999950476,
+        "mean": 0.12967725416092435
+      },
+      "sum_task_compute_seconds": 3.1122540998621844,
+      "compute_occupancy": 0.03432269276884425,
+      "max_worker_busy_seconds": 2.294097999983933,
+      "overhead_estimate_seconds": 20.374972000019625,
+      "distinct_worker_pids": 3,
+      "statuses": {
+        "COMPLETED": 24,
+        "FAILED_INPUT_VALIDATION": 0,
+        "FAILED_EXCEPTION": 0,
+        "WORKER_CRASHED": 0
+      }
+    }
+  ],
+  "common": {
+    "pickle_bytes": {
+      "snapshot": 24663,
+      "request_mean": 780.25,
+      "result_mean": 17396.916666666668
+    },
+    "pool_startup_seconds_by_workers": {
+      "1": [
+        6.088856599992141,
+        6.114962899999227
+      ],
+      "2": [
+        12.049000499944668,
+        11.711217900039628
+      ],
+      "4": [
+        22.910821500001475,
+        22.632145899988245
+      ]
+    }
+  }
+}
