@@ -1,0 +1,91 @@
+# Configuración de EJEMPLO de los benchmarks de escala y de la detección de deterioros (B5.5;
+# BLOCK_5_BENCHMARK_PLAN.md §2.3, §4; CFG-012, BEN-004/005/007).
+#
+# Son ajustes de MEDIDA, no del motor: no entran en el ConfigHash ni en las claves de caché. Todos
+# los valores son SUPUESTOS DE INGENIERÍA para ejercitar el sistema; NO son la distribución real de
+# cargas de AAA-A ni de ningún cliente, no proceden de datos reales y no deben usarse para predecir
+# tiempos de producción. Las etiquetas de clase son las de tests/fixtures/parallel.py::class_workloads.
+
+[scaling]
+# Universo y carteras sintéticos (determinista por semilla e índice de cartera).
+universe_assets = 8
+holdings_min = 3
+holdings_max = 3
+# Proporción de carteras intencionadamente degeneradas (rutas de error): volatilidad objetivo
+# inferior a sigma_min en W4-VOL-TARGET. 0 = ninguna.
+degenerate_fraction = 0.0
+return_periods = 300
+# Repeticiones medidas: <= small_scale_max carteras -> repetitions_small; si no, repetitions_large.
+small_scale_max = 100
+repetitions_small = 5
+repetitions_large = 3
+warmup_runs = 1
+# D-12: tope de carteras por ejecución sin autorización expresa del usuario.
+max_portfolios_without_authorization = 999
+# Detección de deterioro (BEN-005): umbral = mad_k x max(MAD, mad_relative_floor x mediana).
+mad_k = 5.0
+mad_relative_floor = 0.05
+# Variación relativa admitida del contador de iteraciones de solver frente al baseline (puede
+# cambiar en una unidad entre CPU; las llamadas al solver son estructurales y se exigen exactas).
+iteration_relative_tolerance = 0.01
+
+# ---- Mezclas de referencia (BLOCK_5_BENCHMARK_PLAN.md §2.3). Fracciones del NÚMERO DE CARTERAS. ----
+[[scaling.mixes]]
+name = "ENG-MIX-BASE"
+shares = [
+  { label = "W0-GROSS-RISK", fraction = 0.20 },
+  { label = "W0-NET-TARGET", fraction = 0.20 },
+  { label = "W1-GLOBAL-NET", fraction = 0.20 },
+  { label = "W2-INDEPENDENT", fraction = 0.05 },
+  { label = "W2-EXPECTED", fraction = 0.04 },
+  { label = "W2-WORST-CASE", fraction = 0.04 },
+  { label = "W2-STRESS", fraction = 0.02 },
+  { label = "W3-MIN-CVAR", fraction = 0.10 },
+  { label = "W4-ROBUST", fraction = 0.05 },
+  { label = "W4-MAX-SHARPE", fraction = 0.05 },
+  { label = "W4-VOL-TARGET", fraction = 0.04 },
+  { label = "W5-EXACT-MIP", fraction = 0.01 },
+]
+
+[[scaling.mixes]]
+name = "ENG-MIX-LIGHT"
+shares = [
+  { label = "W0-GROSS-RISK", fraction = 0.40 },
+  { label = "W0-NET-TARGET", fraction = 0.40 },
+  { label = "W1-GLOBAL-NET", fraction = 0.05 },
+  { label = "W2-EXPECTED", fraction = 0.05 },
+  { label = "W3-MIN-CVAR", fraction = 0.04 },
+  { label = "W4-ROBUST", fraction = 0.05 },
+  { label = "W5-EXACT-MIP", fraction = 0.01 },
+]
+
+[[scaling.mixes]]
+name = "ENG-MIX-HEAVY"
+shares = [
+  { label = "W0-GROSS-RISK", fraction = 0.05 },
+  { label = "W0-NET-TARGET", fraction = 0.05 },
+  { label = "W1-GLOBAL-NET", fraction = 0.50 },
+  { label = "W2-INDEPENDENT", fraction = 0.10 },
+  { label = "W2-EXPECTED", fraction = 0.05 },
+  { label = "W2-WORST-CASE", fraction = 0.05 },
+  { label = "W2-STRESS", fraction = 0.05 },
+  { label = "W3-MIN-CVAR", fraction = 0.05 },
+  { label = "W4-ROBUST", fraction = 0.04 },
+  { label = "W4-MAX-SHARPE", fraction = 0.05 },
+  { label = "W5-EXACT-MIP", fraction = 0.01 },
+]
+
+[[scaling.mixes]]
+name = "ENG-MIX-CONIC"
+shares = [
+  { label = "W0-GROSS-RISK", fraction = 0.10 },
+  { label = "W0-NET-TARGET", fraction = 0.10 },
+  { label = "W1-GLOBAL-NET", fraction = 0.10 },
+  { label = "W2-WORST-CASE", fraction = 0.08 },
+  { label = "W2-STRESS", fraction = 0.07 },
+  { label = "W3-MIN-CVAR", fraction = 0.25 },
+  { label = "W4-ROBUST", fraction = 0.10 },
+  { label = "W4-MAX-SHARPE", fraction = 0.10 },
+  { label = "W4-VOL-TARGET", fraction = 0.09 },
+  { label = "W5-EXACT-MIP", fraction = 0.01 },
+]

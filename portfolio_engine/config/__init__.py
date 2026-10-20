@@ -31,6 +31,12 @@ from portfolio_engine.config.parallel_config import (
 from portfolio_engine.config.return_config import ReturnConfig
 from portfolio_engine.config.risk_config import RiskConfig
 from portfolio_engine.config.robust_config import RobustConfig
+from portfolio_engine.config.scaling_config import (
+    ClassShare,
+    ScalingBenchmarkConfig,
+    WorkloadMix,
+    load_scaling_benchmark_config,
+)
 from portfolio_engine.config.scenario_config import ScenarioConfig
 from portfolio_engine.config.scenario_definitions import (
     AssetShock,
@@ -52,6 +58,7 @@ __all__ = (
     "CVaRConfig",
     "CacheConfig",
     "CandidateConfig",
+    "ClassShare",
     "ConicSolverConfig",
     "ConstraintConfig",
     "ConstraintOverrides",
@@ -72,6 +79,7 @@ __all__ = (
     "ReturnConfig",
     "RiskConfig",
     "RobustConfig",
+    "ScalingBenchmarkConfig",
     "ScenarioConfig",
     "ScenarioDefinition",
     "ScreeningWeights",
@@ -80,11 +88,13 @@ __all__ = (
     "SolverConfig",
     "StressLimits",
     "TransactionCostConfig",
+    "WorkloadMix",
     "config_hash",
     "config_snapshot",
     "config_to_dict",
     "load_engine_config",
     "load_parallel_config",
+    "load_scaling_benchmark_config",
     "load_scenario_definitions",
     "validate_scenario_set",
 )

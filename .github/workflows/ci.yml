@@ -71,3 +71,27 @@ jobs:
           echo "::notice title=pytest-summary::$(tail -n 1 pytest-full.txt)"
           grep -E '^(FAILED|ERROR)' pytest-full.txt | cut -c1-300 | while IFS= read -r line; do echo "::warning title=pytest-failed::$line"; done
           exit $status
+      - name: B5.5 Linux benchmark evidence (scale 10, spawn and forkserver)
+        if: always()
+        # Evidencia verificable (B5.5, BEN-004/007): 10 carteras sintéticas de ENG-MIX-BASE con
+        # secuencial, spawn y forkserver, 1 y 2 workers. El script termina con error si alguna
+        # ejecución difiere de la secuencial (T1), viola restricciones o pierde/duplica tareas.
+        # Los tiempos son informativos (runner compartido); las anotaciones los hacen consultables.
+        shell: bash
+        run: |
+          set +e
+          mkdir -p benchmarks/results/ci
+          python benchmarks/scripts/scaling.py --scales 10 --mix ENG-MIX-BASE --workers 1 2 \
+            --methods sequential spawn forkserver --repetitions 2 --parallel-repetitions 2 \
+            --startup-repetitions 2 --tag ci --out benchmarks/results/ci 2>&1 | tee scaling-ci.txt
+          status=${PIPESTATUS[0]}
+          python benchmarks/scripts/ci_summary.py scaling benchmarks/results/ci/scaling_*.json
+          exit $status
+      - name: B5.5 H-1 numerical probe (diagnostic, does not gate)
+        if: always()
+        # Reproduce el mecanismo de H-1 con perturbaciones de redondeo y lo anota junto al modelo de
+        # CPU del runner. No cambia ningún algoritmo ni tolerancia; es solo diagnóstico.
+        shell: bash
+        run: |
+          python benchmarks/scripts/h1_numerical_probe.py --repetitions 60 --out benchmarks/results/ci
+          python benchmarks/scripts/ci_summary.py h1 benchmarks/results/ci/h1_numerical_probe_*.json

@@ -165,6 +165,8 @@ NEUTRAL_LITERALS = {0, 1, 2, -1, 0.5}
 #: Constantes con nombre permitidas: conversiones de unidades y constantes matemáticas.
 ALLOWED_NAMED_CONSTANTS = {
     ("models/costs.py", "BPS_PER_UNIT"),
+    # Bloque 5.5: conversión de unidades (segundos por hora) de la proyección de capacidad.
+    ("benchmark/scaling.py", "SECONDS_PER_HOUR"),
     ("data/validation/market_data_validator.py", "MAD_TO_STD_NORMAL"),
     ("data/validation/report.py", "SUMMARY_ISSUES"),
     # Bloque 5.3: constantes de formato/plataforma de los datos compartidos (no son parámetros
