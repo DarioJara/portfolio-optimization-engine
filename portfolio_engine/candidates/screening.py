@@ -208,7 +208,10 @@ class CandidateScreening:
     ) -> npt.NDArray[np.float64]:
         codes = snapshot.sector_codes[nodes]
         valid = codes >= 0
-        return np.bincount(codes[valid], weights=weights[valid], minlength=snapshot.sector_count)
+        return np.asarray(
+            np.bincount(codes[valid], weights=weights[valid], minlength=snapshot.sector_count),
+            dtype=np.float64,
+        )
 
     def _entrant_sector_fit(
         self, codes: npt.NDArray[np.int64], expo: npt.NDArray[np.float64]
@@ -346,7 +349,7 @@ class CandidateScreening:
                 f"Señales de screening ausentes para las posiciones globales {names} "
                 "(política ERROR)."
             )
-        excluded = blocking & (policy is MissingSignalPolicy.EXCLUDE)
+        excluded = np.asarray(blocking & (policy is MissingSignalPolicy.EXCLUDE), dtype=np.bool_)
         normalized, missing = _normalize_rows(raw, ~excluded, config.normalization)
         filled = np.where(
             missing & self._active[:, np.newaxis], neutral_value(config.normalization), normalized

@@ -33,7 +33,25 @@ ALLOWED_DEPENDENCIES: dict[str, set[str]] = {
     "returns": {"exceptions", "utils", "models", "config"},
     "risk": {"exceptions", "utils", "models", "config", "returns"},
     # Bloque 2 (ARCHITECTURE §4.1). ``validation`` NO depende de ``optimizers`` (independencia §44).
-    "parallel": {"utils"},
+    # Bloque 5.2: la orquestación (``task``, ``executor``, ``worker``) compone los motores B1-B4;
+    # los paquetes de capas inferiores solo pueden importar ``parallel.determinism`` (véase
+    # ``test_lower_layers_only_import_parallel_determinism``), de modo que el grafo de módulos
+    # sigue siendo acíclico.
+    "parallel": {
+        "exceptions",
+        "utils",
+        "models",
+        "config",
+        "costs",
+        "constraints",
+        "metrics",
+        "optimizers",
+        "validation",
+        "candidates",
+        "frontiers",
+        "scenarios",
+        "risk",
+    },
     "costs": {"exceptions", "utils", "models", "config"},
     "metrics": {"exceptions", "utils", "models", "config", "costs"},
     "constraints": {"exceptions", "utils", "models", "config", "costs"},
@@ -101,11 +119,8 @@ ALLOWED_DEPENDENCIES: dict[str, set[str]] = {
 #: ``candidates``, ``frontiers/global_frontier.py``, ``constraints/integer.py`` y
 #: ``parallel/determinism.py``— se han implementado y ya no figuran aquí).
 LATER_BLOCK_PACKAGES = (
-    "parallel/batching.py",
     "parallel/shared_data.py",
-    "parallel/worker.py",
-    "parallel/executor.py",
-    "parallel/threading_control.py",
+    "parallel/journal.py",
     "staging",
     "persistence",
     "cache",
@@ -133,11 +148,11 @@ BLOCK_4_MODULES = (
 )
 
 #: ``osqp`` solo puede importarse en su backend (test aparte); el resto sigue prohibido.
+#: Solo ``parallel/`` puede usar procesos (Bloque 5.2); ningún otro paquete importa estos módulos.
+PROCESS_IMPORTS = ("multiprocessing", "concurrent")
 FORBIDDEN_IMPORTS = (
     "cvxpy",
     "gurobipy",
-    "multiprocessing",
-    "concurrent",
     "pyodbc",
     "duckdb",
     "sklearn",
@@ -312,6 +327,52 @@ def test_no_forbidden_imports() -> None:
         for imported in _imports(path)
         if imported.split(".")[0] in FORBIDDEN_IMPORTS
     ]
+    assert not offenders, offenders
+
+
+def test_process_libraries_are_confined_to_the_parallel_package() -> None:
+    """PAR-001/013: ``multiprocessing``/``concurrent`` solo se importan desde ``parallel/``."""
+    offenders = [
+        f"{_relative(path)}: {imported}"
+        for path in _python_files()
+        if _relative(path).split("/")[0] != "parallel"
+        for imported in _imports(path)
+        if imported.split(".")[0] in PROCESS_IMPORTS
+    ]
+    assert not offenders, offenders
+
+
+def test_lower_layers_only_import_parallel_determinism() -> None:
+    """Los paquetes que usa la orquestación solo importan ``parallel.determinism`` (sin ciclos)."""
+    offenders = [
+        f"{_relative(path)}: {imported}"
+        for path in _python_files()
+        if _relative(path).split("/")[0] != "parallel"
+        for imported in _imports(path)
+        if imported.startswith("portfolio_engine.parallel")
+        and imported != "portfolio_engine.parallel.determinism"
+    ]
+    assert not offenders, offenders
+
+
+def test_parallel_package_never_uses_implicit_cpu_count_or_external_systems() -> None:
+    """PAR-012, D-10: ni ``cpu_count`` implícito ni acceso a bases de datos/red en ``parallel/``."""
+    forbidden_calls = ("os.cpu_count", "multiprocessing.cpu_count", "os.sched_getaffinity")
+    forbidden_modules = ("pyodbc", "sqlalchemy", "duckdb", "requests", "urllib", "http", "socket")
+    offenders = []
+    for path in _python_files():
+        if _relative(path).split("/")[0] != "parallel":
+            continue
+        offenders.extend(
+            f"{_relative(path)}: import {imported}"
+            for imported in _imports(path)
+            if imported.split(".")[0] in forbidden_modules
+        )
+        offenders.extend(
+            f"{_relative(path)}:{call.lineno} {ast.unparse(call.func)}"
+            for call in _calls(path)
+            if ast.unparse(call.func) in forbidden_calls
+        )
     assert not offenders, offenders
 
 

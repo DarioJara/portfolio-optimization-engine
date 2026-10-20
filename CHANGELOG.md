@@ -1166,3 +1166,121 @@ Rama `block4-scenarios-robust-optimization`, sin commit/push/merge/PR/tag; no se
 - Tests ejecutados: `pytest -q` **1482 passed**, 0 failed; `mypy --strict` sin errores (158 ficheros); `ruff check .`
   y `ruff format --check .` limpios (319 ficheros); `git diff --check` sin errores de espacios.
 - Abiertos con constancia: F-04…F-09, F-11…F-13 (ver `REMEDIATION_BLOCK_4.md` §5).
+
+## [Bloque 5.2 — Ejecutor secuencial de referencia y ejecutor paralelo] — 2026-10-19
+
+Rama `block5-hpc-architecture` (desde `origin/main` = `271eaeb`, integración del PR #5), **sin commit/push/PR/merge/tag**.
+Diseño: `BLOCK_5_HPC_ARCHITECTURE.md`, `BLOCK_5_IMPLEMENTATION_PLAN.md`, `BLOCK_5_BENCHMARK_PLAN.md`. Decisiones
+aprobadas: D-01, D-02, D-05 (condicional), D-07 (con ajustes), D-09, D-13; las diferidas (D-03, D-04, D-06, D-08, D-10,
+D-11, D-12) se respetaron. No se tocó `MASTER_SPEC.md`, ni algoritmos, tolerancias o estados de B1–B4, ni `main`.
+
+### Baseline de no regresión (antes de modificar nada)
+
+`pytest -q`: **1482 passed** (304 s); `mypy --strict portfolio_engine`: sin errores (158 ficheros); `ruff format --check .`:
+limpio; `ruff check .`: solo marcó un fichero de test propio recién creado durante la ejecución (el árbol previo estaba
+limpio). Entorno: `.venv` aislado (Python 3.13.6); no se modificó el Python del sistema.
+
+### Añadido
+
+- `config/parallel_config.py`, `config/default_parallel.toml`: `ParallelConfig` (workers explícito, tamaño de lote o AUTO,
+  hilos BLAS, método de arranque `SPAWN`/`FORKSERVER`, contrapresión, reciclado). Fichero propio, fuera de `EngineConfig`
+  y de su `ConfigHash` (ajustes de ejecución; el cargador de `EngineConfig` rechaza secciones desconocidas).
+- `parallel/workload.py`: `WorkloadSpec` y catálogo cerrado de operaciones (W0–W5) con validación y hash canónico.
+- `parallel/task.py`: `run_portfolio` (referencia secuencial; compone motores existentes), `PortfolioRequest`,
+  `MarketSnapshot`, `ExecutionContext`, `TaskResult`, `ExecutionStatus`, `input_problems`, `stable_form`.
+- `parallel/batching.py`: `SequenceID`, `PortfolioBatch`, `resolve_batch_size` (fijo/AUTO), `ParallelExecutionError`.
+- `parallel/threading_control.py`: variables de entorno + `threadpoolctl` (1 hilo numérico por worker).
+- `parallel/worker.py`: `initialize_worker`, `WorkerContext`, `run_batch`, `WorkerBundle` (fichero de arranque
+  hash-verificado), huella de `mu`/`Σ` antes y después de cada lote.
+- `parallel/executor.py`: `SequentialExecutor`, `ParallelExecutor` (`ProcessPoolExecutor`, `spawn`/`forkserver`, cola
+  acotada, planificación dinámica, reconstrucción del pool ante `BrokenProcessPool`, orden canónico, comprobación de
+  «exactamente una vez», `RunManifest`).
+- `benchmarks/scripts/parallel_scaling.py`; tests `tests/unit/parallel/` (132), `tests/integration/test_parallel_equivalence.py`
+  (41), `tests/integration/test_determinism.py` (7), tres reglas nuevas en `tests/unit/test_architecture_rules.py`.
+- Dependencia directa `threadpoolctl>=3.5,<4` (ya estaba en `requirements-lock.txt` como transitiva; sin cambios de lock).
+
+### Modificado (sin cambiar comportamiento matemático)
+
+`config/__init__.py` (exporta `ParallelConfig`), `pyproject.toml` (dependencia y override de mypy para `threadpoolctl`),
+`tests/conftest.py` (ruta del TOML paralelo), `tests/unit/test_architecture_rules.py` (grafo de capas: `parallel` puede
+importar los paquetes que orquesta; las capas inferiores solo `parallel.determinism`; `multiprocessing`/`concurrent`
+confinados a `parallel/`; retirados de «bloques posteriores» los módulos de B5.2), `ARCHITECTURE.md` (§3.7),
+`TRACEABILITY.md`, `README.md`.
+
+### Resultados de la verificación (gate final)
+
+- `pytest -q`: **1664 passed**, 0 failed, 0 omitidos (462 s) = 1482 + 182. Tras esa ejecución se añadió un test
+  (`test_the_integrity_check_detects_lost_duplicated_and_swapped_results`), ejecutado de forma aislada: pasa.
+- `mypy --strict portfolio_engine`: sin errores (165 ficheros). `ruff check .` y `ruff format --check .`: limpios
+  (342 ficheros). `git diff --check`: sin errores de espacios (avisos LF/CRLF).
+- Equivalencia secuencial↔paralelo bajo T1 (tolerancia 1e-6 absoluta de la regresión dorada, estados exactos) para
+  W0–W5 (13 workloads, 3 carteras por workload; spawn, 2 workers) y para 1/2/3 workers, lotes 1/2/AUTO/único, orden de
+  envío barajado y repetición: **0 diferencias**. Diagnóstico T0 (no es criterio): 104.734 comparaciones de float en
+  39 carteras, 0 inexactas (idénticas bit a bit en esta máquina, 2 workers, lote 4).
+
+### Benchmark local (sintético, pequeño; no es rendimiento de producción)
+
+Windows 11, Intel (Family 6 Model 186), Python 3.13.6, `spawn`, 1 hilo BLAS por worker, 3 repeticiones (mínimo/mediana),
+universo de 8 activos, 3 posiciones, semilla 7. Resultados: `benchmarks/results/parallel_scaling_24portfolios_20261019T212151Z.json`
+y `parallel_scaling_20portfolios_20261019T212756Z.json` (mezclas = supuestos de ingeniería). Cada ejecución paralela
+se verificó contra la secuencial (T1): 0 diferencias.
+
+| Mezcla | Secuencial (mín.) | 1 worker | 2 workers | 4 workers |
+|---|---|---|---|---|
+| 24 carteras ligeras (W0/W3/W4/W1) | 2,73 s | 9,01 s | 7,40 s | 8,55 s |
+| 20 carteras (12 W1 + 4 W4 + 4 W0) | 11,94 s | 18,29 s | 12,49 s | 10,95 s |
+
+Lectura (medición, no proyección): a este tamaño **el ejecutor paralelo no compensa el arranque de los workers**
+(≈6–7 s de pool, con un `import` de ≈5 s por worker en `spawn`); solo con 4 workers y la mezcla pesada se llega a
+speedup ≈1,09 en tiempo de pared. El camino crítico del cómputo (carga del worker más ocupado) fue 4,08 s frente a
+11,94 s secuenciales con 4 workers (≈2,9×; derivado de las latencias por tarea, no es tiempo de pared), y la suma de
+tiempos de tarea creció de 12,1 s (1 worker) a 15,9 s (4 workers) por contención. Snapshot serializado 25 KB;
+solicitud media 0,8 KB; resultado medio 17–70 KB. Sin proyecciones a 22.000 carteras.
+
+**Hallazgo medido (E-8 de `ARCHITECTURE.md`)**: la primera versión pasaba el snapshot por los argumentos del
+*initializer*; con `spawn` en Windows el arranque se serializaba (`parallel_scaling_24portfolios_20261019T205808Z.json`:
+pool de 1/2/4 workers = 6,1/12,0/22,8 s). Una sonda confirmó la causa (payload mayor que el búfer del *pipe* de arranque
+con un `__main__` pesado: 14,1 s frente a 5,3 s con 100 B). Se sustituyó por un fichero de arranque hash-verificado
+(1/2/4 workers = 6,0/6,0/7,1 s). Ese resultado previo se conserva como evidencia.
+
+### Requisitos (ver `TRACEABILITY.md`)
+
+`VALIDATED`: PAR-001, PAR-002, PAR-007, PAR-008, PAR-010, PAR-011, PAR-012, PAR-013. `PARTIAL`: CFG-011, PAR-003, PAR-005,
+BEN-004, GOV-012 (+ evidencia en BEN-001/002/006). Estados: 231 `VALIDATED`, 43 `PARTIAL`, 42 `NOT_IMPLEMENTED`,
+0 `IMPLEMENTED` (316).
+
+### Limitaciones y deuda técnica (abiertas)
+
+- Sin memoria compartida definitiva ni caché (B5.3: PAR-004, CCH-*), sin plazos, cancelación, reintentos, diario ni
+  interfaces de integración (B5.4). Un worker caído rompe el pool y marca como `WORKER_CRASHED` **todos los lotes en vuelo** (hasta
+  `workers × max_in_flight_batches_per_worker` lotes; incluye carteras sanas y trabajo ya calculado), sin aislar la tarea
+  culpable (corregido en la remediación de B5.2; el texto original decía «todo el lote»).
+- AUTO sin calibrar; arranque de ≈5 s por worker (import) que penaliza cargas pequeñas; `FORKSERVER` **NO VALIDADO**
+  (nunca ejecutado; `SPAWN` solo probado en Windows): la compatibilidad Linux queda pendiente de ejecutarse en Ubuntu.
+- No se ha perfilado (`cProfile`) el reparto de tiempo entre fases (paso 1 del plan de B5.2): pendiente.
+- `STRATEGY_ROBUST` no admite `mu_set` explícito (solo `covariance_scale_max` o derivado de `[robust]`).
+- El directorio temporal del fichero de arranque se elimina siempre salvo muerte brusca del coordinador (`kill -9`).
+- Memoria (RSS) y CPU del sistema no recogidas: `psutil` no está instalado en el entorno.
+- Deuda de B4 (F-03b, F-04…F-09, F-11…F-13) sin cambios.
+
+## [Remediación de B5.2 tras `AUDIT_BLOCK_5_2.md`] — 2026-10-20
+
+Rama `block5-hpc-architecture`, sin commit/push/PR/merge/tag; no se inicia B5.3. Informe: `REMEDIATION_BLOCK_5_2.md`.
+Sin cambios de lógica de producción ni de tolerancias; `MASTER_SPEC.md` intacto.
+
+- **H-1**: corregida la descripción de `WORKER_CRASHED` («todos los lotes en vuelo cuando el pool detecta la caída», no «el
+  lote del worker caído») en este fichero, `ARCHITECTURE.md` §3.7, `README.md`, plan y docstring de `executor.py`.
+- **Pruebas de caída**: `test_a_crash_mid_task_marks_every_in_flight_batch_as_worker_crashed` (2 workers, caída a mitad de
+  tarea con vecino sano, determinista) y `test_a_crash_without_warm_up_keeps_exactly_once_and_bounded_damage`
+  (invariantes). Hallazgo: con `ProcessPoolExecutor` en Windows/CPython 3.13.6 la caída del último worker creado bajo demanda
+  puede detectarse tarde; la prueba determinista calienta el pool antes de enviar trabajo. Deuda D-DET (B5.4).
+- **M-2**: `STRATEGY_ROBUST` con `mu_set` explícito documentado como capacidad pendiente del `WorkloadSpec`.
+- **M-3**: `FORKSERVER` rotulado NO VALIDADO (nunca ejecutado); `SPAWN` probado solo en Windows.
+- **M-4**: `PAR-013` `VALIDATED` → `PARTIAL`. Estados de `TRACEABILITY.md`: **230 `VALIDATED`, 44 `PARTIAL`, 42
+  `NOT_IMPLEMENTED`, 0 `IMPLEMENTED`** (316). Esto sustituye a los recuentos y a la lista de `VALIDATED` de la entrada anterior
+  de B5.2 (231/43/42, con PAR-013).
+- **L-5**: `parallel/__init__.py` y README (rutas Windows/Linux, `threadpoolctl`).
+- Deuda trazable (M-1, L-1…L-4, D-DET) registrada en `ARCHITECTURE.md` §3.7.
+- Verificación: `pytest -q` **1668 passed** (654 s); `mypy --strict` sin errores (165 ficheros); `ruff check .` y
+  `ruff format --check .` limpios (342 ficheros); `git diff --check` sin errores de espacios. Un gate intermedio previo a
+  corregir la prueba de caída dio 2 fallos de esa prueba; se corrigió y se repitió el gate completo.

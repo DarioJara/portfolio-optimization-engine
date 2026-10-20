@@ -20,6 +20,11 @@ from portfolio_engine.config.exact_mip_config import ExactMIPConfig
 from portfolio_engine.config.frontier_config import FrontierConfig
 from portfolio_engine.config.hashing import config_hash, config_snapshot, config_to_dict
 from portfolio_engine.config.loader import load_engine_config
+from portfolio_engine.config.parallel_config import (
+    ParallelConfig,
+    ProcessStartMethod,
+    load_parallel_config,
+)
 from portfolio_engine.config.return_config import ReturnConfig
 from portfolio_engine.config.risk_config import RiskConfig
 from portfolio_engine.config.robust_config import RobustConfig
@@ -57,6 +62,8 @@ __all__ = (
     "FxRate",
     "GroupLimit",
     "LiquidityConfig",
+    "ParallelConfig",
+    "ProcessStartMethod",
     "ReturnConfig",
     "RiskConfig",
     "RobustConfig",
@@ -71,6 +78,7 @@ __all__ = (
     "config_snapshot",
     "config_to_dict",
     "load_engine_config",
+    "load_parallel_config",
     "load_scenario_definitions",
     "validate_scenario_set",
 )

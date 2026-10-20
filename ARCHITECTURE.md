@@ -238,12 +238,14 @@ Basada en MASTER_SPEC §81 ("estructura recomendada"), con **adiciones justifica
 │   │   ├── schemas.py
 │   │   └── builders.py
 │   ├── parallel/                  # §56–61 (Bloque 5)
-│   │   ├── batching.py
-│   │   ├── shared_data.py
-│   │   ├── worker.py              # WorkerInitializer, WorkerContext
-│   │   ├── executor.py
-│   │   ├── threading_control.py
-│   │   └── determinism.py         # SequenceID, derivación de semillas
+│   │   ├── workload.py            # [B5.2] WorkloadSpec, catálogo de operaciones
+│   │   ├── task.py                # [B5.2] run_portfolio (referencia secuencial), TaskResult
+│   │   ├── batching.py            # [B5.2] SequenceID, PortfolioBatch, tamaño AUTO
+│   │   ├── threading_control.py   # [B5.2] hilos BLAS por worker
+│   │   ├── worker.py              # [B5.2] WorkerInitializer, WorkerContext
+│   │   ├── executor.py            # [B5.2] SequentialExecutor, ParallelExecutor
+│   │   ├── shared_data.py         # [B5.3, pendiente]
+│   │   └── determinism.py         # SequenceID, derivación de semillas (B3)
 │   ├── staging/                   # §68 (Bloque 6)
 │   │   ├── coordinator.py
 │   │   ├── parquet_staging.py
@@ -414,6 +416,103 @@ Dependencias: `clarabel` es obligatoria (0.11.1); `pyscipopt` es opcional (grupo
 ausencia se diagnostica, sin sustituir el algoritmo. El grafo de paquetes añade `scenarios` (sobre `models`,
 `config`, `constraints`, `metrics`, `data`; no importa backends) y `benchmark`; `clarabel` y `pyscipopt` solo se
 importan desde sus backends (test de arquitectura).
+
+### 3.7 Bloque 5.2: ejecutor secuencial de referencia y ejecutor paralelo
+
+Registrado al implementar el Bloque 5.2 (2026-10-19, rama `block5-hpc-architecture`, sin commit). Diseño en
+`BLOCK_5_HPC_ARCHITECTURE.md`; decisiones D-01, D-02, D-05, D-07, D-09, D-13 aprobadas. **No** se modificó
+ningún algoritmo, tolerancia ni estado de B1–B4. Quedan fuera (B5.3/B5.4): memoria compartida definitiva,
+caché, diario de recuperación, plazos, cancelación, reintentos, interfaces de integración.
+
+```
+PortfolioRequest(portfolio_id, state, spec, workload: WorkloadSpec, composition_asset_ids)
+MarketSnapshot(risk_model, universe, costs, return_scenarios, scenario_definitions, base_scenario_id)
+ExecutionContext = EngineConfig + MarketSnapshot + config_hash + snapshot_key      (inmutable)
+
+run_portfolio(request, context) -> TaskResult                  # parallel/task.py (referencia, sin pool)
+    input_problems()  →  FAILED_INPUT_VALIDATION  (antes de ejecutar ningún motor)
+    por operación del WorkloadSpec, con motores NUEVOS por tarea:
+        FRONTIER_FIXED_COMPOSITION → ContinuousFrontierEngine.solve
+        GLOBAL_FRONTIER            → GlobalCandidateFrontierEngine.solve   (incluye CandidateEngine)
+        MULTI_SCENARIO             → ScenarioEngine.build + MultiScenarioOptimizer.solve_*
+        STRATEGY_CVAR/ROBUST/MAX_SHARPE/VOL_TARGET → StrategyOptimizer.*
+        EXACT_MIP_VALIDATION       → ExactMIPValidator.validate_heuristic (candidatos de GLOBAL_FRONTIER previa)
+    excepción de un motor → FAILED_EXCEPTION (tipo, mensaje, traza; conserva lo ya calculado)
+
+SequentialExecutor.run(requests) -> RunResult                  # parallel/executor.py
+ParallelExecutor(config, snapshot, ParallelConfig).run(requests) -> RunResult
+    canonical_order (SequenceID por PortfolioID) → make_batches (fijo o AUTO) →
+    ProcessPoolExecutor(mp_context=spawn|forkserver, initializer=initialize_worker, 1 hilo BLAS) →
+    envío incremental con cola acotada (max_in_flight_batches) → BrokenProcessPool: TODOS los lotes en vuelo
+    WORKER_CRASHED + pool reconstruido → ordenación por SequenceID + comprobación «exactamente una vez»
+```
+
+| # | Diseño original (B5.1) | Implementado en B5.2 | Justificación |
+|---|---|---|---|
+| E-1 | `ParallelConfig` como campo opcional de `EngineConfig` y sección en `default_engine.toml` | `config/parallel_config.py` + `config/default_parallel.toml`, cargador propio (`load_parallel_config`) | El cargador de `EngineConfig` rechaza secciones desconocidas y el `ConfigHash` cambiaría al variar `workers`; son ajustes de ejecución, no matemáticos (no entran en `ConfigHash` ni en claves de caché) |
+| E-2 | Catálogo con `CANDIDATE_SEARCH` y `SCENARIO_BUILD` como operaciones | Integrados en `GLOBAL_FRONTIER` y `MULTI_SCENARIO` | Los motores existentes los ejecutan internamente; separarlos obligaría a ejecutarlos dos veces o a modificar B3–B4 |
+| E-3 | `parallel` solo dependía de `utils` | `parallel` puede importar los demás paquetes; las capas inferiores solo importan `parallel.determinism` | El grafo de módulos sigue siendo acíclico (`test_import_graph_is_acyclic`); regla nueva `test_lower_layers_only_import_parallel_determinism`. `parallel/__init__.py` no importa `task`/`executor` para no crear ciclos de importación |
+| E-4 | Estados de ejecución: 7 | `COMPLETED`, `FAILED_INPUT_VALIDATION`, `FAILED_EXCEPTION`, `WORKER_CRASHED` | `TIMED_OUT`, `CANCELLED`, `SKIPPED_BY_RESUME` se crearán con su funcionalidad (B5.4); no se declaran estados sin uso |
+| E-5 | Robusta con conjuntos de incertidumbre de `μ` | `STRATEGY_ROBUST` admite `covariance_scale_max` (o el derivado de `[robust]`); no admite `mu_set` explícito | Los conjuntos de `μ` son arrays por activo de una composición, no expresables en un workload declarativo; **limitación documentada (PARTIAL)** |
+| E-6 | `multiprocessing`/`concurrent` prohibidos | Permitidos solo en `parallel/` (`test_process_libraries_are_confined_to_the_parallel_package`) | Es el paquete que los usa |
+| E-7 | `threadpoolctl` transitivo (vía scikit-learn) | Dependencia directa de runtime (`>=3.5,<4`); `psutil` no se añade (no se necesita en B5.2) | D-09; PAR-007 |
+| E-8 | Snapshot por argumentos del *initializer* | Fichero de arranque hash-verificado (`WorkerBundle`); el *initializer* recibe solo ruta y SHA-256 | Medido: con `spawn` en Windows el padre se bloquea al escribir en el *pipe* de arranque un payload mayor que su búfer hasta que el hijo importa `__main__`, lo que **serializaba** el arranque de los workers (1 → 4 workers: 6,1 s → 22,8 s con 25 KB; 5,3 s con 100 B en la sonda). Con el fichero el arranque pasa a 6,0 → 7,1 s. El mecanismo definitivo de datos compartidos sigue siendo B5.3 |
+
+**Semántica de `WORKER_CRASHED` (verificada con `test_a_crash_mid_task_marks_every_in_flight_batch_as_worker_crashed`).** Con `ProcessPoolExecutor`, la
+muerte de un worker rompe el pool completo: **todos los lotes en vuelo** (hasta `workers ×
+max_in_flight_batches_per_worker` lotes, es decir, hasta ese número × `batch_size` carteras) se marcan
+`WORKER_CRASHED`, con `operations=()` (se pierde también lo ya calculado dentro de esos lotes) y sin reintento. La
+etiqueta significa «afectada por una caída», no «causó la caída»; la cartera culpable no se identifica. Las
+carteras aún no enviadas se ejecutan en el pool reconstruido y los resultados de lotes ya recogidos se conservan.
+El reintento con `attempt+1` y la cuarentena de la tarea venenosa son de B5.4 (P-06).
+
+**Detección tardía de la caída (hallazgo de la remediación).** En Windows / CPython 3.13.6, `ProcessPoolExecutor`
+crea los workers bajo demanda y su hilo gestor calcula la lista de *sentinels* antes de que el último worker exista:
+si muere precisamente el worker creado en último lugar, la caída puede no detectarse hasta el siguiente evento del
+pool (otro resultado o un envío). Mientras tanto un vecino sano puede terminar con normalidad (`COMPLETED`) y es una
+cartera enviada después la que se pierde (observado con el pool estándar y con uno instrumentado en sondas de la
+remediación: unas ejecuciones daban «ambos lotes en vuelo caídos» y otras «vecino `COMPLETED`, siguiente lote
+caído»). Por eso la semántica documentada es «**los lotes en vuelo en el momento en que el pool detecta la caída**». Las
+pruebas lo reflejan: `test_a_crash_mid_task_marks_every_in_flight_batch_as_worker_crashed` crea todos los workers y
+espera un resultado de cada uno antes de enviar trabajo (`warm_up`), con lo que la detección es inmediata y el
+resultado determinista; `test_a_crash_without_warm_up_keeps_exactly_once_and_bounded_damage` fija solo invariantes
+(una salida por cartera, culpable perdida, daño acotado, `COMPLETED` ≡ referencia). El ejecutor de producción **no**
+hace ese calentamiento (deuda D-DET, B5.4): la detección tardía está acotada por el siguiente evento del pool, sin
+bloqueo permanente salvo que ningún otro worker produzca eventos.
+
+**Capacidades pendientes del `WorkloadSpec`.** `STRATEGY_ROBUST` con `mu_set` explícito (conjuntos de incertidumbre
+de `μ` por activo, `BOX`/`ELLIPSOIDAL`) no es expresable todavía; un mandato con alpha externo y
+`[robust].mu_uncertainty ≠ NONE` termina en `FAILED_EXCEPTION` (`UnsupportedCombinationError`). Requiere una
+especificación serializable (`MuUncertaintySpec`) o excluir el alpha externo (decisión de B5.3/B5.4). El motor robusto
+de B4 no se modificó.
+
+**Estado de validación por plataforma.** `SPAWN`: probado en Windows 11 / Python 3.13.6 (suite completa). `FORKSERVER`:
+**NO VALIDADO** (nunca ejecutado; no hay Linux disponible en la sesión). Riesgos estáticos conocidos: el servidor
+*forkserver* se lanza una vez por proceso coordinador con el `os.environ` de ese instante (las variables de hilos de
+`worker_thread_environment` no se refrescan en ejecuciones posteriores con otro `blas_threads`) y no hay
+`set_forkserver_preload`. Hasta ejecutar la suite paralela en Ubuntu 22.04 + Python ≥ 3.11 no se declara
+compatibilidad Linux.
+
+**Deuda técnica trazable (auditoría `AUDIT_BLOCK_5_2.md`).**
+
+| ID | Deuda | Destino |
+|---|---|---|
+| M-1 | Fallo determinista del *initializer*: `run()` devuelve todas las carteras `WORKER_CRASHED` tras N reconstrucciones (~5-6 s cada una) sin excepción de nivel de ejecución; `pool.submit` no está protegido ante un pool roto entre iteraciones (análisis estático) | B5.4 (contador de reconstrucciones sin progreso → `ParallelExecutionError`; capturar `BrokenProcessPool` en `submit`) |
+| M-2 | `STRATEGY_ROBUST` sin `mu_set` explícito | B5.3/B5.4 |
+| M-3 | `FORKSERVER` sin validar; sin `set_forkserver_preload` | CI Linux antes de declarar compatibilidad |
+| L-1 | `snapshot_fingerprint` cubre solo `mu`/`Σ` (universo, costes y escenarios no se vigilan; arrays de solo lectura tras `pickle`) | B5.3 |
+| L-2 | `TaskError.message`/traza sin truncar ni escapar | B5.4 (diario) |
+| L-3 | Fichero de arranque en el directorio temporal: se borra en `finally`, pero queda tras muerte brusca del coordinador; sin barrido de `portfolio_engine_run_*` huérfanos ni test de permisos POSIX | B5.3/B5.4 |
+| D-DET | Detección tardía de la caída del último worker creado bajo demanda (ver arriba): sin calentamiento del pool, un vecino sano puede completar y perderse un lote posterior | B5.4 (calentar el pool antes de enviar o vigilar los procesos; con prueba) |
+| L-4 | `worker_thread_environment` muta `os.environ`: un solo `run()` a la vez por proceso | Documentado; B5.4 |
+
+Datos compartidos en B5.2: el `ExecutionContext` (configuración + `MarketSnapshot` + `ConfigHash` + `snapshot_key`)
+llega al worker por un fichero de arranque (`WorkerBundle`) que el coordinador escribe una vez en un directorio
+temporal privado; el *initializer* solo recibe su ruta y su SHA-256 y verifica el hash antes de deserializar
+(una copia privada por worker; la solicitud no lleva matrices globales). Los modelos copian los arrays al construirse
+(`readonly_float_array`), por lo que un mecanismo de memoria compartida no evitaría una copia privada por worker
+sin tocar B1–B4: la elección definitiva es de B5.3 (BEN-004). Cada worker verifica una huella de `mu` y `Σ` antes
+y después de cada lote (contaminación).
 
 ---
 
