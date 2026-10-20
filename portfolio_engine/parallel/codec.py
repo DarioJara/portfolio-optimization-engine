@@ -38,6 +38,9 @@ TAG_FLOAT, TAG_ENUM, TAG_ARRAY, TAG_TUPLE, TAG_DICT = "$f", "$e", "$a", "$t", "$
 TAG_FROZENSET, TAG_SET, TAG_BYTES, TAG_DATACLASS = "$fs", "$s", "$b", "$dc"
 ARRAY_PARTS = 3  # dtype, forma, datos
 PAIR_PARTS = 2  # (tipo, valor) / (tipo, campos)
+#: Profundidad máxima de anidamiento admitida al decodificar (los resultados reales usan una
+#: fracción: lo comprueba una prueba). Un documento más profundo es hostil o corrupto.
+MAX_DEPTH = 200
 NON_FINITE = MappingProxyType({"nan": math.nan, "inf": math.inf, "-inf": -math.inf})
 
 
@@ -152,7 +155,7 @@ def _decode_dataclass(payload: object) -> object:
     fields = {field.name: field for field in dataclasses.fields(cls)}
     if set(stored) != set(fields):
         raise CodecError(f"Los campos de {name} no coinciden con la clase actual.")
-    decoded = {key: decode(item) for key, item in stored.items()}
+    decoded = {key: _decode(item) for key, item in stored.items()}
     init_kwargs = {key: item for key, item in decoded.items() if fields[key].init}
     instance = cls(**init_kwargs)
     for key, item in decoded.items():
@@ -187,23 +190,50 @@ def _decode_simple_tag(tag: str, payload: object) -> object:
 
 def _decode_container_tag(tag: str, payload: object) -> object:
     if tag == TAG_TUPLE and isinstance(payload, list):
-        return tuple(decode(item) for item in payload)
+        return tuple(_decode(item) for item in payload)
     if tag in (TAG_FROZENSET, TAG_SET) and isinstance(payload, list):
-        items = [decode(item) for item in payload]
+        items = [_decode(item) for item in payload]
         return frozenset(items) if tag == TAG_FROZENSET else set(items)
     if tag == TAG_DICT and isinstance(payload, list):
-        return {decode(key): decode(item) for key, item in payload}
+        return {_decode(key): _decode(item) for key, item in payload}
     if tag == TAG_DATACLASS:
         return _decode_dataclass(payload)
     return _UNHANDLED
 
 
+def document_depth(document: object) -> int:
+    """Profundidad de anidamiento de un documento JSON, calculada sin recursión."""
+    deepest = 0
+    stack: list[tuple[object, int]] = [(document, 1)]
+    while stack:
+        node, depth = stack.pop()
+        deepest = max(deepest, depth)
+        if isinstance(node, dict):
+            stack.extend((child, depth + 1) for child in node.values())
+        elif isinstance(node, list):
+            stack.extend((child, depth + 1) for child in node)
+    return deepest
+
+
 def decode(document: object) -> Any:
-    """Reconstruye el valor codificado por :func:`encode` (sin ejecutar código del documento)."""
+    """Reconstruye el valor codificado por :func:`encode` (sin ejecutar código del documento).
+
+    Rechaza con :class:`CodecError` los documentos demasiado profundos (``MAX_DEPTH``) antes de
+    recorrerlos, de modo que un documento hostil no agota la pila del intérprete.
+    """
+    if document_depth(document) > MAX_DEPTH:
+        raise CodecError(f"Documento demasiado profundo (más de {MAX_DEPTH} niveles).")
+    try:
+        return _decode(document)
+    except RecursionError as error:
+        raise CodecError("Documento demasiado profundo para decodificar.") from error
+
+
+def _decode(document: object) -> Any:
     if document is None or isinstance(document, (bool, int, float, str)):
         return document
     if isinstance(document, list):
-        return [decode(item) for item in document]
+        return [_decode(item) for item in document]
     if not isinstance(document, dict) or len(document) != 1:
         raise CodecError("Documento mal formado.")
     ((tag, payload),) = document.items()

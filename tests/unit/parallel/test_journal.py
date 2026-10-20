@@ -446,3 +446,64 @@ def test_the_cli_flags_an_incomplete_journal(
     assert cli.main(["journal-info", str(tmp_path / "j")]) == cli.EXIT_OK
     document = json.loads(capsys.readouterr().out)
     assert document["complete"] is False and document["shards_corrupt"] == [shard.name]
+
+
+# ----------------------------------------- L-1: contenido inválido con suma válida (hostil)
+
+
+def _replace_first_result(directory: Path, result_json: str) -> str:
+    """Sustituye el resultado del primer registro del primer shard conservando una suma válida."""
+    shard = sorted((directory / SHARD_DIRECTORY).glob("s-*.json"))[0]
+    header_line, _, body = shard.read_bytes().partition(b"\n")
+    records = json.loads(body)
+    head = json.dumps({k: v for k, v in records[0].items() if k != "result"}, sort_keys=True)
+    rest = json.dumps(records[1:], sort_keys=True)
+    forged = (
+        "["
+        + head[:-1]
+        + ',"result":'
+        + result_json
+        + "}"
+        + ("," + rest[1:] if rest != "[]" else "]")
+    ).encode()
+    header = json.loads(header_line)
+    header["body_bytes"] = len(forged)
+    header["body_sha256"] = hashlib.sha256(forged).hexdigest()
+    shard.write_bytes(json.dumps(header, sort_keys=True).encode() + b"\n" + forged)
+    return shard.name
+
+
+@pytest.mark.parametrize(
+    "result_json",
+    [
+        "[" * 5000 + "]" * 5000,  # supera el límite de recursión del parser JSON
+        "[" * 300 + "]" * 300,  # supera MAX_DEPTH del códec pero no la recursión de JSON
+        '{"$dc":["portfolio_engine.config.parallel_config:CacheConfig",'
+        '{"enabled":true,"max_entries":0,"max_bytes":1}]}',  # ``__post_init__`` lanza ConfigError
+        '{"$dc":["os:system",{}]}',
+        '{"$unknown":1}',
+    ],
+    ids=["json-recursion", "codec-depth", "post-init-error", "foreign-type", "unknown-tag"],
+)
+def test_a_shard_with_valid_checksum_but_invalid_content_is_set_aside_not_fatal(
+    tmp_path: Path,
+    reference: tuple[Any, list[PortfolioRequest], RunResult],
+    result_json: str,
+) -> None:
+    """Auditoría L-1: no bloquea la reanudación completa; sus tareas se re-ejecutan."""
+    run = _write(tmp_path / "j", reference)
+    name = _replace_first_result(tmp_path / "j", result_json)
+    identity, expected, _ = _setup(reference)
+    journal = RunJournal.open(tmp_path / "j", identity, expected, resume=True)
+    try:
+        assert journal.scan.corrupt_shards == (name,)
+        assert (tmp_path / "j" / SHARD_DIRECTORY / (name + CORRUPT_SUFFIX)).exists()
+        kept = set(journal.restored)
+        assert kept and kept < {r.task_id for r in _restorable(run)}  # el otro shard se conserva
+    finally:
+        journal.close()
+    again = RunJournal.open(tmp_path / "j", identity, expected, resume=True)  # ya no falla
+    try:
+        assert again.scan.corrupt_shards == ()
+    finally:
+        again.close()

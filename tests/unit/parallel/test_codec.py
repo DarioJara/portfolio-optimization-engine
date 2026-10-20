@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 from portfolio_engine.models.enums import SolverStatus
-from portfolio_engine.parallel.codec import CodecError, decode, encode
+from portfolio_engine.parallel.codec import MAX_DEPTH, CodecError, decode, document_depth, encode
 from portfolio_engine.parallel.executor import SequentialExecutor
 from portfolio_engine.parallel.task import ExecutionStatus
 from tests.fixtures.parallel import Comparison, reference_requests
@@ -141,4 +141,46 @@ def test_a_dataclass_with_different_fields_is_rejected() -> None:
     fields = document["$dc"][1]
     del fields["worker_pid"]
     with pytest.raises(CodecError, match="no coinciden"):
+        decode(document)
+
+
+def test_real_results_are_far_shallower_than_the_depth_limit() -> None:
+    snapshots, by_universe = reference_requests(CONFIG, 1)
+    deepest = 0
+    for key, requests in by_universe.items():
+        for result in SequentialExecutor(CONFIG, snapshots[key]).run(requests).results:
+            deepest = max(deepest, document_depth(encode(result)))
+    assert 0 < deepest <= MAX_DEPTH // 2
+
+
+@pytest.mark.parametrize("depth", [MAX_DEPTH + 1, 5000, 50000])
+def test_documents_nested_beyond_the_limit_are_rejected_without_exhausting_the_stack(
+    depth: int,
+) -> None:
+    document: Any = 1
+    for _ in range(depth):
+        document = [document]
+    assert document_depth(document) == depth + 1
+    with pytest.raises(CodecError, match="profundo"):
+        decode(document)
+
+
+def test_a_document_at_the_limit_is_accepted() -> None:
+    document: Any = 1
+    for _ in range(MAX_DEPTH - 1):
+        document = [document]
+    assert document_depth(document) == MAX_DEPTH
+    assert decode(document) is not None
+
+
+def test_a_dataclass_that_fails_its_own_validation_surfaces_a_library_error() -> None:
+    from portfolio_engine.exceptions import PortfolioEngineError
+
+    document = {
+        "$dc": [
+            "portfolio_engine.config.parallel_config:CacheConfig",
+            {"enabled": True, "max_entries": 0, "max_bytes": 1},
+        ]
+    }
+    with pytest.raises(PortfolioEngineError):
         decode(document)

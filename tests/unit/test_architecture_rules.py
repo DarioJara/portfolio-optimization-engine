@@ -185,6 +185,12 @@ ALLOWED_NAMED_CONSTANTS = {
     # longitud del sufijo aleatorio, permisos privados POSIX y campos del nombre de una marca.
     ("parallel/codec.py", "ARRAY_PARTS"),
     ("parallel/codec.py", "PAIR_PARTS"),
+    ("parallel/codec.py", "MAX_DEPTH"),
+    ("parallel/markers.py", "LINUX_STARTTIME_INDEX"),
+    ("parallel/markers.py", "WIN_PROCESS_QUERY_LIMITED_INFORMATION"),
+    ("parallel/markers.py", "FILETIME_HIGH_SHIFT"),
+    ("parallel/markers.py", "FILETIME_COUNT"),
+    ("parallel/supervisor.py", "DEADLINE_REBUILDS_PER_TASK"),
     ("parallel/journal.py", "SEQUENCE_DIGITS"),
     ("parallel/journal.py", "SHA_PREFIX_CHARS"),
     ("parallel/journal.py", "TOKEN_BYTES"),

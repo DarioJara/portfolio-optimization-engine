@@ -4,7 +4,7 @@ El pool simulado resuelve cada lote según un guion: ``ok``, ``crash`` (el pool 
 de progreso señala una posición), ``hang`` (el futuro queda pendiente hasta que el pool se rompe o
 se cierra) o ``init_error``. Así se prueban las reglas de cuarentena, intentos, cotas, plazos y
 cancelación de forma rápida y determinista; las pruebas con procesos reales están en
-``test_recovery.py``. Nunca se termina un proceso real: ``terminate_process`` se sustituye.
+``test_recovery.py``. Nunca se termina un proceso real: ``terminate_owned`` se sustituye.
 """
 
 from __future__ import annotations
@@ -152,7 +152,9 @@ class Harness:
         self.terminated: list[int] = []
         self.events: list[tuple[str, str]] = []
         monkeypatch.setattr(
-            supervisor_module.markers, "terminate_process", lambda pid: self.terminated.append(pid)
+            supervisor_module.markers,
+            "terminate_owned",
+            lambda pid, token=None: self.terminated.append(pid),
         )
 
         def new_pool() -> Any:
@@ -408,7 +410,7 @@ def test_a_vanished_worker_is_detected_without_waiting_for_the_pool(
     monkeypatch.setattr(
         supervisor_module.markers,
         "process_is_gone",
-        lambda pid: dead["now"] and pid == FAKE_PID,
+        lambda pid, token=None: dead["now"] and pid == FAKE_PID,
     )
     harness = Harness(tmp_path, monkeypatch, script, _policy())
 
@@ -426,6 +428,92 @@ def test_a_vanished_worker_is_detected_without_waiting_for_the_pool(
 
 
 # --------------------------------------------------------------------------- plazos
+
+
+def test_many_deadlines_do_not_consume_the_failure_budget_nor_abort_healthy_tasks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, items: tuple[SequencedRequest, ...]
+) -> None:
+    """M-1: más plazos vencidos que ``max_total_rebuilds`` no abortan carteras sanas."""
+    hung = {1, 3, 5, 7}
+
+    def script(pool: int, batch: PortfolioBatch) -> Action:
+        for position, item in enumerate(batch.items):
+            if item.sequence_id in hung:
+                return ("hang", position)
+        return OK
+
+    policy = _policy(task_timeout_seconds=0.05, max_total_rebuilds=2)
+    harness = Harness(tmp_path, monkeypatch, script, policy)
+    report = harness.run(_batches(items, 3))
+    statuses = harness.statuses()
+    assert {s for s, st in statuses.items() if st is ExecutionStatus.TIMED_OUT} == hung
+    assert {st for s, st in statuses.items() if s not in hung} == {ExecutionStatus.COMPLETED}
+    assert report.timeouts == 4 and not report.aborted
+    assert report.deadline_rebuilds >= 4 > policy.max_total_rebuilds  # presupuesto aparte
+    assert report.crashes == 0
+
+
+def test_the_deadline_budget_is_finite_even_if_every_task_hangs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, items: tuple[SequencedRequest, ...]
+) -> None:
+    def script(pool: int, batch: PortfolioBatch) -> Action:
+        return ("hang", 0)
+
+    harness = Harness(tmp_path, monkeypatch, script, _policy(task_timeout_seconds=0.05))
+    report = harness.run(_batches(items, 3))
+    assert set(harness.statuses().values()) == {ExecutionStatus.TIMED_OUT}
+    assert len(harness.statuses()) == len(items) and not report.aborted
+    assert report.deadline_rebuilds <= 2 * len(items)
+
+
+def test_the_deadline_budget_aborts_cleanly_if_it_were_ever_exceeded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, items: tuple[SequencedRequest, ...]
+) -> None:
+    """Defensa en profundidad: superar la cota por tarea aborta, no entra en bucle."""
+    monkeypatch.setattr(supervisor_module, "DEADLINE_REBUILDS_PER_TASK", 0)
+
+    def script(pool: int, batch: PortfolioBatch) -> Action:
+        return ("hang", 0) if _contains(batch, 0) is not None else OK
+
+    harness = Harness(tmp_path, monkeypatch, script, _policy(task_timeout_seconds=0.05))
+    report = harness.run(_batches(items, 3))
+    assert report.aborted and len(harness.statuses()) == len(items)
+    assert any("por plazos" in detail for _, detail in harness.events)
+
+
+# ------------------------------------------------------------ L-2: nunca procesos ajenos
+
+
+def test_a_reused_pid_never_gets_a_foreign_process_terminated(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, items: tuple[SequencedRequest, ...]
+) -> None:
+    """Auditoría L-2: las marcas apuntan a un PID que ahora es un proceso ajeno vivo.
+
+    El proceso ajeno no es hijo del coordinador y su hora de creación no es la registrada: el
+    supervisor no debe tocarlo, aunque su PID figure en ``w.*`` y ``t.*``.
+    """
+    import subprocess
+    import sys
+
+    from portfolio_engine.parallel import markers
+
+    foreign = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"])
+    try:
+        real_terminate = markers.terminate_owned
+        (tmp_path / f"w.{foreign.pid}.1").touch()  # «hora de creación» registrada ≠ la real
+        monkeypatch.setattr(sys.modules[__name__], "FAKE_PID", foreign.pid)
+
+        def script(pool: int, batch: PortfolioBatch) -> Action:
+            return ("crash", 0) if pool == 0 and batch.batch_id == 0 else OK
+
+        harness = Harness(tmp_path, monkeypatch, script, _policy())
+        monkeypatch.setattr(supervisor_module.markers, "terminate_owned", real_terminate)
+        harness.run(_batches(items, 3))
+        assert foreign.poll() is None  # sigue vivo
+        assert set(harness.statuses().values()) == {ExecutionStatus.COMPLETED}
+    finally:
+        foreign.kill()
+        foreign.wait(timeout=60)
 
 
 def test_a_task_over_its_deadline_is_timed_out_and_neighbours_are_rerun(

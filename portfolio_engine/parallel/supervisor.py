@@ -59,6 +59,8 @@ from portfolio_engine.parallel.protocols import RunControl
 from portfolio_engine.parallel.task import ExecutionStatus, PortfolioRequest, TaskError, TaskResult
 from portfolio_engine.parallel.worker import ResultBatch, WorkerInitializationError, crashed_result
 
+#: Cota de reconstrucciones por plazo y tarea: una finaliza la tarea y otra descompone su lote.
+DEADLINE_REBUILDS_PER_TASK = 2
 TASK_SCOPE = "TASK"
 BATCH_SCOPE = "BATCH"
 
@@ -72,6 +74,8 @@ class RecoveryReport:
         crashes: caídas de proceso atribuidas a un fallo (no a un plazo ni a una cancelación).
         isolated_retries: ejecuciones aisladas de tareas sospechosas.
         poisoned_tasks: tareas confirmadas como venenosas (``WORKER_CRASHED``).
+        deadline_rebuilds: reconstrucciones provocadas por el propio supervisor al terminar workers
+            por un plazo vencido (presupuesto aparte de las caídas; véase ``_apply_limits``).
         timeouts: tareas con ``TIMED_OUT``.
         batches_split: lotes de varias carteras descompuestos por plazo de lote.
         init_failures: lotes que recibieron un fallo del *initializer*.
@@ -85,6 +89,7 @@ class RecoveryReport:
     crashes: int = 0
     isolated_retries: int = 0
     poisoned_tasks: int = 0
+    deadline_rebuilds: int = 0
     timeouts: int = 0
     batches_split: int = 0
     init_failures: int = 0
@@ -158,6 +163,8 @@ class BatchSupervisor:
         self._break_started: float | None = None
         self._events: list[tuple[str, str]] = []
         self._rebuilds = 0
+        self._deadline_rebuilds = 0
+        self._total_tasks = 0
         self._crashes = 0
         self._retries = 0
         self._poisoned = 0
@@ -173,6 +180,7 @@ class BatchSupervisor:
     def run(self, batches: Sequence[PortfolioBatch]) -> RecoveryReport:
         """Ejecuta todos los lotes; cada tarea acaba en un resultado final exactamente una vez."""
         self._pending = deque(batches)
+        self._total_tasks = sum(len(batch.items) for batch in batches)
         self._next_batch_id = max((batch.batch_id for batch in batches), default=-1) + 1
         pool: ProcessPoolExecutor | None = None
         try:
@@ -203,6 +211,7 @@ class BatchSupervisor:
             crashes=self._crashes,
             isolated_retries=self._retries,
             poisoned_tasks=self._poisoned,
+            deadline_rebuilds=self._deadline_rebuilds,
             timeouts=self._timeouts,
             batches_split=self._splits,
             init_failures=self._init_failures,
@@ -409,8 +418,9 @@ class BatchSupervisor:
 
     def _check_workers(self) -> None:
         """D-DET: un worker registrado, sin salida limpia y sin proceso es una caída."""
-        for pid in markers.scan(self._dir).workers:
-            if markers.process_is_gone(pid):
+        snapshot = markers.scan(self._dir)
+        for pid in snapshot.workers:
+            if markers.process_is_gone(pid, snapshot.tokens.get(pid)):
                 self._event("worker_vanished", f"pid {pid} desapareció sin salir limpiamente")
                 self._broken = True
                 return
@@ -419,8 +429,9 @@ class BatchSupervisor:
 
     def _terminate_pool(self, pool: ProcessPoolExecutor, snapshot: markers.MarkerSnapshot) -> None:
         """Termina los workers registrados y cierra el pool (todos sus futuros quedan resueltos)."""
-        for pid in set(snapshot.workers) | {marker.pid for marker in snapshot.tasks.values()}:
-            markers.terminate_process(pid)
+        targets = set(snapshot.workers) | {marker.pid for marker in snapshot.tasks.values()}
+        for pid in targets:
+            markers.terminate_owned(pid, snapshot.tokens.get(pid))
         pool.shutdown(wait=True, cancel_futures=True)
 
     def _recover(self, pool: ProcessPoolExecutor) -> None:
@@ -442,7 +453,9 @@ class BatchSupervisor:
         self._broken = False
         self._intentional = False
         self._rebuilds += 1
-        if not intentional:
+        if intentional:
+            self._deadline_rebuilds += 1
+        else:
             self._crashes += 1
             if self._break_started is None:
                 self._break_started = detected
@@ -502,13 +515,26 @@ class BatchSupervisor:
         self._event("quarantined", f"seq={suspect.sequence_id}")
 
     def _apply_limits(self) -> None:
+        """Cotas finitas con presupuestos separados (auditoría M-1).
+
+        * Caídas de workers: ``max_rebuilds_without_progress`` (sin atribuir / venenosas seguidas) y
+          ``max_total_rebuilds`` (solo reconstrucciones **por fallo**).
+        * Plazos: cada reconstrucción intencionada finaliza una tarea (``TIMED_OUT``) o descompone
+          un lote en unitarios, así que no puede haber más de dos por tarea; ese es su tope. Los
+          plazos legítimos no consumen el presupuesto de caídas ni abortan carteras sanas.
+        """
         limit = self._policy.max_rebuilds_without_progress
         over_streak = self._consecutive >= limit or self._poison_streak >= limit
-        over_total = self._rebuilds >= self._policy.max_total_rebuilds and bool(
-            self._pending or self._suspects
-        )
-        if over_streak or over_total:
-            self._abort("sin progreso" if over_streak else "máximo de reconstrucciones")
+        failure_rebuilds = self._rebuilds - self._deadline_rebuilds
+        has_work = bool(self._pending or self._suspects)
+        over_total = failure_rebuilds >= self._policy.max_total_rebuilds and has_work
+        over_deadline = self._deadline_rebuilds > DEADLINE_REBUILDS_PER_TASK * self._total_tasks
+        if over_streak or over_total or over_deadline:
+            if over_deadline:
+                reason = "máximo de reconstrucciones por plazos"
+            else:
+                reason = "sin progreso" if over_streak else "máximo de reconstrucciones"
+            self._abort(reason)
 
     def _abort(self, reason: str) -> None:
         """Cierra lo pendiente: ``ABORTED``, o ``WORKER_INIT_FAILED`` si el entorno no arranca."""

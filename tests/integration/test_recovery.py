@@ -237,6 +237,24 @@ def test_a_hanging_task_is_timed_out_and_the_rest_complete(
     assert multiprocessing.active_children() == []  # el proceso colgado no sobrevive
 
 
+def test_more_deadlines_than_the_failure_budget_still_let_healthy_tasks_finish(
+    snapshot: Any, requests: list[PortfolioRequest], sequential: RunResult
+) -> None:
+    """M-1 con procesos reales: 3 plazos vencidos con ``max_total_rebuilds=1``."""
+    ids = _ids(requests)
+    hung = {ids[1], ids[3], ids[6]}
+    config = fault_config(2, 1, task_timeout_seconds=3.0, max_total_rebuilds=1)
+    run = FaultyExecutor(CONFIG, snapshot, config, spec=FaultSpec(hang=tuple(hung))).run(requests)
+    _assert_matches(run, sequential, except_ids=hung)
+    assert {
+        r.portfolio_id for r in run.results if r.execution_status is ExecutionStatus.TIMED_OUT
+    } == hung
+    assert run.recovery.timeouts == 3 and not run.recovery.aborted
+    assert run.recovery.deadline_rebuilds >= 3 > config.recovery.max_total_rebuilds
+    assert ExecutionStatus.ABORTED not in {r.execution_status for r in run.results}
+    assert multiprocessing.active_children() == []
+
+
 def test_a_batch_over_its_deadline_is_split_and_only_the_hanging_task_fails(
     snapshot: Any, requests: list[PortfolioRequest], sequential: RunResult
 ) -> None:

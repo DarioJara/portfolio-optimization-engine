@@ -19,6 +19,7 @@ from portfolio_engine.config.loader import build_dataclass, read_toml
 from portfolio_engine.exceptions import ConfigError
 
 PARALLEL_SECTION = "parallel"
+RECOVERY_SECTION = "recovery"
 
 
 class ProcessStartMethod(StrEnum):
@@ -85,7 +86,9 @@ class RecoveryConfig:
         max_rebuilds_without_progress: tope (``>= 1``) de caídas consecutivas **sin atribuir a
             ninguna tarea** y de tareas venenosas consecutivas, en ambos casos sin ningún resultado
             recibido en medio; al alcanzarlo la ejecución se aborta.
-        max_total_rebuilds: cota absoluta de reconstrucciones por ejecución (``>= 1``).
+        max_total_rebuilds: cota absoluta de reconstrucciones **por fallo** de workers por ejecución
+            (``>= 1``). Las terminaciones intencionadas por plazo tienen un presupuesto aparte,
+            acotado por el número de tareas, y no consumen esta cota.
         supervision_poll_seconds: periodo del sondeo del supervisor (plazos, vigilancia de
             procesos, cancelación); ``> 0``.
         task_timeout_seconds: plazo de pared de **una cartera** desde que su worker la empieza
@@ -203,4 +206,11 @@ def load_parallel_config(source: str | Path | Mapping[str, Any]) -> ParallelConf
         raise ConfigError(f"Secciones desconocidas en la configuración paralela: {unknown}")
     if PARALLEL_SECTION not in raw:
         raise ConfigError(f"Sección de configuración ausente: [{PARALLEL_SECTION}]")
-    return build_dataclass(ParallelConfig, raw[PARALLEL_SECTION], PARALLEL_SECTION)
+    section = raw[PARALLEL_SECTION]
+    if isinstance(section, Mapping) and RECOVERY_SECTION not in section:
+        raise ConfigError(
+            f"Falta la sección [{PARALLEL_SECTION}.{RECOVERY_SECTION}], obligatoria desde el "
+            "Bloque 5.4 (cambio incompatible con las configuraciones de B5.2/B5.3). Cópiela de "
+            "config/default_parallel.toml: sus claves no tienen valores por defecto en el código."
+        )
+    return build_dataclass(ParallelConfig, section, PARALLEL_SECTION)

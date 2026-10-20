@@ -56,7 +56,7 @@ from typing import IO, Any
 
 import portfolio_engine
 from portfolio_engine.exceptions import PortfolioEngineError
-from portfolio_engine.parallel.codec import CodecError, decode, encode
+from portfolio_engine.parallel.codec import decode, encode
 from portfolio_engine.parallel.task import ExecutionContext, ExecutionStatus, TaskResult
 from portfolio_engine.utils.hashing import canonical_json, sha256_hex
 
@@ -371,7 +371,11 @@ def _read_shard(
                 raise JournalError("registro ajeno a esta ejecución o no restaurable")
             results.append(result)
         return results
-    except (OSError, ValueError, KeyError, TypeError, CodecError) as error:
+    except JournalError:
+        raise
+    except Exception as error:  # cualquier fallo al leer un shard lo aparta (L-1)
+        # Un shard con suma válida pero contenido inválido (dataclass que no valida, anidamiento
+        # excesivo, tipo desconocido…) es un shard corrupto: se aparta y sus tareas se re-ejecutan.
         raise JournalError(f"{path.name}: {type(error).__name__}") from error
 
 

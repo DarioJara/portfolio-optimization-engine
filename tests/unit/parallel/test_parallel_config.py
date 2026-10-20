@@ -171,3 +171,13 @@ def test_recovery_rejects_unknown_keys_and_non_boolean_journal_flag() -> None:
         _load(recovery={**VALID["recovery"], "retries": 3})
     with pytest.raises(ConfigError, match="journal_enabled"):
         _load(recovery={**VALID["recovery"], "journal_enabled": 1})
+
+
+def test_a_pre_b54_configuration_without_recovery_fails_with_an_actionable_message() -> None:
+    """Auditoría L-4: cambio incompatible documentado; el error dice qué copiar y de dónde."""
+    legacy = {key: value for key, value in VALID.items() if key != "recovery"}
+    with pytest.raises(ConfigError) as caught:
+        load_parallel_config({"parallel": legacy})
+    message = str(caught.value)
+    assert "[parallel.recovery]" in message and "default_parallel.toml" in message
+    assert "Bloque 5.4" in message

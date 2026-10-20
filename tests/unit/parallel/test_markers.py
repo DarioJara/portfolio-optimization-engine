@@ -95,3 +95,67 @@ def test_terminate_process_kills_a_real_child_and_ignores_missing_pids() -> None
             child.kill()
     assert child.returncode is not None
     markers.terminate_process(child.pid)  # ya no existe: no lanza
+
+
+# -------------------------------------------------------- L-2: identidad antes de terminar
+
+
+def _sleeper() -> None:
+    import time
+
+    time.sleep(120)
+
+
+def test_start_tokens_identify_a_process_and_workers_register_theirs(tmp_path: Path) -> None:
+    token = markers.start_token(os.getpid())
+    assert token is not None and token.isdigit()  # Windows y Linux facilitan la hora de inicio
+    assert markers.start_token(os.getpid()) == token  # estable
+    markers.register_worker(str(tmp_path))
+    snapshot = markers.scan(tmp_path)
+    assert snapshot.tokens == {os.getpid(): token}
+    assert markers.process_is_gone(os.getpid(), token) is False
+    assert markers.process_is_gone(os.getpid(), "0") is True  # mismo PID, otra «identidad»
+
+
+def test_scan_reads_tokens_and_accepts_marks_without_one(tmp_path: Path) -> None:
+    (tmp_path / "w.10.777").touch()
+    (tmp_path / "w.11").touch()
+    (tmp_path / "w.12.abc").touch()  # token mal formado: ignorada
+    snapshot = markers.scan(tmp_path)
+    assert snapshot.workers == frozenset({10, 11})
+    assert snapshot.tokens == {10: "777"}
+
+
+def test_a_foreign_process_is_never_terminated_even_with_a_matching_token() -> None:
+    """Un proceso vivo que no es hijo del coordinador (PID reutilizado) no se puede terminar."""
+    foreign = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"])
+    try:
+        token = markers.start_token(foreign.pid)
+        assert not markers.is_our_worker(foreign.pid, token)
+        assert not markers.terminate_owned(foreign.pid, token)
+        assert not markers.terminate_owned(foreign.pid)
+        assert foreign.poll() is None
+    finally:
+        foreign.kill()
+        foreign.wait(timeout=60)
+
+
+def test_an_owned_child_is_terminated_only_when_identity_matches() -> None:
+    import multiprocessing
+
+    child = multiprocessing.get_context("spawn").Process(target=_sleeper)
+    child.start()
+    try:
+        assert child.pid is not None
+        token = markers.start_token(child.pid)
+        assert markers.is_our_worker(child.pid, token)
+        assert not markers.terminate_owned(child.pid, "1")  # PID reutilizado: otra hora de inicio
+        assert child.is_alive()
+        assert markers.terminate_owned(child.pid, token)
+        child.join(timeout=60)
+        assert not child.is_alive()
+        assert not markers.terminate_owned(child.pid, token)  # ya no es nuestro
+    finally:
+        if child.is_alive():
+            child.kill()
+            child.join(timeout=60)
