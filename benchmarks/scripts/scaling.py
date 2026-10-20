@@ -28,6 +28,7 @@ Uso::
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import multiprocessing
 import pickle
@@ -288,7 +289,7 @@ def run_batch_set(
             )
             print(f"  {method}: NO DISPONIBLE en esta plataforma")
             continue
-        for workers in args.workers:
+        for workers, batch_size in itertools.product(args.workers, _batch_sizes(args)):
             cell = _parallel_cell(
                 batch,
                 reference,
@@ -297,13 +298,14 @@ def run_batch_set(
                 parallel_repetitions,
                 scaling.warmup_runs,
                 args.startup_repetitions,
-                args.batch_size,
+                batch_size,
                 args.blas_threads,
                 args.shared_data_mode,
             )
             cells.append(cell)
             print(
-                f"  {method:10s} w={workers} min={cell['wall']['min']:.2f} s "
+                f"  {method:10s} w={workers} lote={cell['batch_size']} "
+                f"min={cell['wall']['min']:.2f} s "
                 f"mediana={cell['wall']['median']:.2f} s "
                 f"inicio={cell['pool_startup_seconds']['median']:.2f} s "
                 f"T1_dif={cell['t1_differences_vs_sequential']} válida={cell['valid_measurement']}"
@@ -332,6 +334,14 @@ def run_batch_set(
     }
 
 
+def _batch_sizes(args: argparse.Namespace) -> list[int | None]:
+    return [None if str(item).upper() == "AUTO" else int(item) for item in args.batch_size]
+
+
+def _batch_label_list(args: argparse.Namespace) -> list[str]:
+    return [str(item).upper() for item in args.batch_size]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter
@@ -344,7 +354,12 @@ def main() -> None:
     )
     parser.add_argument("--workers", type=int, nargs="+", default=[1, 2, 4])
     parser.add_argument("--methods", nargs="+", default=["sequential", "spawn", "forkserver"])
-    parser.add_argument("--batch-size", type=int, default=None, help="omitido = AUTO")
+    parser.add_argument(
+        "--batch-size",
+        nargs="*",
+        default=["AUTO"],
+        help="tamaños de lote a medir (enteros o AUTO); varios = barrido E3/E13",
+    )
     parser.add_argument("--repetitions", type=int, default=0, help="0 = según la configuración")
     parser.add_argument(
         "--parallel-repetitions", type=int, default=0, help="0 = igual que --repetitions"
@@ -391,7 +406,7 @@ def main() -> None:
         start_methods_available=multiprocessing.get_all_start_methods(),
         blas_threads_per_worker=args.blas_threads,
         shared_data_mode=args.shared_data_mode,
-        batch_size="AUTO" if args.batch_size is None else args.batch_size,
+        batch_sizes=_batch_label_list(args),
         authorized_by=args.authorized_by,
     )
     results: list[dict[str, Any]] = []
