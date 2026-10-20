@@ -24,6 +24,7 @@ from portfolio_engine.config.parallel_config import (
     CacheConfig,
     ParallelConfig,
     ProcessStartMethod,
+    RecoveryConfig,
     SharedDataMode,
     load_parallel_config,
 )
@@ -67,6 +68,7 @@ __all__ = (
     "LiquidityConfig",
     "ParallelConfig",
     "ProcessStartMethod",
+    "RecoveryConfig",
     "ReturnConfig",
     "RiskConfig",
     "RobustConfig",

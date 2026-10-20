@@ -125,3 +125,53 @@ def test_the_fingerprint_changes_with_the_data(context: tuple[Any, worker.Worker
     other = snapshot_of(random_problem(8, [0, 1, 2], 4, CONFIG))
     assert worker.snapshot_fingerprint(other) != ctx.fingerprint
     assert worker.snapshot_fingerprint(ctx.execution.snapshot) == ctx.fingerprint
+
+
+def test_the_fingerprint_covers_costs_and_return_scenarios() -> None:
+    """L-1: además de ``mu``/``Σ``, se vigilan los costes y los escenarios de retorno."""
+    import dataclasses
+
+    problem = random_problem(8, [0, 1, 2], 3, CONFIG)
+    base = snapshot_of(problem, return_periods=50, seed=1)
+    assert worker.snapshot_fingerprint(base) == worker.snapshot_fingerprint(
+        snapshot_of(problem, return_periods=50, seed=1)
+    )
+    other_returns = snapshot_of(problem, return_periods=50, seed=2)
+    assert worker.snapshot_fingerprint(other_returns) != worker.snapshot_fingerprint(base)
+    assert problem.costs is not None
+    costs = problem.costs
+    changed = dataclasses.replace(costs, buy_costs=costs.buy_costs * 2.0)
+    assert worker.snapshot_fingerprint(
+        dataclasses.replace(base, costs=changed)
+    ) != worker.snapshot_fingerprint(base)
+    resold = dataclasses.replace(costs, sell_costs=costs.sell_costs * 2.0)
+    assert worker.snapshot_fingerprint(
+        dataclasses.replace(base, costs=resold)
+    ) != worker.snapshot_fingerprint(base)
+
+
+def test_error_texts_are_bounded_without_touching_statuses_or_types() -> None:
+    """L-2: mensaje y traza se recortan; estado, tipo y operaciones permanecen."""
+    import dataclasses
+
+    from portfolio_engine.parallel.task import (
+        ExecutionStatus,
+        OperationOutcome,
+        TaskError,
+        TaskResult,
+    )
+
+    error = TaskError("ValueError", "m" * 1000, 0, "t" * 1000)
+    operation = OperationOutcome(0, OperationKind.STRATEGY_MAX_SHARPE, False, None, error, 0.0)
+    result = TaskResult(
+        "t", "P", "w", 3, ExecutionStatus.FAILED_EXCEPTION, (operation,), error, 0.0, None
+    )
+    bounded = worker.bound_errors(result, 50)
+    assert bounded.error is not None and len(bounded.error.message) == 50
+    assert len(bounded.error.traceback) == 50 and bounded.error.error_type == "ValueError"
+    assert bounded.execution_status is ExecutionStatus.FAILED_EXCEPTION
+    inner = bounded.operations[0].error
+    assert inner is not None and len(inner.message) == 50 and inner.operation_index == 0
+    assert worker.bound_errors(result, None) is result  # sin límite: idéntico
+    clean = dataclasses.replace(result, error=None, operations=())
+    assert worker.bound_errors(clean, 5).error is None

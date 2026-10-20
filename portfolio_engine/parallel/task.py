@@ -66,14 +66,34 @@ OperationResult = (
 class ExecutionStatus(StrEnum):
     """Estado de la **ejecución** de una tarea (no del solver; requisito propuesto P-01).
 
-    ``TIMED_OUT``, ``CANCELLED`` y ``SKIPPED_BY_RESUME`` (plazos, cancelación y reanudación)
-    pertenecen al Bloque 5.4 y no existen todavía.
+    Es independiente de ``SolverStatus``: un solver que termina en ``TIME_LIMIT`` o
+    ``INFEASIBLE`` es una tarea ``COMPLETED``; el estado del solver viaja intacto en el resultado.
+
+    * ``COMPLETED``: todas las operaciones terminaron sin excepción.
+    * ``FAILED_INPUT_VALIDATION``: la entrada era inválida; no se ejecutó ningún motor.
+    * ``FAILED_EXCEPTION``: una operación lanzó una excepción (fallo de **tarea**).
+    * ``WORKER_CRASHED``: la tarea mató a su worker en ``max_task_attempts`` intentos aislados
+      (tarea venenosa confirmada), o el proceso que la ejecutaba murió y no pudo reintentarse.
+    * ``WORKER_INIT_FAILED``: el *initializer* de los workers falló de forma consistente (fallo de
+      **entorno**, no de la tarea); la tarea nunca llegó a ejecutarse.
+    * ``TIMED_OUT``: la tarea (o su lote unitario) superó el plazo de pared configurado.
+    * ``CANCELLED``: la ejecución se canceló antes de que la tarea concluyera.
+    * ``ABORTED``: el supervisor agotó sus límites de reconstrucción antes de que la tarea tuviera
+      un intento concluyente (no es culpa de la tarea; puede reintentarse en otra ejecución).
+    * ``SKIPPED_BY_RESUME``: la tarea no se ejecutó porque el diario ya tenía su resultado. Solo
+      se usa en la contabilidad (``RunAccounting``): el resultado restaurado conserva el estado
+      con el que se calculó.
     """
 
     COMPLETED = "COMPLETED"
     FAILED_INPUT_VALIDATION = "FAILED_INPUT_VALIDATION"
     FAILED_EXCEPTION = "FAILED_EXCEPTION"
     WORKER_CRASHED = "WORKER_CRASHED"
+    WORKER_INIT_FAILED = "WORKER_INIT_FAILED"
+    TIMED_OUT = "TIMED_OUT"
+    CANCELLED = "CANCELLED"
+    ABORTED = "ABORTED"
+    SKIPPED_BY_RESUME = "SKIPPED_BY_RESUME"
 
 
 @dataclass(frozen=True, eq=False, slots=True)

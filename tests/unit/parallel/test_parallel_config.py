@@ -23,6 +23,15 @@ VALID: dict[str, Any] = {
     "blas_threads": 1,
     "shared_data_mode": "BUNDLE_FILE",
     "cache": {"enabled": False, "max_entries": 8, "max_bytes": 1024},
+    "recovery": {
+        "max_task_attempts": 2,
+        "max_rebuilds_without_progress": 3,
+        "max_total_rebuilds": 10,
+        "supervision_poll_seconds": 0.1,
+        "cancel_grace_seconds": 0.0,
+        "journal_enabled": False,
+        "max_message_chars": 200,
+    },
 }
 
 
@@ -109,3 +118,56 @@ def test_config_is_immutable() -> None:
     config = _load()
     with pytest.raises(dataclasses.FrozenInstanceError):
         config.workers = 9  # type: ignore[misc]
+
+
+# ------------------------------------------------------------------------------ recuperación (B5.4)
+
+
+def test_recovery_limits_come_from_the_example_file_and_timeouts_are_optional() -> None:
+    recovery = load_parallel_config(DEFAULT_PARALLEL_CONFIG_PATH).recovery
+    assert recovery.task_timeout_seconds is None and recovery.batch_timeout_seconds is None
+    assert recovery.journal_enabled is False  # el diario es opt-in
+    assert recovery.max_task_attempts >= 1
+
+
+@pytest.mark.parametrize(
+    "missing",
+    [
+        "max_task_attempts",
+        "max_rebuilds_without_progress",
+        "max_total_rebuilds",
+        "supervision_poll_seconds",
+        "cancel_grace_seconds",
+        "journal_enabled",
+        "max_message_chars",
+    ],
+)
+def test_every_mandatory_recovery_key_must_be_present(missing: str) -> None:
+    recovery = {key: value for key, value in VALID["recovery"].items() if key != missing}
+    with pytest.raises(ConfigError, match=missing):
+        _load(recovery=recovery)
+
+
+@pytest.mark.parametrize(
+    ("field", "bad"),
+    [
+        ("max_task_attempts", 0),
+        ("max_rebuilds_without_progress", 0),
+        ("max_total_rebuilds", -1),
+        ("max_message_chars", 0),
+        ("supervision_poll_seconds", 0.0),
+        ("task_timeout_seconds", 0.0),
+        ("batch_timeout_seconds", -5.0),
+        ("cancel_grace_seconds", -0.1),
+    ],
+)
+def test_recovery_values_are_validated(field: str, bad: float) -> None:
+    with pytest.raises(ConfigError, match=field):
+        _load(recovery={**VALID["recovery"], field: bad})
+
+
+def test_recovery_rejects_unknown_keys_and_non_boolean_journal_flag() -> None:
+    with pytest.raises(ConfigError, match="desconocidas"):
+        _load(recovery={**VALID["recovery"], "retries": 3})
+    with pytest.raises(ConfigError, match="journal_enabled"):
+        _load(recovery={**VALID["recovery"], "journal_enabled": 1})

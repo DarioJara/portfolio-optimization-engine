@@ -30,6 +30,7 @@ from dataclasses import dataclass, field, replace
 from portfolio_engine.cache import CacheMetrics, ResultCache
 from portfolio_engine.config.parallel_config import CacheConfig
 from portfolio_engine.parallel.batching import PortfolioBatch
+from portfolio_engine.parallel.markers import BatchMarker, register_worker
 from portfolio_engine.parallel.operation_cache import OperationCache
 from portfolio_engine.parallel.shared_data import (
     Attachment,
@@ -62,6 +63,7 @@ class WorkerContext:
     cache: OperationCache | None = None
     attachment: Attachment | None = None
     attach_seconds: float = 0.0
+    max_message_chars: int | None = None
 
 
 @dataclass(frozen=True, eq=False, slots=True)
@@ -75,19 +77,48 @@ class ResultBatch:
     cache: CacheMetrics = field(default_factory=CacheMetrics)
 
 
+class WorkerInitializationError(RuntimeError):
+    """El *initializer* del worker falló (fallo de entorno, no de una tarea; Bloque 5.4).
+
+    Un *initializer* que lanza una excepción rompe todo el ``ProcessPoolExecutor`` sin dejar
+    rastro de la causa. El *initializer* supervisado la captura y el primer lote que llega al
+    worker la relanza con esta clase: así el coordinador distingue «el entorno no arranca» de «una
+    tarea mató al proceso».
+    """
+
+
 _CONTEXT: WorkerContext | None = None
+_INIT_ERROR: str | None = None
 #: Profundidad máxima al seguir la cadena de propietarios de un array.
 MAX_BACKING_DEPTH = 8
 
 
 def snapshot_fingerprint(snapshot: MarketSnapshot) -> str:
-    """Huella numérica de ``mu`` y ``Σ`` para detectar que un worker no altera los datos."""
+    """Huella numérica de los arrays del snapshot (deuda L-1) para detectar contaminación.
+
+    Cubre ``mu``, ``Σ``, los costes de compra/venta y los escenarios de retorno con sus pesos. El
+    universo y las definiciones de escenario son dataclasses inmutables (no hay arrays que alterar).
+    """
     risk = snapshot.risk_model
-    return sha256_hex(hash_float_array(risk.mu) + hash_float_array(risk.sigma))
+    parts = [hash_float_array(risk.mu), hash_float_array(risk.sigma)]
+    if snapshot.costs is not None:
+        parts += [
+            hash_float_array(snapshot.costs.buy_costs),
+            hash_float_array(snapshot.costs.sell_costs),
+        ]
+    if snapshot.return_scenarios is not None:
+        parts += [
+            hash_float_array(snapshot.return_scenarios.returns),
+            hash_float_array(snapshot.return_scenarios.weights),
+        ]
+    return sha256_hex("|".join(parts))
 
 
 def initialize_worker(
-    handle: SnapshotHandle, blas_threads: int, cache: CacheConfig | None = None
+    handle: SnapshotHandle,
+    blas_threads: int,
+    cache: CacheConfig | None = None,
+    max_message_chars: int | None = None,
 ) -> None:
     """*Initializer* del pool: adjunta el snapshot, fija hilos numéricos, ignora ``SIGINT``.
 
@@ -113,7 +144,46 @@ def initialize_worker(
         cache=operation_cache,
         attachment=attachment,
         attach_seconds=attach_seconds,
+        max_message_chars=max_message_chars,
     )
+
+
+def initialize_worker_supervised(
+    progress_dir: str,
+    handle: SnapshotHandle,
+    blas_threads: int,
+    cache: CacheConfig | None,
+    max_message_chars: int,
+) -> None:
+    """*Initializer* del supervisor: se registra, inicializa y conserva el fallo sin romper el pool.
+
+    Con éxito equivale a :func:`initialize_worker`. Si falla, guarda el error (acotado) y
+    ``run_batch`` lo relanza como :class:`WorkerInitializationError`.
+    """
+    global _INIT_ERROR  # estado de proceso del worker
+    register_worker(progress_dir)
+    try:
+        initialize_worker(handle, blas_threads, cache, max_message_chars)
+    except Exception as error:  # límite: el fallo se comunica en el primer lote
+        _INIT_ERROR = f"{type(error).__name__}: {error}"[:max_message_chars]
+
+
+def bound_errors(result: TaskResult, limit: int | None) -> TaskResult:
+    """Recorta mensaje y traza de los errores de ``result`` a ``limit`` caracteres (deuda L-2).
+
+    No toca estados, resultados numéricos ni el tipo de la excepción: solo el texto libre, que
+    puede ser arbitrariamente largo y contener datos de la entrada.
+    """
+    if limit is None:
+        return result
+
+    def cut(error: TaskError | None) -> TaskError | None:
+        if error is None:
+            return None
+        return replace(error, message=error.message[:limit], traceback=error.traceback[:limit])
+
+    operations = tuple(replace(op, error=cut(op.error)) for op in result.operations)
+    return replace(result, error=cut(result.error), operations=operations)
 
 
 def worker_context() -> WorkerContext:
@@ -123,30 +193,38 @@ def worker_context() -> WorkerContext:
     return _CONTEXT
 
 
-def run_batch(batch: PortfolioBatch) -> ResultBatch:
+def run_batch(batch: PortfolioBatch, progress_dir: str | None = None) -> ResultBatch:
     """Ejecuta un lote completo en este worker y devuelve sus resultados.
 
     Comprueba antes y después que los datos de mercado compartidos no han cambiado; si cambiaran,
     lanza ``RuntimeError`` (el ejecutor lo registra como fallo del lote, nunca como resultado).
+    Con ``progress_dir`` declara cada tarea antes de empezarla (véase ``parallel.markers``).
     """
+    if _INIT_ERROR is not None:
+        raise WorkerInitializationError(_INIT_ERROR)
     context = worker_context()
     started = time.perf_counter()
     if snapshot_fingerprint(context.execution.snapshot) != context.fingerprint:
         raise RuntimeError("El snapshot compartido cambió antes de ejecutar el lote.")
     before = CacheMetrics() if context.cache is None else context.cache.metrics
     pid = os.getpid()
-    results = tuple(
-        replace(
-            run_portfolio(item.request, context.execution, cache=context.cache),
-            sequence_id=item.sequence_id,
-            worker_pid=pid,
-        )
-        for item in batch.items
-    )
+    results: list[TaskResult] = []
+    with BatchMarker(progress_dir, batch.batch_id) as marker:
+        for position, item in enumerate(batch.items):
+            marker.start(position)
+            outcome = run_portfolio(item.request, context.execution, cache=context.cache)
+            results.append(
+                bound_errors(
+                    replace(outcome, sequence_id=item.sequence_id, worker_pid=pid),
+                    context.max_message_chars,
+                )
+            )
     if snapshot_fingerprint(context.execution.snapshot) != context.fingerprint:
         raise RuntimeError("El snapshot compartido fue alterado durante el lote (contaminación).")
     cache_delta = CacheMetrics() if context.cache is None else context.cache.metrics.since(before)
-    return ResultBatch(batch.batch_id, results, pid, time.perf_counter() - started, cache_delta)
+    return ResultBatch(
+        batch.batch_id, tuple(results), pid, time.perf_counter() - started, cache_delta
+    )
 
 
 @dataclass(frozen=True, slots=True)

@@ -76,6 +76,61 @@ class CacheConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class RecoveryConfig:
+    """Supervisión, reintentos, plazos y diario del ejecutor (Bloque 5.4; P-03…P-06).
+
+    Attributes:
+        max_task_attempts: intentos **aislados** (una tarea sola en el pool) que se permiten a una
+            tarea sospechosa de una caída antes de declararla ``WORKER_CRASHED`` (``>= 1``).
+        max_rebuilds_without_progress: tope (``>= 1``) de caídas consecutivas **sin atribuir a
+            ninguna tarea** y de tareas venenosas consecutivas, en ambos casos sin ningún resultado
+            recibido en medio; al alcanzarlo la ejecución se aborta.
+        max_total_rebuilds: cota absoluta de reconstrucciones por ejecución (``>= 1``).
+        supervision_poll_seconds: periodo del sondeo del supervisor (plazos, vigilancia de
+            procesos, cancelación); ``> 0``.
+        task_timeout_seconds: plazo de pared de **una cartera** desde que su worker la empieza
+            (omitido = sin plazo). Se hace cumplir terminando el worker.
+        batch_timeout_seconds: plazo de pared de **un lote** desde que su worker lo empieza
+            (omitido = sin plazo). Un lote de varias carteras que lo agota se descompone en lotes
+            unitarios; un lote unitario que lo agota termina ``TIMED_OUT``.
+        cancel_grace_seconds: tras una cancelación, tiempo (``>= 0``) que se espera a los lotes en
+            vuelo antes de terminar sus workers.
+        journal_enabled: permite escribir el diario local (``false``: ``journal`` se rechaza).
+        max_message_chars: longitud máxima de los mensajes de error en eventos y resultados
+            sintéticos (observabilidad acotada); ``>= 1``.
+    """
+
+    max_task_attempts: int
+    max_rebuilds_without_progress: int
+    max_total_rebuilds: int
+    supervision_poll_seconds: float
+    task_timeout_seconds: float | None
+    batch_timeout_seconds: float | None
+    cancel_grace_seconds: float
+    journal_enabled: bool
+    max_message_chars: int
+
+    def __post_init__(self) -> None:
+        _require_at_least_one(self.max_task_attempts, "parallel.recovery.max_task_attempts")
+        _require_at_least_one(
+            self.max_rebuilds_without_progress, "parallel.recovery.max_rebuilds_without_progress"
+        )
+        _require_at_least_one(self.max_total_rebuilds, "parallel.recovery.max_total_rebuilds")
+        _require_at_least_one(self.max_message_chars, "parallel.recovery.max_message_chars")
+        _require_positive(
+            self.supervision_poll_seconds, "parallel.recovery.supervision_poll_seconds"
+        )
+        if self.task_timeout_seconds is not None:
+            _require_positive(self.task_timeout_seconds, "parallel.recovery.task_timeout_seconds")
+        if self.batch_timeout_seconds is not None:
+            _require_positive(self.batch_timeout_seconds, "parallel.recovery.batch_timeout_seconds")
+        if isinstance(self.cancel_grace_seconds, bool) or self.cancel_grace_seconds < 0:
+            raise ConfigError("parallel.recovery.cancel_grace_seconds debe ser >= 0.")
+        if not isinstance(self.journal_enabled, bool):
+            raise ConfigError("parallel.recovery.journal_enabled debe ser booleano.")
+
+
+@dataclass(frozen=True, slots=True)
 class ParallelConfig:
     """Ajustes del ejecutor paralelo.
 
@@ -92,6 +147,7 @@ class ParallelConfig:
         max_tasks_per_child: lotes tras los cuales un worker se recicla (``None`` = sin reciclado).
         shared_data_mode: cómo se entregan los datos de mercado a los workers.
         cache: caché de resultados por worker (desactivada por defecto).
+        recovery: supervisión, reintentos, plazos y diario (Bloque 5.4).
     """
 
     workers: int
@@ -104,6 +160,7 @@ class ParallelConfig:
     max_tasks_per_child: int | None
     shared_data_mode: SharedDataMode
     cache: CacheConfig
+    recovery: RecoveryConfig
 
     def __post_init__(self) -> None:
         _require_at_least_one(self.workers, "parallel.workers")
@@ -124,6 +181,11 @@ class ParallelConfig:
     def max_in_flight_batches(self) -> int:
         """Lotes simultáneamente en vuelo en total."""
         return self.workers * self.max_in_flight_batches_per_worker
+
+
+def _require_positive(value: float, name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not value > 0:
+        raise ConfigError(f"{name} debe ser un número > 0 (recibido {value!r}).")
 
 
 def _require_at_least_one(value: int, name: str) -> None:
