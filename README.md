@@ -38,7 +38,7 @@ se garantiza en la **generación discreta**; la formulación MIQP exacta solo va
 ## Requisitos
 
 - Python ≥ 3.11.
-- Dependencias de runtime: `numpy`, `scipy`, `pandas`, `pyarrow`, `osqp`, `clarabel` (ver `pyproject.toml`). Opcional, grupo `exact-mip`: `pyscipopt` (solo para el modo de validación EXACT_MIP; sin él se diagnostica y no se sustituye por otro algoritmo).
+- Dependencias de runtime: `numpy`, `scipy`, `pandas`, `pyarrow`, `osqp`, `clarabel`, `threadpoolctl` (ver `pyproject.toml`). Opcional, grupo `exact-mip`: `pyscipopt` (solo para el modo de validación EXACT_MIP; sin él se diagnostica y no se sustituye por otro algoritmo).
 - Dependencias de desarrollo (grupo `dev`): `pytest`, `hypothesis`, `mypy`, `ruff`, `scikit-learn` (solo como referencia en tests).
 
 ## Instalación (entorno local, nunca global)
@@ -61,6 +61,9 @@ Linux / macOS:
 
 Versiones exactas con las que se validó el último bloque: `requirements-lock.txt`
 (`.venv/Scripts/python -m pip install -r requirements-lock.txt` para reproducirlas).
+
+> Convención: los comandos de este documento usan la ruta de Windows `.venv/Scripts/python`. En
+> Linux/macOS sustituir por `.venv/bin/python` (o activar el entorno y usar `python`).
 
 ## Ejecutar tests y controles de calidad
 
@@ -243,3 +246,37 @@ Los parámetros numéricos proceden de las secciones `[conic]`, `[sharpe]`, `[cv
 
 Mide etapas reales (construcción de escenarios, formulación, solver, validación) y guarda el resultado con
 metadatos en `benchmarks/results/`. Un proceso, sin paralelismo: no es rendimiento de producción.
+
+## Uso: ejecución por lotes de carteras, secuencial y paralela (Bloque 5.2)
+
+Cada cartera lleva un `WorkloadSpec` (una estrategia o un pipeline de operaciones ya existentes). La
+referencia secuencial y el ejecutor paralelo producen el mismo `TaskResult` (equivalencia T1).
+
+```python
+from portfolio_engine.config import load_parallel_config
+from portfolio_engine.parallel.executor import ParallelExecutor, SequentialExecutor
+from portfolio_engine.parallel.task import MarketSnapshot, PortfolioRequest
+
+snapshot = MarketSnapshot(risk_model, universe, costs, None, (), "BASE")
+requests = [PortfolioRequest(pid, state, spec, workload) for pid, state, spec in carteras]
+reference = SequentialExecutor(config, snapshot).run(requests)
+parallel_config = load_parallel_config("config/default_parallel.toml")
+run = ParallelExecutor(config, snapshot, parallel_config).run(requests)
+```
+
+Los ajustes de ejecución (`workers`, tamaño de lote o AUTO, hilos BLAS, método de arranque) están en
+`config/default_parallel.toml`, separados de la configuración matemática. Los valores del ejemplo **no**
+son una recomendación de producción. No hay memoria compartida definitiva, caché ni diario de recuperación
+(Bloques 5.3 y 5.4). `SPAWN` está probado solo en Windows; `FORKSERVER` **no está validado** (sin pruebas en
+Linux). Un `ParallelExecutor.run` a la vez por proceso (modifica temporalmente `os.environ`). Si un worker
+cae, **todos los lotes en vuelo** quedan como `WORKER_CRASHED` (sin reintento hasta B5.4).
+
+```bash
+python benchmarks/scripts/parallel_scaling.py --workers 1 2 4 --repetitions 3 --seed 7
+```
+
+(con el entorno `.venv` activado; equivale a `.venv/Scripts/python …` en Windows y `.venv/bin/python …` en
+Linux/macOS).
+
+Benchmark local y pequeño con datos sintéticos; verifica la equivalencia T1 en cada ejecución. No es
+rendimiento de producción.
