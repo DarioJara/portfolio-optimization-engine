@@ -43,11 +43,10 @@ jobs:
         shell: bash
         run: |
           set +e
-          python -m pytest -v -rA -p no:cacheprovider             tests/integration/test_recovery_linux.py tests/unit/parallel/test_markers.py             tests/unit/parallel/test_journal.py tests/integration/test_forkserver_linux.py             2>&1 | tee b54-linux.txt
+          python -m pytest -v -rA -p no:cacheprovider tests/integration/test_recovery_linux.py tests/unit/parallel/test_markers.py tests/unit/parallel/test_journal.py tests/integration/test_forkserver_linux.py 2>&1 | tee b54-linux.txt
           status=${PIPESTATUS[0]}
           env_line="$(uname -sr) | $(python --version) | uid=$(id -u) | $(lscpu | grep 'Model name' | sed 's/  */ /g')"
-          results="$(grep -E '^(PASSED|FAILED|ERROR|SKIPPED) ' b54-linux.txt | cut -c1-160 | tr '
-' ';')"
+          results="$(grep -E '^(PASSED|FAILED|ERROR|SKIPPED) ' b54-linux.txt | cut -c1-160 | paste -sd ';')"
           echo "::notice title=b54-linux-env::${env_line}"
           echo "::notice title=b54-linux-summary::$(tail -n 1 b54-linux.txt)"
           echo "::notice title=b54-linux-tests::${results}"
