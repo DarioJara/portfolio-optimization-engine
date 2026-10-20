@@ -17,6 +17,7 @@ packaging==26.3
 pandas==3.0.6
 pathspec==1.1.1
 pluggy==1.6.0
+psutil==7.2.2
 pyarrow==25.0.1
 Pygments==2.21.0
 pyscipopt==6.2.1

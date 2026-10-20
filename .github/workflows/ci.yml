@@ -36,5 +36,16 @@ jobs:
           python -m ruff format --check .
       - name: Linux forkserver smoke test
         run: python -m pytest -q tests/integration/test_forkserver_linux.py
+      - name: Runner CPU (diagnostic)
+        run: echo "::notice title=runner-cpu::$(lscpu | grep 'Model name' | sed 's/  */ /g')"
       - name: Full test suite
-        run: python -m pytest -q
+        # El resultado de pytest decide el job; las anotaciones solo hacen visible qué tests fallan
+        # y en qué CPU (diagnóstico de la fragilidad de B4 dependiente del runner, AUDIT_BLOCK_5_3 H-1).
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -q -rfE 2>&1 | tee pytest-full.txt
+          status=${PIPESTATUS[0]}
+          echo "::notice title=pytest-summary::$(tail -n 1 pytest-full.txt)"
+          grep -E '^(FAILED|ERROR)' pytest-full.txt | cut -c1-300 | while IFS= read -r line; do echo "::warning title=pytest-failed::$line"; done
+          exit $status

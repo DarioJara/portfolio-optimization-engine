@@ -35,6 +35,46 @@ class ProcessStartMethod(StrEnum):
     FORKSERVER = "forkserver"
 
 
+class SharedDataMode(StrEnum):
+    """Cómo llegan los datos de mercado inmutables a los workers (MASTER_SPEC §58; PAR-004).
+
+    * ``BUNDLE_FILE``: fichero de arranque hash-verificado que cada worker deserializa por completo
+      (modo de B5.2; copia privada por worker). Es el modo de reserva (*fallback*).
+    * ``FILE_MMAP``: cabecera de *pickle* con *buffers* fuera de banda; los arrays viven en un único
+      fichero que cada worker proyecta en memoria de solo lectura (``mmap``): las páginas se
+      comparten a través de la caché de páginas del sistema.
+    * ``SHARED_MEMORY``: igual, pero los arrays viven en un segmento de
+      ``multiprocessing.shared_memory`` gestionado por el coordinador.
+    """
+
+    BUNDLE_FILE = "BUNDLE_FILE"
+    FILE_MMAP = "FILE_MMAP"
+    SHARED_MEMORY = "SHARED_MEMORY"
+
+
+@dataclass(frozen=True, slots=True)
+class CacheConfig:
+    """Caché de resultados por worker (MASTER_SPEC §62; CCH-001…005).
+
+    Attributes:
+        enabled: la caché se entrega **desactivada** (``false``); activarla es una decisión
+            explícita. Con ``false`` no se calcula ninguna clave ni se guarda nada.
+        max_entries: número máximo de resultados por worker (``>= 1``).
+        max_bytes: tamaño máximo en bytes serializados por worker (``>= 1``); un único resultado
+            mayor que este límite no se guarda.
+    """
+
+    enabled: bool
+    max_entries: int
+    max_bytes: int
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.enabled, bool):
+            raise ConfigError("parallel.cache.enabled debe ser booleano.")
+        _require_at_least_one(self.max_entries, "parallel.cache.max_entries")
+        _require_at_least_one(self.max_bytes, "parallel.cache.max_bytes")
+
+
 @dataclass(frozen=True, slots=True)
 class ParallelConfig:
     """Ajustes del ejecutor paralelo.
@@ -50,6 +90,8 @@ class ParallelConfig:
         start_method: método de arranque de procesos.
         blas_threads: hilos numéricos (BLAS/OpenMP) por worker; línea base 1 (§60).
         max_tasks_per_child: lotes tras los cuales un worker se recicla (``None`` = sin reciclado).
+        shared_data_mode: cómo se entregan los datos de mercado a los workers.
+        cache: caché de resultados por worker (desactivada por defecto).
     """
 
     workers: int
@@ -60,6 +102,8 @@ class ParallelConfig:
     start_method: ProcessStartMethod
     blas_threads: int
     max_tasks_per_child: int | None
+    shared_data_mode: SharedDataMode
+    cache: CacheConfig
 
     def __post_init__(self) -> None:
         _require_at_least_one(self.workers, "parallel.workers")

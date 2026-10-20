@@ -4,15 +4,16 @@ Cada worker conserva únicamente el :class:`~portfolio_engine.parallel.task.Exec
 inmutable (``MarketSnapshot`` + configuración); todo lo demás se crea y se descarta por tarea
 (aislamiento entre carteras).
 
-En el Bloque 5.2 el snapshot llega al worker por un **fichero de arranque** (``WorkerBundle``) que
-el coordinador escribe una vez en un directorio temporal privado; el *initializer* solo recibe su
-ruta y su SHA-256 (unos cientos de bytes). Motivo medido: con ``spawn`` en Windows el padre
-escribe los argumentos del proceso en un *pipe* de búfer reducido y se bloquea hasta que el hijo
-los lee; el hijo no los lee hasta haber importado el módulo ``__main__``, de modo que un payload
-mayor que el búfer serializa el arranque de los workers (sonda en
-``BLOCK_5_IMPLEMENTATION_PLAN.md`` §8). El fichero se verifica por hash antes de deserializarlo
-(``pickle`` solo entre procesos de confianza de la misma ejecución). El mecanismo definitivo de
-datos compartidos (memoria compartida, ``memmap``, formatos no ejecutables) es del Bloque 5.3.
+El snapshot llega al worker por una referencia diminuta (ruta o nombre de segmento más hashes,
+véase ``parallel.shared_data``): con ``spawn`` en Windows el padre escribe los argumentos del
+proceso en un *pipe* de búfer reducido y se bloquea hasta que el hijo los lee, y el hijo no los
+lee hasta haber importado ``__main__``; un payload mayor que el búfer serializa el arranque de los
+workers (sonda en ``BLOCK_5_IMPLEMENTATION_PLAN.md`` §8). El modo de entrega (fichero de arranque,
+``mmap`` o ``shared_memory``) se elige en ``ParallelConfig.shared_data_mode``.
+
+Cada worker puede tener además una caché de resultados propia y acotada
+(``parallel.operation_cache``),
+desactivada por defecto; su ciclo de vida es el del proceso.
 
 Las funciones de este módulo son las que ``ProcessPoolExecutor`` ejecuta en los hijos, por lo que
 son de nivel de módulo (picklables por referencia) y el estado del worker es una variable de módulo
@@ -21,18 +22,20 @@ privada, inevitable con ese ejecutor.
 
 from __future__ import annotations
 
-import hashlib
 import os
-import pickle
 import signal
-import tempfile
 import time
-from collections.abc import Iterator
-from contextlib import contextmanager
-from dataclasses import dataclass, replace
-from pathlib import Path
+from dataclasses import dataclass, field, replace
 
+from portfolio_engine.cache import CacheMetrics, ResultCache
+from portfolio_engine.config.parallel_config import CacheConfig
 from portfolio_engine.parallel.batching import PortfolioBatch
+from portfolio_engine.parallel.operation_cache import OperationCache
+from portfolio_engine.parallel.shared_data import (
+    Attachment,
+    SnapshotHandle,
+    attach_snapshot,
+)
 from portfolio_engine.parallel.task import (
     ExecutionContext,
     ExecutionStatus,
@@ -56,6 +59,9 @@ class WorkerContext:
     execution: ExecutionContext
     fingerprint: str
     blas_threads: int
+    cache: OperationCache | None = None
+    attachment: Attachment | None = None
+    attach_seconds: float = 0.0
 
 
 @dataclass(frozen=True, eq=False, slots=True)
@@ -66,50 +72,12 @@ class ResultBatch:
     results: tuple[TaskResult, ...]
     worker_pid: int
     elapsed_seconds: float
+    cache: CacheMetrics = field(default_factory=CacheMetrics)
 
 
 _CONTEXT: WorkerContext | None = None
-BUNDLE_FILE_NAME = "worker_bundle.pkl"
-
-
-@dataclass(frozen=True, slots=True)
-class WorkerBundle:
-    """Referencia (ruta + SHA-256) al fichero de arranque con la configuración y el snapshot."""
-
-    path: str
-    sha256: str
-
-
-def write_worker_bundle(directory: Path, context: ExecutionContext) -> WorkerBundle:
-    """Escribe el fichero de arranque de los workers en ``directory`` y devuelve su referencia.
-
-    Contiene el contexto completo, con ``ConfigHash`` y ``snapshot_key`` ya calculados por el
-    coordinador (los workers no los recalculan).
-    """
-    payload = pickle.dumps(context, protocol=pickle.HIGHEST_PROTOCOL)
-    path = directory / BUNDLE_FILE_NAME
-    path.write_bytes(payload)
-    return WorkerBundle(str(path), hashlib.sha256(payload).hexdigest())
-
-
-def load_worker_bundle(bundle: WorkerBundle) -> ExecutionContext:
-    """Lee y deserializa el fichero de arranque tras verificar su SHA-256."""
-    payload = Path(bundle.path).read_bytes()
-    if hashlib.sha256(payload).hexdigest() != bundle.sha256:
-        raise RuntimeError(
-            "El fichero de arranque del worker no coincide con su hash (integridad)."
-        )
-    context = pickle.loads(payload)  # fichero propio, verificado por hash
-    if not isinstance(context, ExecutionContext):
-        raise RuntimeError("El fichero de arranque no contiene un ExecutionContext.")
-    return context
-
-
-@contextmanager
-def worker_bundle(context: ExecutionContext) -> Iterator[WorkerBundle]:
-    """Directorio temporal privado con el fichero de arranque; se elimina siempre al salir."""
-    with tempfile.TemporaryDirectory(prefix="portfolio_engine_run_") as directory:
-        yield write_worker_bundle(Path(directory), context)
+#: Profundidad máxima al seguir la cadena de propietarios de un array.
+MAX_BACKING_DEPTH = 8
 
 
 def snapshot_fingerprint(snapshot: MarketSnapshot) -> str:
@@ -118,8 +86,13 @@ def snapshot_fingerprint(snapshot: MarketSnapshot) -> str:
     return sha256_hex(hash_float_array(risk.mu) + hash_float_array(risk.sigma))
 
 
-def initialize_worker(bundle: WorkerBundle, blas_threads: int) -> None:
-    """*Initializer* del pool: carga el snapshot, fija hilos numéricos, ignora ``SIGINT``.
+def initialize_worker(
+    handle: SnapshotHandle, blas_threads: int, cache: CacheConfig | None = None
+) -> None:
+    """*Initializer* del pool: adjunta el snapshot, fija hilos numéricos, ignora ``SIGINT``.
+
+    ``handle`` es la referencia publicada por el coordinador (verificada por hash al adjuntar);
+    ``cache`` activa la caché de resultados del worker (``None`` o ``enabled=false``: sin caché).
 
     ``SIGINT`` lo gestiona el proceso coordinador; un Ctrl+C no debe dejar workers a medias con
     trazas de ``KeyboardInterrupt``.
@@ -127,11 +100,19 @@ def initialize_worker(bundle: WorkerBundle, blas_threads: int) -> None:
     global _CONTEXT  # estado de proceso del worker (inevitable con ProcessPoolExecutor)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     limit_blas_threads(blas_threads)
-    execution = load_worker_bundle(bundle)
+    attach_started = time.perf_counter()
+    execution, attachment = attach_snapshot(handle)
+    attach_seconds = time.perf_counter() - attach_started
+    operation_cache = None
+    if cache is not None and cache.enabled:
+        operation_cache = OperationCache(execution, ResultCache(cache.max_entries, cache.max_bytes))
     _CONTEXT = WorkerContext(
         execution=execution,
         fingerprint=snapshot_fingerprint(execution.snapshot),
         blas_threads=blas_threads,
+        cache=operation_cache,
+        attachment=attachment,
+        attach_seconds=attach_seconds,
     )
 
 
@@ -152,10 +133,11 @@ def run_batch(batch: PortfolioBatch) -> ResultBatch:
     started = time.perf_counter()
     if snapshot_fingerprint(context.execution.snapshot) != context.fingerprint:
         raise RuntimeError("El snapshot compartido cambió antes de ejecutar el lote.")
+    before = CacheMetrics() if context.cache is None else context.cache.metrics
     pid = os.getpid()
     results = tuple(
         replace(
-            run_portfolio(item.request, context.execution),
+            run_portfolio(item.request, context.execution, cache=context.cache),
             sequence_id=item.sequence_id,
             worker_pid=pid,
         )
@@ -163,7 +145,54 @@ def run_batch(batch: PortfolioBatch) -> ResultBatch:
     )
     if snapshot_fingerprint(context.execution.snapshot) != context.fingerprint:
         raise RuntimeError("El snapshot compartido fue alterado durante el lote (contaminación).")
-    return ResultBatch(batch.batch_id, results, pid, time.perf_counter() - started)
+    cache_delta = CacheMetrics() if context.cache is None else context.cache.metrics.since(before)
+    return ResultBatch(batch.batch_id, results, pid, time.perf_counter() - started, cache_delta)
+
+
+@dataclass(frozen=True, slots=True)
+class MemoryUsage:
+    """Memoria de un proceso en bytes (``psutil``; ``uss``/``pss`` según la plataforma)."""
+
+    rss: int
+    uss: int | None
+    pss: int | None
+
+
+def array_backing(array: object) -> str:
+    """Tipo del objeto que posee la memoria de un array (``mmap``, ``bytes``, ``ndarray``…).
+
+    Distingue las vistas sin copia sobre una proyección (``mmap``) o un segmento compartido de una
+    copia privada deserializada en banda (``bytes``). Sigue ``.base`` y ``memoryview.obj``.
+    """
+    current: object = array
+    for _ in range(MAX_BACKING_DEPTH):
+        if isinstance(current, memoryview):
+            current = current.obj
+        else:
+            base = getattr(current, "base", None)
+            if base is None:
+                break
+            current = base
+    return type(current).__name__
+
+
+def process_memory(pid: int | None = None) -> MemoryUsage | None:
+    """Memoria del proceso ``pid`` (el actual por defecto); ``None`` si ``psutil`` no está
+    instalado.
+
+    ``psutil`` es una dependencia opcional del grupo ``bench``: solo se usa para medir.
+    """
+    try:
+        import psutil
+    except ImportError:
+        return None
+    process = psutil.Process(pid)
+    full = process.memory_full_info()
+    return MemoryUsage(
+        rss=int(full.rss),
+        uss=int(full.uss) if hasattr(full, "uss") else None,
+        pss=int(full.pss) if hasattr(full, "pss") else None,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -174,6 +203,9 @@ class WorkerDiagnostics:
     blas_threads_configured: int
     thread_pools: tuple[ThreadPoolState, ...]
     environment: tuple[tuple[str, str], ...]
+    memory: MemoryUsage | None = None
+    sigma_backing: str = ""
+    attach_seconds: float = 0.0
 
 
 def worker_diagnostics(_: int = 0) -> WorkerDiagnostics:
@@ -185,6 +217,9 @@ def worker_diagnostics(_: int = 0) -> WorkerDiagnostics:
         blas_threads_configured=context.blas_threads,
         thread_pools=blas_thread_report(),
         environment=tuple((name, os.environ.get(name, "")) for name in names),
+        memory=process_memory(),
+        sigma_backing=array_backing(context.execution.snapshot.risk_model.sigma),
+        attach_seconds=context.attach_seconds,
     )
 
 

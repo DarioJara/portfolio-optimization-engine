@@ -9,14 +9,19 @@ from __future__ import annotations
 
 import dataclasses
 import math
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from enum import Enum
 from typing import Any
 
 import numpy as np
 
 from portfolio_engine.config import EngineConfig
-from portfolio_engine.config.parallel_config import ParallelConfig, load_parallel_config
+from portfolio_engine.config.parallel_config import (
+    CacheConfig,
+    ParallelConfig,
+    load_parallel_config,
+)
 from portfolio_engine.frontiers import FrontierProblem
 from portfolio_engine.models.cvar import build_return_scenario_set
 from portfolio_engine.models.enums import (
@@ -47,7 +52,7 @@ T1_ABS_TOLERANCE = 1e-6
 TIMING_SUFFIXES = ("_time", "_seconds")
 TIMING_NAMES = frozenset({"elapsed", "started_at", "finished_at"})
 #: Campos de diagnóstico del proceso que ejecutó la tarea (no del cálculo).
-PROCESS_NAMES = frozenset({"worker_pid", "traceback"})
+PROCESS_NAMES = frozenset({"worker_pid", "traceback", "cache_event"})
 
 
 def parallel_config(**changes: Any) -> ParallelConfig:
@@ -247,6 +252,8 @@ _LAMBDA = 3.0
 _MIP_LAMBDA = 4.0
 _VOLATILITY_LIMIT = 0.2
 _SCALE_MAX = 1.2
+#: Semiancho BOX de μ por activo del universo p8 (AssetID ordenados; datos de prueba).
+BOX_HALF_WIDTH = tuple((f"A{i:03d}", 0.01 + 0.002 * i) for i in range(8))
 
 
 def class_workloads() -> dict[str, tuple[str, WorkloadSpec]]:
@@ -335,6 +342,19 @@ def class_workloads() -> dict[str, tuple[str, WorkloadSpec]]:
                 )
             ),
         ),
+        "W4-ROBUST-BOX": (
+            "p8",
+            WorkloadSpec(
+                (
+                    _op(
+                        k.STRATEGY_ROBUST,
+                        _GROSS,
+                        risk_aversion=_LAMBDA,
+                        mu_half_width=BOX_HALF_WIDTH,
+                    ),
+                )
+            ),
+        ),
         "W4-MAX-SHARPE": ("p8", WorkloadSpec((_op(k.STRATEGY_MAX_SHARPE, _NET),))),
         "W4-VOL-TARGET": (
             "p8",
@@ -406,3 +426,62 @@ def reference_requests(
             )
         )
     return snapshots, by_universe
+
+
+# ----------------------------------------------------------------- caché y llamadas al solver
+
+
+def cache_config(**changes: Any) -> CacheConfig:
+    """``CacheConfig`` activada (valores de prueba) con cambios opcionales."""
+    base = CacheConfig(enabled=True, max_entries=16, max_bytes=8 * 1024 * 1024)
+    return dataclasses.replace(base, **changes) if changes else base
+
+
+class SolverCalls:
+    """Contador de llamadas reales a un solver (``solve`` de cada backend y ``linprog``)."""
+
+    def __init__(self) -> None:
+        self.count = 0
+
+
+@contextmanager
+def count_solver_calls() -> Iterator[SolverCalls]:
+    """Cuenta cada llamada a ``solve()`` de los backends concretos y al LP de HiGHS."""
+    from portfolio_engine.optimizers import highs_backend
+    from portfolio_engine.optimizers.base import OptimizationBackend
+
+    counter = SolverCalls()
+    patched: list[tuple[type, Any]] = []
+
+    def concrete(cls: type) -> Iterator[type]:
+        for sub in cls.__subclasses__():
+            yield sub
+            yield from concrete(sub)
+
+    for backend in concrete(OptimizationBackend):
+        original = backend.__dict__.get("solve")
+        if original is None or getattr(original, "__isabstractmethod__", False):
+            continue
+
+        def make(wrapped: Any) -> Any:
+            def counted(self: Any, *args: Any, **kwargs: Any) -> Any:
+                counter.count += 1
+                return wrapped(self, *args, **kwargs)
+
+            return counted
+
+        patched.append((backend, original))
+        backend.solve = make(original)  # type: ignore[method-assign]
+    original_linprog = highs_backend.linprog
+
+    def counted_linprog(*args: Any, **kwargs: Any) -> Any:
+        counter.count += 1
+        return original_linprog(*args, **kwargs)
+
+    highs_backend.linprog = counted_linprog
+    try:
+        yield counter
+    finally:
+        highs_backend.linprog = original_linprog
+        for backend, original in patched:
+            backend.solve = original  # type: ignore[method-assign]
