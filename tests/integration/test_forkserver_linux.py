@@ -1,4 +1,5 @@
 """Smoke test real de forkserver en Linux para PAR-013 (datos sintéticos)."""
+
 from __future__ import annotations
 
 import dataclasses
@@ -25,11 +26,13 @@ def test_forkserver_results_match_sequential_and_use_workers() -> None:
     problem = random_problem(8, [0, 1, 2], 3, config)
     snapshot = snapshot_of(problem)
     workload = WorkloadSpec(
-        (OperationSpec(
-            OperationKind.FRONTIER_FIXED_COMPOSITION,
-            CostTreatment.NET,
-            method=FrontierMethod.RISK_AVERSION_GRID,
-        ),)
+        (
+            OperationSpec(
+                OperationKind.FRONTIER_FIXED_COMPOSITION,
+                CostTreatment.NET,
+                method=FrontierMethod.RISK_AVERSION_GRID,
+            ),
+        )
     )
     requests = requests_for(problem, workload, 4, seed=73)
     expected = SequentialExecutor(config, snapshot).run(requests)
