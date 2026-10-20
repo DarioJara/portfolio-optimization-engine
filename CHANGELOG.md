@@ -1463,6 +1463,7 @@ temporal o de `ci.yml`; «sonda» = 12 repeticiones de los dos tests de B4 sobre
 | ídem | `539d4b7` / rama | sonda | EPYC 7763 / EPYC 7763 | **0/12** / **0/12** |
 | 39429009105 | `bcada73` | `ci.yml` (PR #7) | no registrada | **failure** en *Full test suite* (sin anotaciones de detalle; su runner no se registra) |
 | 39430640797 | `d121a75` | `ci.yml` (PR #7) | no registrada | success |
+| 39432929217 | `1cae068` (solo documentación) | `ci.yml` (PR #7) | no registrada | **failure** en *Full test suite*; `ci.yml` no publicaba detalle, por lo que **no se puede confirmar qué tests fallaron** |
 
 Lectura, sin atribuir una causa:
 
@@ -1475,6 +1476,9 @@ Lectura, sin atribuir una causa:
   demostrada: no se ha determinado el mecanismo (el mensaje muestra dos utilidades del peor caso que difieren en ≈ 5·10⁻¹⁵ y, en el
   otro test, «Positive directional derivative» del oráculo SLSQP del propio test).
 - Un intento local del auditor con núcleos OpenBLAS forzados (Haswell, Sandybridge, Nehalem, Katmai) no reprodujo el fallo.
+- `ci.yml` (el workflow permanente) se amplió solo con diagnóstico: `-rfE`, anotaciones con los tests fallidos y la CPU del runner. Su
+  resultado sigue decidiendo el job; no se ha enmascarado ningún fallo. Los runs posteriores a este cambio no se listan aquí: constan en la
+  pestaña *Actions* del PR #7.
 - Consecuencia: la CI permanente (`ci.yml`) puede salir en rojo en función del runner sorteado, también para B5.4. **No se han relajado
   tolerancias ni desactivado tests.** Queda abierta la remediación B4 independiente propuesta por la auditoría (H-1).
 
