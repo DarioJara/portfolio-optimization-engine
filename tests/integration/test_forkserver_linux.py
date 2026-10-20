@@ -7,12 +7,12 @@ import sys
 import pytest
 
 from portfolio_engine.config.parallel_config import ProcessStartMethod
-from portfolio_engine.parallel.executor import ParallelExecutor, SequentialExecutor
-from tests.fixtures.parallel import compare_results, parallel_config, requests_for, snapshot_of
-from tests.fixtures.candidates import random_problem
-from tests.fixtures.problems import base_config
-from portfolio_engine.parallel.workload import OperationKind, OperationSpec, WorkloadSpec
 from portfolio_engine.models.enums import CostTreatment, FrontierMethod
+from portfolio_engine.parallel.executor import ParallelExecutor, SequentialExecutor
+from portfolio_engine.parallel.workload import OperationKind, OperationSpec, WorkloadSpec
+from tests.fixtures.candidates import random_problem
+from tests.fixtures.parallel import compare_results, parallel_config, requests_for, snapshot_of
+from tests.fixtures.problems import base_config
 
 pytestmark = [
     pytest.mark.integration,
