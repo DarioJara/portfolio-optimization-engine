@@ -30,6 +30,12 @@ class ConicSolverConfig:
         max_iterations: iteraciones máximas del punto interior.
         time_limit_seconds: límite de tiempo por resolución (``None`` = sin límite).
         equilibrate: activa el equilibrado de las matrices de Clarabel.
+        retry_equilibrate: equilibrado del reintento en frío (``COLD_RETRY``) tras un estancamiento
+            numérico (``AlmostSolved``, ``NumericalError``, ``InsufficientProgress``): resuelve el
+            mismo problema, con las mismas tolerancias, con otra numérica, porque repetir un método
+            determinista reproduce el mismo estancamiento (``REMEDIATION_H1_FB551.md``). Tras
+            ``MaxIterations`` el reintento conserva ``equilibrate``. Si es igual a ``equilibrate``
+            el reintento es idéntico al primer intento.
         psd_eigenvalue_relative_tolerance: los autovalores de ``Σ`` por debajo de esta fracción de
             ``λ_max`` se descartan al factorizar (rango numérico).
         psd_negative_tolerance: un autovalor por debajo de ``−tol · max|λ|`` significa que ``Σ``
@@ -46,6 +52,7 @@ class ConicSolverConfig:
     max_iterations: int
     time_limit_seconds: float | None
     equilibrate: bool
+    retry_equilibrate: bool
     psd_eigenvalue_relative_tolerance: float
     psd_negative_tolerance: float
     factorization_tolerance: float
@@ -58,6 +65,8 @@ class ConicSolverConfig:
             require_positive(self.time_limit_seconds, "conic.time_limit_seconds")
         if not isinstance(self.equilibrate, bool):
             raise ConfigError("conic.equilibrate debe ser booleano.")
+        if not isinstance(self.retry_equilibrate, bool):
+            raise ConfigError("conic.retry_equilibrate debe ser booleano.")
         require_non_negative(
             self.psd_eigenvalue_relative_tolerance, "conic.psd_eigenvalue_relative_tolerance"
         )

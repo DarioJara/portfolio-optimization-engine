@@ -193,6 +193,9 @@ tol_infeas_rel = 1e-9
 max_iterations = 200
 # time_limit_seconds: opcional.
 equilibrate = true
+# Equilibrado del reintento en frio (COLD_RETRY): distinto del primario para que el reintento no repita el
+# mismo estancamiento numerico (H-1, INVESTIGATION_H1_B4.md). Las tolerancias del reintento son las mismas.
+retry_equilibrate = false
 # Factorización PSD de Sigma = L L' por autovalores: se descartan autovalores < 1e-12 * lambda_max.
 psd_eigenvalue_relative_tolerance = 1e-12
 # Un autovalor < -1e-10 * max|lambda| significa que Sigma no es PSD (mismo criterio que [risk]).
