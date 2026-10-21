@@ -163,6 +163,29 @@ def _unit_from_mix(
     return unit, n, source
 
 
+def _steady_state(
+    entries: list[dict[str, Any]], method: str, workers: int
+) -> tuple[list[float], list[float], list[int], list[int]]:
+    """Eficiencia en régimen estacionario (arranque descontado), arranques y memoria medidos."""
+    efficiencies: list[float] = []
+    startups: list[float] = []
+    worker_rss: list[int] = []
+    coordinator_rss: list[int] = []
+    for entry in entries:
+        seq = next(c for c in entry["cells"] if c["mode"] == "sequential")
+        for cell in entry["cells"]:
+            if cell["mode"] != method or cell.get("workers") != workers:
+                continue
+            startup = cell["pool_startup_seconds"]["median"]
+            steady = cell["wall"]["min"] - startup
+            if steady > 0:
+                efficiencies.append(seq["wall"]["min"] / (workers * steady))
+            startups.append(startup)
+            worker_rss.append(cell["memory"]["worker_peak_rss_bytes_max"])
+            coordinator_rss.append(cell["memory"]["coordinator_peak_rss_bytes"])
+    return efficiencies, startups, worker_rss, coordinator_rss
+
+
 def _estimate(args: argparse.Namespace) -> None:
     entries = [
         e
@@ -178,19 +201,9 @@ def _estimate(args: argparse.Namespace) -> None:
         unit, n, unit_source = _unit_from_classes(args)
     projections: list[dict[str, Any]] = []
     for workers in args.workers:
-        efficiencies, startups, worker_rss, coordinator_rss = [], [], [], []
-        for entry in entries:
-            seq = next(c for c in entry["cells"] if c["mode"] == "sequential")
-            for cell in entry["cells"]:
-                if cell["mode"] != args.method or cell.get("workers") != workers:
-                    continue
-                startup = cell["pool_startup_seconds"]["median"]
-                steady = cell["wall"]["min"] - startup
-                if steady > 0:
-                    efficiencies.append(seq["wall"]["min"] / (workers * steady))
-                startups.append(startup)
-                worker_rss.append(cell["memory"]["worker_peak_rss_bytes_max"])
-                coordinator_rss.append(cell["memory"]["coordinator_peak_rss_bytes"])
+        efficiencies, startups, worker_rss, coordinator_rss = _steady_state(
+            entries, args.method, workers
+        )
         if not efficiencies:
             raise SystemExit(
                 f"No hay mediciones de {args.method} con {workers} workers: no se extrapola el "
