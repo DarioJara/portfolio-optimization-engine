@@ -1,0 +1,113 @@
+{
+  "metadata": {
+    "benchmark": "perf_reference_baseline",
+    "evidence_for": [
+      "BEN-005",
+      "TST-005"
+    ],
+    "execution_timestamp_utc": "20261020T204048Z",
+    "git": {
+      "commit": "3d0463b94035859e2a668ff900fcf6285f571cb5",
+      "branch": "block5-benchmarks-final-audit",
+      "dirty": false,
+      "modified_tracked_files": [],
+      "untracked_in_code": [],
+      "untracked_outside_code": [
+        "AUDIT_BLOCK_5_4_CLOSURE.md"
+      ]
+    },
+    "python": "3.13.6",
+    "versions": {
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "osqp": "1.1.3",
+      "clarabel": "0.11.1",
+      "pyscipopt": "6.2.1",
+      "threadpoolctl": "3.7.0",
+      "psutil": "7.2.2"
+    },
+    "host": {
+      "os": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "cpu_model": "13th Gen Intel(R) Core(TM) i7-13620H",
+      "cpu_logical": 16,
+      "cpu_physical": 10,
+      "smt_enabled": true,
+      "cpu_governor": null,
+      "ram_total_bytes": 16890322944,
+      "ram_available_bytes_at_start": 746106880,
+      "swap_used_bytes_at_start": 6939000832,
+      "system_cpu_percent_before": 16.1,
+      "load_note": "medido con psutil; no se consulta ning\u00fan servidor de base de datos"
+    },
+    "host_fingerprint": "00c905c7d527f3ca",
+    "command": "benchmarks/scripts/baseline.py --repetitions 7",
+    "env_threads": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null
+    },
+    "repetitions": 7,
+    "random_seed": 7,
+    "cells": [
+      [
+        "W0-GROSS-RISK",
+        6
+      ],
+      [
+        "W0-NET-TARGET",
+        6
+      ],
+      [
+        "W1-GLOBAL-NET",
+        2
+      ],
+      [
+        "W3-MIN-CVAR",
+        6
+      ],
+      [
+        "W4-ROBUST",
+        6
+      ],
+      [
+        "W4-MAX-SHARPE",
+        6
+      ],
+      [
+        "W4-VOL-TARGET",
+        6
+      ]
+    ]
+  },
+  "cells": {
+    "W0-GROSS-RISK|6|sequential": {
+      "solver_calls": 132,
+      "frontier_iterations": 8156
+    },
+    "W0-NET-TARGET|6|sequential": {
+      "solver_calls": 132,
+      "frontier_iterations": 20499
+    },
+    "W1-GLOBAL-NET|2|sequential": {
+      "solver_calls": 484,
+      "frontier_iterations": 46934
+    },
+    "W3-MIN-CVAR|6|sequential": {
+      "solver_calls": 12,
+      "frontier_iterations": 0
+    },
+    "W4-ROBUST|6|sequential": {
+      "solver_calls": 6,
+      "frontier_iterations": 0
+    },
+    "W4-MAX-SHARPE|6|sequential": {
+      "solver_calls": 18,
+      "frontier_iterations": 0
+    },
+    "W4-VOL-TARGET|6|sequential": {
+      "solver_calls": 12,
+      "frontier_iterations": 0
+    }
+  }
+}

@@ -1,0 +1,246 @@
+{
+  "metadata": {
+    "benchmark": "scaling",
+    "evidence_for": [
+      "BEN-001",
+      "BEN-002",
+      "BEN-004",
+      "BEN-006",
+      "BEN-007",
+      "GOV-012",
+      "PAR-008"
+    ],
+    "execution_timestamp_utc": "20261020T221407Z",
+    "git": {
+      "commit": "3d0463b94035859e2a668ff900fcf6285f571cb5",
+      "branch": "block5-benchmarks-final-audit",
+      "dirty": false,
+      "modified_tracked_files": [],
+      "untracked_in_code": [],
+      "untracked_outside_code": [
+        "AUDIT_BLOCK_5_4_CLOSURE.md",
+        "INVESTIGATION_H1_B4.md",
+        "benchmarks/results/baselines/",
+        "benchmarks/results/h1_numerical_probe_20261020T204243Z.json",
+        "benchmarks/results/scaling_ENG-MIX-BASE_10-100portfolios_20261020T204253Z.json",
+        "benchmarks/results/scaling_ENG-MIX-HEAVY_100portfolios_20261020T220055Z.json",
+        "benchmarks/results/scaling_ENG-MIX-LIGHT_100portfolios_20261020T215723Z.json",
+        "benchmarks/results/scaling_classes_10portfolios_20261020T210640Z.json"
+      ]
+    },
+    "python": "3.13.6",
+    "versions": {
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "osqp": "1.1.3",
+      "clarabel": "0.11.1",
+      "pyscipopt": "6.2.1",
+      "threadpoolctl": "3.7.0",
+      "psutil": "7.2.2"
+    },
+    "host": {
+      "os": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "cpu_model": "13th Gen Intel(R) Core(TM) i7-13620H",
+      "cpu_logical": 16,
+      "cpu_physical": 10,
+      "smt_enabled": true,
+      "cpu_governor": null,
+      "ram_total_bytes": 16890322944,
+      "ram_available_bytes_at_start": 811040768,
+      "swap_used_bytes_at_start": 6867714048,
+      "system_cpu_percent_before": 27.1,
+      "load_note": "medido con psutil; no se consulta ning\u00fan servidor de base de datos"
+    },
+    "host_fingerprint": "00c905c7d527f3ca",
+    "command": "benchmarks/scripts/scaling.py --scales 100 --mix ENG-MIX-CONIC --workers 4 --methods sequential spawn --repetitions 3 --parallel-repetitions 3 --startup-repetitions 1 --count-solver-calls",
+    "env_threads": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null
+    },
+    "scaling_config": "config\\default_benchmark.toml",
+    "scaling_config_sha256": "64c7220f6d517c4e0f3cf2fe51f3506e7e89f9ca970c5565c6c13d5bb303e97c",
+    "random_seed": 7,
+    "engine_config_hash": "5d3cdc5e0e0c32c70fd6fac2ace95862172b2c5af9e346dc3b80a03973e33630",
+    "mixes_are_engineering_assumptions": true,
+    "start_methods_requested": [
+      "sequential",
+      "spawn"
+    ],
+    "start_methods_available": [
+      "spawn"
+    ],
+    "blas_threads_per_worker": 1,
+    "shared_data_mode": "BUNDLE_FILE",
+    "batch_sizes": [
+      "AUTO"
+    ],
+    "authorized_by": null
+  },
+  "note": "Medici\u00f3n local de una sola m\u00e1quina con datos sint\u00e9ticos; no es rendimiento de producci\u00f3n ni se extrapola. Tiempos bimodales: se informan m\u00ednimo y mediana. Una celda con diferencias T1 o violaciones de restricciones NO es una medici\u00f3n v\u00e1lida.",
+  "results": [
+    {
+      "mix": "ENG-MIX-CONIC",
+      "mix_shares": {
+        "W0-GROSS-RISK": 0.1,
+        "W0-NET-TARGET": 0.1,
+        "W1-GLOBAL-NET": 0.1,
+        "W2-WORST-CASE": 0.08,
+        "W2-STRESS": 0.07,
+        "W3-MIN-CVAR": 0.25,
+        "W4-ROBUST": 0.1,
+        "W4-MAX-SHARPE": 0.1,
+        "W4-VOL-TARGET": 0.09,
+        "W5-EXACT-MIP": 0.01
+      },
+      "portfolios": 100,
+      "class_counts": {
+        "W0-GROSS-RISK": 10,
+        "W0-NET-TARGET": 10,
+        "W1-GLOBAL-NET": 10,
+        "W2-WORST-CASE": 8,
+        "W2-STRESS": 7,
+        "W3-MIN-CVAR": 25,
+        "W4-ROBUST": 10,
+        "W4-MAX-SHARPE": 10,
+        "W4-VOL-TARGET": 9,
+        "W5-EXACT-MIP": 1
+      },
+      "repetitions": 3,
+      "parallel_repetitions": 3,
+      "work_counters": {
+        "frontier_solver_iterations": 348212,
+        "solver_calls": 3237
+      },
+      "snapshot_key": "86383d39d4aac4968a77fc1fe9851f9087b782e1a63f04a0c921e2c7574dc790",
+      "cells": [
+        {
+          "mode": "sequential",
+          "workers": 1,
+          "wall_seconds_samples": [
+            16.28943210002035,
+            16.367320799967274,
+            17.131090600043535
+          ],
+          "wall": {
+            "min": 16.28943210002035,
+            "median": 16.367320799967274,
+            "mean": 16.59594783334372,
+            "max": 17.131090600043535
+          },
+          "throughput_portfolios_per_second_min_wall": 6.1389494358047685,
+          "task_latency_seconds": {
+            "min": 0.009748000069521368,
+            "median": 0.025969349953811616,
+            "mean": 0.1624569249956403,
+            "max": 1.5364719999488443,
+            "p50": 0.025969349953811616,
+            "p95": 1.2171556950488593,
+            "p99": 1.2467715670494377
+          },
+          "memory": {
+            "coordinator_peak_rss_bytes": 229785600,
+            "worker_processes_observed": 0,
+            "worker_peak_rss_bytes_max": 0,
+            "worker_peak_rss_bytes_mean": 0,
+            "worker_peak_uss_bytes_max": 0,
+            "total_peak_rss_bytes": 229785600,
+            "samples": 262
+          },
+          "t1_differences_between_repetitions": 0,
+          "valid_measurement": true,
+          "execution_statuses": {
+            "COMPLETED": 100
+          },
+          "warmup_runs_discarded": 1
+        },
+        {
+          "mode": "spawn",
+          "workers": 4,
+          "batch_size": "AUTO",
+          "blas_threads": 1,
+          "shared_data_mode": "BUNDLE_FILE",
+          "effective_batch_size": 7,
+          "batches": 15,
+          "pool_rebuilds": 0,
+          "wall_seconds_samples": [
+            17.892940400051884,
+            18.49635859997943,
+            18.777995799900964
+          ],
+          "wall": {
+            "min": 17.892940400051884,
+            "median": 18.49635859997943,
+            "mean": 18.389098266644094,
+            "max": 18.777995799900964
+          },
+          "throughput_portfolios_per_second_min_wall": 5.5887963500795,
+          "task_latency_seconds": {
+            "min": 0.010931600001640618,
+            "median": 0.03434415004448965,
+            "mean": 0.19436117700999603,
+            "max": 1.8280313999857754,
+            "p50": 0.03434415004448965,
+            "p95": 1.524007919972064,
+            "p99": 1.6316941050149045
+          },
+          "sum_task_compute_seconds": 19.436117700999603,
+          "compute_occupancy": 0.27156125916765533,
+          "max_worker_busy_seconds": 9.570669900160283,
+          "overhead_estimate_seconds": 8.322270499891602,
+          "distinct_worker_pids": 4,
+          "pool_startup_seconds_samples": [
+            8.337148200022057
+          ],
+          "pool_startup_seconds": {
+            "min": 8.337148200022057,
+            "median": 8.337148200022057,
+            "mean": 8.337148200022057,
+            "max": 8.337148200022057
+          },
+          "ipc": {
+            "request_pickle_bytes": 804,
+            "result_pickle_bytes": 11387,
+            "result_dumps_loads_roundtrip_seconds": 0.003362519998336211
+          },
+          "memory": {
+            "coordinator_peak_rss_bytes": 225341440,
+            "worker_processes_observed": 4,
+            "worker_peak_rss_bytes_max": 183742464,
+            "worker_peak_rss_bytes_mean": 175473664,
+            "worker_peak_uss_bytes_max": 126853120,
+            "total_peak_rss_bytes": 923942912,
+            "samples": 89
+          },
+          "t1_differences_vs_sequential": 0,
+          "t0_inexact_floats_vs_sequential": 0,
+          "t1_max_abs_difference": 0.0,
+          "exactly_once_and_balanced": true,
+          "constraint_audit": {
+            "solutions_checked": 3107,
+            "budget_violations": 0,
+            "bound_violations": 0,
+            "flag_inconsistencies": 0,
+            "max_budget_error": 6.917133532624575e-12,
+            "max_bound_excess": 1.6246847200918069e-09,
+            "solver_status_histogram": {
+              "OPTIMAL": 54,
+              "point:OPTIMAL": 2820
+            }
+          },
+          "valid_measurement": true,
+          "execution_statuses": {
+            "COMPLETED": 100
+          },
+          "warmup_runs_discarded": 1,
+          "speedup_min": 0.9103831866546157,
+          "speedup_median": 0.8848942191240537,
+          "efficiency_min": 0.22759579666365393,
+          "efficiency_median": 0.22122355478101344,
+          "karp_flatt_serial_fraction_min": 1.1312514183171583
+        }
+      ]
+    }
+  ]
+}

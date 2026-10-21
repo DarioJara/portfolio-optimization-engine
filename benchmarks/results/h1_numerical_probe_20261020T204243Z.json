@@ -1,0 +1,424 @@
+{
+  "metadata": {
+    "benchmark": "h1_numerical_probe",
+    "evidence_for": [
+      "H-1 (AUDIT_BLOCK_5_3)"
+    ],
+    "execution_timestamp_utc": "20261020T204243Z",
+    "git": {
+      "commit": "3d0463b94035859e2a668ff900fcf6285f571cb5",
+      "branch": "block5-benchmarks-final-audit",
+      "dirty": false,
+      "modified_tracked_files": [],
+      "untracked_in_code": [],
+      "untracked_outside_code": [
+        "AUDIT_BLOCK_5_4_CLOSURE.md",
+        "benchmarks/results/baselines/"
+      ]
+    },
+    "python": "3.13.6",
+    "versions": {
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "osqp": "1.1.3",
+      "clarabel": "0.11.1",
+      "pyscipopt": "6.2.1",
+      "threadpoolctl": "3.7.0",
+      "psutil": "7.2.2"
+    },
+    "host": {
+      "os": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "cpu_model": "13th Gen Intel(R) Core(TM) i7-13620H",
+      "cpu_logical": 16,
+      "cpu_physical": 10,
+      "smt_enabled": true,
+      "cpu_governor": null,
+      "ram_total_bytes": 16890322944,
+      "ram_available_bytes_at_start": 440434688,
+      "swap_used_bytes_at_start": 6696128512,
+      "system_cpu_percent_before": 15.3,
+      "load_note": "medido con psutil; no se consulta ning\u00fan servidor de base de datos"
+    },
+    "host_fingerprint": "00c905c7d527f3ca",
+    "command": "benchmarks/scripts/h1_numerical_probe.py --repetitions 100",
+    "env_threads": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null
+    },
+    "configured_conic_tolerance": 1e-09,
+    "accept_inaccurate_solutions": false,
+    "ambiguous_status_policy": "COLD_RETRY",
+    "random_seed": 0,
+    "repetitions": 100,
+    "engine_changes": "NINGUNA: solo se perturban los datos en el experimento y se mide"
+  },
+  "part_a_engine": {
+    "conic_tol_1e-09": [
+      {
+        "relative_perturbation": 0.0,
+        "repetitions": 100,
+        "valid_solutions": 100,
+        "valid_fraction": 1.0,
+        "states": {
+          "OPTIMAL/SOLVER": 100
+        },
+        "clarabel_iterations": [
+          10
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 1.0907941216942163e-14
+      },
+      {
+        "relative_perturbation": 1e-16,
+        "repetitions": 100,
+        "valid_solutions": 47,
+        "valid_fraction": 0.47,
+        "states": {
+          "OPTIMAL/SOLVER": 47,
+          "OPTIMAL_INACCURATE/CROSS_CHECK": 53
+        },
+        "clarabel_iterations": [
+          9,
+          10,
+          20,
+          22
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 1.1903533714274772e-12
+      },
+      {
+        "relative_perturbation": 1e-15,
+        "repetitions": 100,
+        "valid_solutions": 35,
+        "valid_fraction": 0.35,
+        "states": {
+          "OPTIMAL/SOLVER": 35,
+          "OPTIMAL_INACCURATE/CROSS_CHECK": 65
+        },
+        "clarabel_iterations": [
+          9,
+          10,
+          20,
+          22
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 1.421640583032513e-12
+      },
+      {
+        "relative_perturbation": 1e-14,
+        "repetitions": 100,
+        "valid_solutions": 35,
+        "valid_fraction": 0.35,
+        "states": {
+          "OPTIMAL/SOLVER": 35,
+          "OPTIMAL_INACCURATE/CROSS_CHECK": 65
+        },
+        "clarabel_iterations": [
+          9,
+          10,
+          20,
+          22
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 1.419087070075875e-12
+      },
+      {
+        "relative_perturbation": 1e-12,
+        "repetitions": 100,
+        "valid_solutions": 37,
+        "valid_fraction": 0.37,
+        "states": {
+          "OPTIMAL/SOLVER": 37,
+          "OPTIMAL_INACCURATE/CROSS_CHECK": 63
+        },
+        "clarabel_iterations": [
+          9,
+          10,
+          20,
+          22
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 6.740732971799446e-12
+      },
+      {
+        "relative_perturbation": 1e-10,
+        "repetitions": 100,
+        "valid_solutions": 5,
+        "valid_fraction": 0.05,
+        "states": {
+          "OPTIMAL/SOLVER": 5,
+          "OPTIMAL_INACCURATE/CROSS_CHECK": 95
+        },
+        "clarabel_iterations": [
+          9,
+          18,
+          20,
+          22,
+          24,
+          28
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 6.056791179709364e-10
+      }
+    ],
+    "conic_tol_3e-09": [
+      {
+        "relative_perturbation": 0.0,
+        "repetitions": 100,
+        "valid_solutions": 100,
+        "valid_fraction": 1.0,
+        "states": {
+          "OPTIMAL/SOLVER": 100
+        },
+        "clarabel_iterations": [
+          8
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 6.728909096587188e-11
+      },
+      {
+        "relative_perturbation": 1e-16,
+        "repetitions": 100,
+        "valid_solutions": 100,
+        "valid_fraction": 1.0,
+        "states": {
+          "OPTIMAL/SOLVER": 100
+        },
+        "clarabel_iterations": [
+          8
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 6.729629353774413e-11
+      },
+      {
+        "relative_perturbation": 1e-15,
+        "repetitions": 100,
+        "valid_solutions": 100,
+        "valid_fraction": 1.0,
+        "states": {
+          "OPTIMAL/SOLVER": 100
+        },
+        "clarabel_iterations": [
+          8
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 6.729934665106185e-11
+      },
+      {
+        "relative_perturbation": 1e-14,
+        "repetitions": 100,
+        "valid_solutions": 100,
+        "valid_fraction": 1.0,
+        "states": {
+          "OPTIMAL/SOLVER": 100
+        },
+        "clarabel_iterations": [
+          8
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 6.735081936604104e-11
+      },
+      {
+        "relative_perturbation": 1e-12,
+        "repetitions": 100,
+        "valid_solutions": 100,
+        "valid_fraction": 1.0,
+        "states": {
+          "OPTIMAL/SOLVER": 100
+        },
+        "clarabel_iterations": [
+          8
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 7.312506156154086e-11
+      },
+      {
+        "relative_perturbation": 1e-10,
+        "repetitions": 100,
+        "valid_solutions": 100,
+        "valid_fraction": 1.0,
+        "states": {
+          "OPTIMAL/SOLVER": 100
+        },
+        "clarabel_iterations": [
+          8
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 6.50694151338449e-10
+      }
+    ],
+    "conic_tol_1e-08": [
+      {
+        "relative_perturbation": 0.0,
+        "repetitions": 100,
+        "valid_solutions": 100,
+        "valid_fraction": 1.0,
+        "states": {
+          "OPTIMAL/SOLVER": 100
+        },
+        "clarabel_iterations": [
+          8
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 6.728909096587188e-11
+      },
+      {
+        "relative_perturbation": 1e-16,
+        "repetitions": 100,
+        "valid_solutions": 100,
+        "valid_fraction": 1.0,
+        "states": {
+          "OPTIMAL/SOLVER": 100
+        },
+        "clarabel_iterations": [
+          8
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 6.729629353774413e-11
+      },
+      {
+        "relative_perturbation": 1e-15,
+        "repetitions": 100,
+        "valid_solutions": 100,
+        "valid_fraction": 1.0,
+        "states": {
+          "OPTIMAL/SOLVER": 100
+        },
+        "clarabel_iterations": [
+          8
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 6.729934665106185e-11
+      },
+      {
+        "relative_perturbation": 1e-14,
+        "repetitions": 100,
+        "valid_solutions": 100,
+        "valid_fraction": 1.0,
+        "states": {
+          "OPTIMAL/SOLVER": 100
+        },
+        "clarabel_iterations": [
+          8
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 6.735081936604104e-11
+      },
+      {
+        "relative_perturbation": 1e-12,
+        "repetitions": 100,
+        "valid_solutions": 100,
+        "valid_fraction": 1.0,
+        "states": {
+          "OPTIMAL/SOLVER": 100
+        },
+        "clarabel_iterations": [
+          8
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 7.312506156154086e-11
+      },
+      {
+        "relative_perturbation": 1e-10,
+        "repetitions": 100,
+        "valid_solutions": 100,
+        "valid_fraction": 1.0,
+        "states": {
+          "OPTIMAL/SOLVER": 100
+        },
+        "clarabel_iterations": [
+          8
+        ],
+        "max_abs_gap_worst_case_utility_vs_solver_t": 6.50694151338449e-10
+      }
+    ]
+  },
+  "part_b_slsqp_oracle": [
+    {
+      "ftol": 1e-15,
+      "start_point_relative_perturbation": 0.0,
+      "repetitions": 100,
+      "success_true": 100,
+      "success_fraction": 1.0,
+      "messages": {
+        "Optimization terminated successfully": 100
+      },
+      "optimum_spread_over_runs": 0.0
+    },
+    {
+      "ftol": 1e-15,
+      "start_point_relative_perturbation": 1e-16,
+      "repetitions": 100,
+      "success_true": 67,
+      "success_fraction": 0.67,
+      "messages": {
+        "Optimization terminated successfully": 67,
+        "Positive directional derivative for linesearch": 33
+      },
+      "optimum_spread_over_runs": 4.735691006008125e-13
+    },
+    {
+      "ftol": 1e-15,
+      "start_point_relative_perturbation": 1e-12,
+      "repetitions": 100,
+      "success_true": 76,
+      "success_fraction": 0.76,
+      "messages": {
+        "Optimization terminated successfully": 76,
+        "Positive directional derivative for linesearch": 24
+      },
+      "optimum_spread_over_runs": 4.641668993610182e-13
+    },
+    {
+      "ftol": 1e-12,
+      "start_point_relative_perturbation": 0.0,
+      "repetitions": 100,
+      "success_true": 100,
+      "success_fraction": 1.0,
+      "messages": {
+        "Optimization terminated successfully": 100
+      },
+      "optimum_spread_over_runs": 0.0
+    },
+    {
+      "ftol": 1e-12,
+      "start_point_relative_perturbation": 1e-16,
+      "repetitions": 100,
+      "success_true": 100,
+      "success_fraction": 1.0,
+      "messages": {
+        "Optimization terminated successfully": 100
+      },
+      "optimum_spread_over_runs": 4.737252257136504e-13
+    },
+    {
+      "ftol": 1e-12,
+      "start_point_relative_perturbation": 1e-12,
+      "repetitions": 100,
+      "success_true": 100,
+      "success_fraction": 1.0,
+      "messages": {
+        "Optimization terminated successfully": 100
+      },
+      "optimum_spread_over_runs": 4.641322048914986e-13
+    },
+    {
+      "ftol": 1e-10,
+      "start_point_relative_perturbation": 0.0,
+      "repetitions": 100,
+      "success_true": 100,
+      "success_fraction": 1.0,
+      "messages": {
+        "Optimization terminated successfully": 100
+      },
+      "optimum_spread_over_runs": 0.0
+    },
+    {
+      "ftol": 1e-10,
+      "start_point_relative_perturbation": 1e-16,
+      "repetitions": 100,
+      "success_true": 100,
+      "success_fraction": 1.0,
+      "messages": {
+        "Optimization terminated successfully": 100
+      },
+      "optimum_spread_over_runs": 3.589142871796014e-14
+    },
+    {
+      "ftol": 1e-10,
+      "start_point_relative_perturbation": 1e-12,
+      "repetitions": 100,
+      "success_true": 100,
+      "success_fraction": 1.0,
+      "messages": {
+        "Optimization terminated successfully": 100
+      },
+      "optimum_spread_over_runs": 3.867739462037889e-14
+    }
+  ]
+}

@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "benchmark": "perf_reference_baseline",
+    "evidence_for": [
+      "BEN-005",
+      "TST-005"
+    ],
+    "execution_timestamp_utc": "20261020T204048Z",
+    "git": {
+      "commit": "3d0463b94035859e2a668ff900fcf6285f571cb5",
+      "branch": "block5-benchmarks-final-audit",
+      "dirty": false,
+      "modified_tracked_files": [],
+      "untracked_in_code": [],
+      "untracked_outside_code": [
+        "AUDIT_BLOCK_5_4_CLOSURE.md"
+      ]
+    },
+    "python": "3.13.6",
+    "versions": {
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "osqp": "1.1.3",
+      "clarabel": "0.11.1",
+      "pyscipopt": "6.2.1",
+      "threadpoolctl": "3.7.0",
+      "psutil": "7.2.2"
+    },
+    "host": {
+      "os": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "cpu_model": "13th Gen Intel(R) Core(TM) i7-13620H",
+      "cpu_logical": 16,
+      "cpu_physical": 10,
+      "smt_enabled": true,
+      "cpu_governor": null,
+      "ram_total_bytes": 16890322944,
+      "ram_available_bytes_at_start": 746106880,
+      "swap_used_bytes_at_start": 6939000832,
+      "system_cpu_percent_before": 16.1,
+      "load_note": "medido con psutil; no se consulta ning\u00fan servidor de base de datos"
+    },
+    "host_fingerprint": "00c905c7d527f3ca",
+    "command": "benchmarks/scripts/baseline.py --repetitions 7",
+    "env_threads": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null
+    },
+    "repetitions": 7,
+    "random_seed": 7,
+    "cells": [
+      [
+        "W0-GROSS-RISK",
+        6
+      ],
+      [
+        "W0-NET-TARGET",
+        6
+      ],
+      [
+        "W1-GLOBAL-NET",
+        2
+      ],
+      [
+        "W3-MIN-CVAR",
+        6
+      ],
+      [
+        "W4-ROBUST",
+        6
+      ],
+      [
+        "W4-MAX-SHARPE",
+        6
+      ],
+      [
+        "W4-VOL-TARGET",
+        6
+      ]
+    ]
+  },
+  "cells": {
+    "W0-GROSS-RISK|6|sequential": {
+      "samples": [
+        0.34038489998783916,
+        0.4046610000077635,
+        0.3514909000368789,
+        0.3173869999591261,
+        0.31808790005743504,
+        0.32235859998036176,
+        0.320717699942179
+      ],
+      "work_counter": 132,
+      "host": "00c905c7d527f3ca"
+    },
+    "W0-NET-TARGET|6|sequential": {
+      "samples": [
+        0.43763810000382364,
+        0.37634860002435744,
+        0.36818870005663484,
+        0.3594538999022916,
+        0.36819030006881803,
+        0.3636453999206424,
+        0.4641455999808386
+      ],
+      "work_counter": 132,
+      "host": "00c905c7d527f3ca"
+    },
+    "W1-GLOBAL-NET|2|sequential": {
+      "samples": [
+        2.4957204000093043,
+        2.7071483999025077,
+        2.4595815000357106,
+        2.4688214999623597,
+        2.551279400009662,
+        2.4300585000310093,
+        2.515254700090736
+      ],
+      "work_counter": 484,
+      "host": "00c905c7d527f3ca"
+    },
+    "W3-MIN-CVAR|6|sequential": {
+      "samples": [
+        0.1810445999726653,
+        0.18818860000465065,
+        0.18779700004961342,
+        0.18635560001712292,
+        0.194160700077191,
+        0.18175639992114156,
+        0.1799427999649197
+      ],
+      "work_counter": 12,
+      "host": "00c905c7d527f3ca"
+    },
+    "W4-MAX-SHARPE|6|sequential": {
+      "samples": [
+        0.2124147000722587,
+        0.2319208999397233,
+        0.1939404000295326,
+        0.20479809993412346,
+        0.1997313000028953,
+        0.20864590001292527,
+        0.20620570005849004
+      ],
+      "work_counter": 18,
+      "host": "00c905c7d527f3ca"
+    },
+    "W4-ROBUST|6|sequential": {
+      "samples": [
+        0.11255580000579357,
+        0.11682440002914518,
+        0.12739509996026754,
+        0.15487430000212044,
+        0.13949390000198036,
+        0.13536660000681877,
+        0.10293779999483377
+      ],
+      "work_counter": 6,
+      "host": "00c905c7d527f3ca"
+    },
+    "W4-VOL-TARGET|6|sequential": {
+      "samples": [
+        0.1588549999287352,
+        0.1382192000746727,
+        0.14683959993999451,
+        0.1506338999606669,
+        0.14015710004605353,
+        0.16381930001080036,
+        0.1526922999182716
+      ],
+      "work_counter": 12,
+      "host": "00c905c7d527f3ca"
+    }
+  }
+}
