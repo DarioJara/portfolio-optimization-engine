@@ -39,7 +39,21 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repetitions", type=int, default=7)
     parser.add_argument("--replace", action="store_true")
+    parser.add_argument(
+        "--show-work",
+        action="store_true",
+        help="solo imprime los contadores de trabajo de esta plataforma (no escribe nada)",
+    )
     args = parser.parse_args()
+    if args.show_work:
+        for label, portfolios in perf_reference.REFERENCE_CELLS:
+            measured = perf_reference.measure_cell(label, portfolios, 1)
+            print(
+                f"{cell_key(label, portfolios, 'sequential')}: "
+                f"solver_calls={measured.solver_calls} "
+                f"frontier_iterations={measured.frontier_iterations}"
+            )
+        return
     meta = _common.metadata(
         "perf_reference_baseline",
         ["BEN-005", "TST-005"],

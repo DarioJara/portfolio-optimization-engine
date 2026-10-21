@@ -6,9 +6,10 @@ ejecutor secuencial. El fichero de referencia se produjo en Windows/Intel;
 ``tests/integration/test_cross_platform_reference.py`` lo reproduce en la plataforma que ejecute la
 suite (en CI, Linux) y exige T1 (``|Δpeso| ≤ 1e-6``) con igualdad exacta de recuentos y estados.
 
-Uso (regenerar la referencia; solo con una razón documentada)::
+Uso::
 
-    python benchmarks/scripts/cross_platform_reference.py write
+    python benchmarks/scripts/cross_platform_reference.py explain   # diagnóstico de divergencias
+    python benchmarks/scripts/cross_platform_reference.py write     # regenerar (razón documentada)
 """
 
 from __future__ import annotations
@@ -69,7 +70,43 @@ def differences(reference: dict[str, Any], current: dict[str, Any], tolerance: f
     return found
 
 
+def explain(reference: dict[str, Any], current: dict[str, Any], tolerance: float) -> list[str]:
+    """Descripción compacta de cada cartera divergente (para diagnóstico en CI)."""
+    from collections import Counter
+
+    lines: list[str] = []
+    for portfolio_id in sorted(set(reference) & set(current)):
+        expected, got = reference[portfolio_id], current[portfolio_id]
+        if not differences({portfolio_id: expected}, {portfolio_id: got}, tolerance):
+            continue
+        ref_ids = {tuple(ids) for ids, _ in expected["solutions"]}
+        cur_ids = {tuple(ids) for ids, _ in got["solutions"]}
+        lines.append(
+            f"{portfolio_id}: soluciones {len(expected['solutions'])} (ref) vs "
+            f"{len(got['solutions'])} (actual); composiciones distintas {len(ref_ids)} vs "
+            f"{len(cur_ids)}, solo en ref {len(ref_ids - cur_ids)}, solo en actual "
+            f"{len(cur_ids - ref_ids)}; estados ref {dict(Counter(expected['point_statuses']))} "
+            f"vs actual {dict(Counter(got['point_statuses']))}"
+        )
+        shared = ref_ids & cur_ids
+        worst = 0.0
+        for ids, weights in expected["solutions"]:
+            if tuple(ids) not in shared:
+                continue
+            for other_ids, other in got["solutions"]:
+                if tuple(other_ids) == tuple(ids) and len(other) == len(weights):
+                    worst = max(worst, *(abs(a - b) for a, b in zip(weights, other, strict=True)))
+                    break
+        lines.append(f"  máx |Δpeso| entre soluciones de composiciones comunes: {worst:.3e}")
+    return lines or ["sin divergencias"]
+
+
 def main() -> None:
+    if sys.argv[1:] == ["explain"]:
+        document = json.loads(REFERENCE_PATH.read_text(encoding="utf-8"))
+        for line in explain(document["portfolios"], compute(), 1e-6):
+            print(line)
+        return
     if sys.argv[1:] != ["write"]:
         raise SystemExit(__doc__)
     fingerprint = compute()

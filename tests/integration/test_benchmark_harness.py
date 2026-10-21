@@ -197,3 +197,27 @@ def test_a_parallel_cell_that_exceeds_its_wall_limit_is_aborted_and_never_valid(
     )
     assert cell["valid_measurement"] is False and "max-wall" in cell["aborted"]
     assert "wall" not in cell  # sin cifras de rendimiento de una ejecución abortada
+
+
+def test_throughput_rates_divide_the_deterministic_work_by_the_wall_time() -> None:
+    """BEN-002: carteras/s, fronteras/s y llamadas al solver/s = trabajo determinista ÷ tiempo."""
+    scaling_script = load_script("scaling")
+    batch = SYNTHETIC.generate(SCALING, _pure("W0-GROSS-RISK"), 3, 4)
+    run = SequentialExecutor(batch.config, batch.snapshot).run(batch.requests)
+    frontiers = COMMON.frontier_count(run.results)
+    assert frontiers == 3  # una frontera de composición fija por cartera W0
+    cells = [
+        {"mode": "sequential", "workers": 1, "wall": {"min": 2.0}},
+        {"mode": "spawn", "workers": 4, "batch_size": "AUTO", "wall": {"min": 0.5}},
+    ]
+    rates = scaling_script._rates(cells, run, 60)
+    assert rates["sequential:w1:b-"] == {
+        "portfolios_per_second": 1.5,
+        "frontiers_per_second": 1.5,
+        "solver_calls_per_second": 30.0,
+    }
+    assert rates["spawn:w4:bAUTO"]["portfolios_per_second"] == 6.0
+    assert (
+        scaling_script._rates(cells, run, None)["sequential:w1:b-"]["solver_calls_per_second"]
+        is None
+    )
