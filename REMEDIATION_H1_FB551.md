@@ -9,8 +9,8 @@ benchmarks de ≥ 1.000 carteras. **Fuera de alcance:** cualquier bloque posteri
 
 ## FINAL_STATUS = READY_FOR_INDEPENDENT_AUDIT
 
-(Condicionado a la sección 8: lo que sigue **no** está resuelto —el efecto sobre B5.5 requiere rebasar PR #9, y hay dos hipótesis abiertas—, pero la evidencia
-justifica la implementación y no hay una decisión matemática pendiente que impida auditarla. Las decisiones que sí le corresponden al propietario están en §7.)
+La evidencia justifica la implementación y no hay una decisión matemática pendiente que impida auditarla. **No resuelto** (§8): el efecto sobre B5.5 requiere rebasar el PR #9 (no se ha tocado esa rama);
+quedan hipótesis abiertas sobre *qué* operación numérica introduce el ulp; y hay decisiones del propietario (valor de `retry_equilibrate`, invariancia de conjunto del desempate de B3).
 
 ## 1. Resumen
 
@@ -18,7 +18,7 @@ justifica la implementación y no hay una decisión matemática pendiente que im
 |---|---|---|
 | Síntoma | `OPTIMAL_INACCURATE` ⇒ solución con pesos válidos rechazada; `SLSQP` del test con `success=False` | W1 devuelve 11 o 12 composiciones (240/260 soluciones; 484/506 llamadas al solver) según la CPU |
 | **Causa confirmada** | Instancia degenerada en el borde de `tol = 1e-9`: el residuo primal se estanca en 4·10⁻⁹…10⁻⁸ > `tol_feas` una iteración después de cumplir la brecha ⇒ `AlmostSolved`; el reintento en frío repetía **el mismo método determinista** y caía igual | `ranking_key` desempata por hash solo con mejoras idénticas **bit a bit**; composiciones con la misma utilidad matemática (entrante con peso cero, activos idénticos) difieren en el último ulp ⇒ el ruido decide qué finalistas sobreviven |
-| Qué lo dispara entre CPU | Cualquier diferencia de 1 ulp en `b`/`q` (**no** es específico de EPYC 7763: ver §3.2) | El **núcleo de OpenBLAS** que se despacha (`SkylakeX` en CPU AVX-512 frente a `Haswell`): forzar `OPENBLAS_CORETYPE=Haswell` en esas CPU elimina la divergencia (§4.2) |
+| Qué lo dispara entre CPU | Cualquier diferencia de 1 ulp en `b`/`q`. En CI el sentido lo marca el **núcleo de OpenBLAS**: con `Haswell` (EPYC 7763 y una VM EPYC 9V74 sin AVX-512) falla sin perturbar; con `SkylakeX` no; forzando `OPENBLAS_CORETYPE=Haswell` en CPU `SkylakeX` el fallo aparece (§3.2) | El **núcleo de OpenBLAS**, en sentido contrario: `SkylakeX` diverge (12 composiciones), `Haswell` no; forzando `Haswell` en esas CPU la divergencia desaparece (§4.2) |
 | Corrección | El reintento en frío tras un estancamiento usa otra numérica (`conic.retry_equilibrate`) con las **mismas** tolerancias; oráculo SLSQP con `ftol = 1e-12` | `rank_nodes`: mejoras a menos de `candidates.improvement_tolerance` (ya existente) del mejor del grupo son un empate y se desempatan por hash |
 | Tolerancias / algoritmos | **No se relaja ninguna tolerancia; no se cambia de solver ni de algoritmo; no se promueve ningún estado** | Sin parámetro nuevo; misma búsqueda (Beam + Local), mismo criterio de parada |
 
@@ -27,16 +27,18 @@ justifica la implementación y no hay una decisión matemática pendiente que im
 * Sin acceso a las CPU que fallan: la evidencia por CPU procede de **12 runners de GitHub Actions** (matriz `remediation-diagnostics.yml`, temporal) y de esta máquina
   (Windows 11, i7-13620H, Python 3.13.6, numpy 2.5.3 / scipy 1.18.1 / clarabel 0.11.1 — el `requirements-lock.txt`).
 * CI de Linux: `ubuntu-22.04`, Python 3.11.17, **numpy 2.4.6 / scipy 1.17.1** / clarabel 0.11.1 / osqp 1.1.3 (la CI **no instala el lock**; deriva de versiones posible).
-* Las CPU muestreadas en el primer run (`5cf463a`): 7 × AMD EPYC 7763 (núcleos OpenBLAS `Haswell`), 1 × EPYC 9V45, 3 × EPYC 9V74 y 1 × Xeon Platinum 8573C (los cinco con AVX-512 y núcleos
-  OpenBLAS `SkylakeX`). Anotaciones públicas del run; los datos crudos de este equipo están en `evidence/remediation_h1_fb551/`.
+* Tres runs de la matriz (12 trabajos cada uno, la CPU se sortea): `5cf463a`, `ab42ca7` y **`3b1cc5c`** (con cada carga etiquetada con el núcleo de OpenBLAS activo; es la referencia
+  para H-1). En `3b1cc5c`: 5 × AMD EPYC 7763 y 1 × EPYC 9V74 sin AVX-512 expuesto (núcleos OpenBLAS `Haswell`), 3 × EPYC 9V45, 2 × EPYC 9V74 y 1 × Xeon Platinum 8370C (AVX-512, núcleos `SkylakeX`);
+  en `5cf463a` además un Xeon 8573C. Las anotaciones son públicas; copia en `evidence/remediation_h1_fb551/ci_annotations_run_*.json`.
+* El workflow temporal de la matriz (12 trabajos) y el disparador de `ci.yml` se retiraron al cerrar la fase; están en el historial: `git show 3b1cc5c:.github/workflows/remediation-diagnostics.yml`.
 * Script: `benchmarks/scripts/remediation_diagnostics.py` (`env`, `h1`, `fb551`); no modifica ningún algoritmo: perturba de forma determinista los datos con ruido de ulp.
 
 ## 3. H-1 (B4)
 
 ### 3.1 Reproducción (punto 3 del encargo)
 
-Los dos tests de `tests/unit/scenarios/test_multi_scenario.py` **pasan** en esta máquina (Intel/Windows) y **fallan** donde el redondeo cae del lado malo.
-Estados, residuos y chequeos del primer test, en la CPU/entorno donde falla (EPYC 7763; idéntico en las otras 11 muestras de CI):
+Los dos tests de `tests/unit/scenarios/test_multi_scenario.py` **pasan** en esta máquina (Intel/Windows, 10 iteraciones, `OPTIMAL`) y, **sobre la base sin corregir (`8ceaf3a`) en CI, fallan los dos en los 6 de 12 runners con núcleos `Haswell` (5 × EPYC 7763 y la VM EPYC 9V74) y pasan en los 6 con núcleos `SkylakeX`** (run `3b1cc5c`).
+Estados, residuos y chequeos del primer test, en un runner donde falla (EPYC 7763; idéntico en los 6 `Haswell`):
 
 | Dato | Valor |
 |---|---|
@@ -63,9 +65,9 @@ de progreso y devuelve `AlmostSolved` (se cumplen las tolerancias *reducidas*, 5
 
 | Afirmación | Veredicto con la evidencia |
 |---|---|
-| El mecanismo es `Solved → AlmostSolved` por la tolerancia 1e-9 y se dispara con diferencias de ~1 ulp (INVESTIGATION §2) | **Confirmado** en 12 runners reales: es exactamente el patrón de arriba |
+| El mecanismo es `Solved → AlmostSolved` por la tolerancia 1e-9 y se dispara con diferencias de ~1 ulp (INVESTIGATION §2) | **Confirmado** en los runners con núcleos `Haswell` (y en `SkylakeX` forzados a `Haswell`): es exactamente el patrón de arriba |
 | «No demostrado que el estado sea `AlmostSolved`» (INVESTIGATION §4) | **Cerrado**: `Terminated with status = AlmostSolved`, 11 + 11 iteraciones, anotado en cada runner |
-| Fallo del primer test «intermitente» / «solo EPYC 7763» (INVESTIGATION §1) | **Matizado**: no es intermitente ni propio de EPYC 7763. En el entorno de CI de este run (numpy 2.4.6) **las 12 muestras** —EPYC 7763, 9V45, 9V74 y Xeon 8573C, con núcleos `Haswell` y `SkylakeX`— terminan `OPTIMAL_INACCURATE` sin perturbar (0/3 válidas). En B5.5 un Xeon 8573C terminó `Solved` (9 iteraciones): lo que cambia el resultado es **cualquier** diferencia de 1 ulp en los datos de entrada (CPU, núcleo BLAS y versión de numpy/OpenBLAS), no una CPU concreta. «Funcionó en el runner Xeon» **no** es evidencia de robustez |
+| Fallo del primer test «intermitente» / «solo EPYC 7763» (INVESTIGATION §1) | **Matizado.** No es intermitente en un entorno dado ni propio de EPYC 7763: en CI **falla determinista** (22 = 11 + 11 iteraciones, 0/3 válidas, sin perturbar) en **todas** las CPU con núcleos OpenBLAS `Haswell` (incluida una VM EPYC 9V74) y no falla en las de núcleos `SkylakeX`. **Intervención:** con `OPENBLAS_CORETYPE=Haswell` las CPU `SkylakeX` (EPYC 9V45/9V74, Xeon 8370C) reproducen el fallo (0/3, 22 iteraciones). El núcleo BLAS decide en qué lado cae el ulp; el sentido contrario al de F-B55-1. El Windows local usa núcleos `Haswell` con OpenBLAS 0.3.34 y **no** falla (10 iteraciones): la versión de numpy/OpenBLAS también cuenta, no solo el núcleo. «Funcionó en un runner Xeon» **no** es evidencia de robustez (AUDIT_BLOCK_5_5 A-01 lo anticipó) |
 | Mismo defecto en los dos tests (AUDIT §3) | **Dos mecanismos distintos** (motor Clarabel; criterio de éxito del oráculo SLSQP) con una raíz común: precisión pedida ≈ resolución de coma flotante |
 | El segundo test falla por el criterio del oráculo, no por el motor (INVESTIGATION §3) | **Confirmado**: `ftol = 1e-15` ≈ 70 ulp del óptimo (|x₄| ≈ 0,09, ulp ≈ 1,4·10⁻¹⁷); con `ftol = 1e-12` el éxito es 100 % en todas las celdas de la sonda y la dispersión del óptimo (≤ 5·10⁻¹³) es muy inferior a las tolerancias del test |
 
@@ -91,6 +93,19 @@ Ejecución del problema del primer test; «válidas» = `is_valid_solution`. `ep
 Lectura: el estancamiento es **sensible a la numérica** (regularización, equilibrado, paso), no a la matemática del problema. Relajar la tolerancia lo oculta (3·10⁻⁹ ≈ 3× el suelo del residuo primal,
 sin margen para otros problemas degenerados) pero **cambia la garantía** de todas las formulaciones cónicas; cambiar la numérica del *primer* intento cambia resultados validados.
 
+### 3.4 Resultado de la corrección en CI (run `3b1cc5c`, cada carga etiquetada con el núcleo de OpenBLAS)
+
+Instancia del primer test **sin perturbar** (3 resoluciones) y base sin corregir frente a rama corregida:
+
+| Núcleo OpenBLAS (CPU) | Base: tests originales de H-1 | Motor sin corregir (reintento idéntico) | Motor corregido |
+|---|---|---|---|
+| `Haswell` nativo (5 × EPYC 7763, 1 × EPYC 9V74 VM) | **FALLAN los 2** | `OPTIMAL_INACCURATE/CROSS_CHECK`, 22 it., 0/3 válidas | `OPTIMAL/CROSS_CHECK`, 19 it., 3/3 |
+| `SkylakeX` nativo (3 × EPYC 9V45, 2 × EPYC 9V74, Xeon 8370C) | pasan | `OPTIMAL/SOLVER`, 9 it., 3/3 válidas | `OPTIMAL/SOLVER`, 9 it., 3/3 (idéntico) |
+| `SkylakeX` con `OPENBLAS_CORETYPE=Haswell` (mismas 6 CPU) | — | `OPTIMAL_INACCURATE/CROSS_CHECK`, 22 it., 0/3 | `OPTIMAL/CROSS_CHECK`, 19 it., 3/3 |
+
+Con perturbación de 1 ulp (`eps` = 10⁻¹⁶…10⁻¹², 20 resoluciones por celda; run `5cf463a`, mismas conclusiones en `3b1cc5c`), el motor sin corregir da 7/20 a 11/20 soluciones válidas según la celda y la CPU
+(p. ej. 7/20 con `eps` = 10⁻¹⁶ en EPYC 7763 y 9/20 en `SkylakeX`) y el corregido **20/20 en todas las celdas de todos los runners**; la suite de los módulos afectados (926 tests) pasa en los 12 runners (§9).
+
 ## 4. F-B55-1 (B3)
 
 ### 4.1 Reproducción y causa
@@ -109,14 +124,14 @@ sin margen para otros problemas degenerados) pero **cambia la garantía** de tod
 | Hipótesis | Evidencia | Estado |
 |---|---|---|
 | **Algoritmo de búsqueda / criterio de orden** (empates sensibles a ulp) | Traza anterior; ruido de 10⁻¹⁶ reproduce 11/12 en una sola CPU; `rank_nodes` elimina la variación (§6) | **Confirmada como causa** de la discontinuidad |
-| **Núcleo de OpenBLAS** (despacho `SkylakeX` frente a `Haswell`) como **disparador** del ruido entre CPU | En el B5.5 sin corregir, las 5 CPU con AVX-512 y núcleos `SkylakeX` (EPYC 9V45, 3 × 9V74, Xeon 8573C) dan 260/12; las 7 EPYC 7763 (`Haswell`) dan 240/11; **forzando `OPENBLAS_CORETYPE=Haswell` en las 5 CPU AVX-512 la divergencia desaparece**; mismo resultado idéntico en las 12 muestras | **Confirmada** (12/12 runners) |
-| **Despacho SIMD de NumPy** (bucles propios, no BLAS) | `NPY_DISABLE_CPU_FEATURES` con las extensiones AVX-512 no elimina la divergencia (§9: la variable surte efecto) | **Descartada como causa principal** |
+| **Núcleo de OpenBLAS** (despacho `SkylakeX` frente a `Haswell`) como **disparador** del ruido entre CPU | En el B5.5 sin corregir (`41e4264`, lote de referencia), **todas** las CPU con núcleos `SkylakeX` (run `3b1cc5c`: 3 × EPYC 9V45, 2 × 9V74, Xeon 8370C; run `5cf463a`: además Xeon 8573C) dan 260/12 y **todas** las de núcleos `Haswell` (EPYC 7763 y la VM EPYC 9V74 sin AVX-512) dan 240/11, como Windows; **forzando `OPENBLAS_CORETYPE=Haswell` en las CPU `SkylakeX` la divergencia desaparece** (6/6 en `3b1cc5c`, 5/5 en `5cf463a`); el mismo modelo EPYC 9V74 se comporta según el núcleo que expone | **Confirmada** (intervención) |
+| **Despacho SIMD de NumPy** (bucles propios, no BLAS) | `NPY_DISABLE_CPU_FEATURES` con extensiones AVX-512 **no surtió efecto** (la lista de características habilitadas de NumPy 2.4.6 seguía incluyendo AVX512F/SKX/CLX/CNL con la variable puesta), y la divergencia persistió. La prueba **no es concluyente** | **Hipótesis pendiente** (no descartada ni confirmada) |
 | Criterios de factibilidad / tolerancias | Todos los estados `OPTIMAL`, mismas composiciones comunes con |Δpeso| ≤ 3,5·10⁻¹² entre variantes | No intervienen |
 | Orden de sumas/FMA dentro del solver (OSQP/QDLDL) | No aislado | **Hipótesis pendiente**: no se necesita para la corrección; no se ha medido por separado |
 | SO / Python / compilador | EPYC 7763 y Windows dan el mismo resultado pese a SO y Python distintos | Descartada (ya señalado por AUDIT_BLOCK_5_5 A-02) |
 
 Corrección de `AUDIT_BLOCK_5_5` A-02: coincide en que la divergencia es **dependiente de CPU/núcleo BLAS, no de la plataforma**; la partición observada no es «AVX-512 sí/no» en abstracto sino **el núcleo de OpenBLAS elegido**
-(medido con `threadpoolctl`: `SkylakeX` frente a `Haswell`), verificado por intervención (`OPENBLAS_CORETYPE`).
+(medido con `threadpoolctl`: `SkylakeX` frente a `Haswell`), verificado por intervención (`OPENBLAS_CORETYPE`). La hipótesis ISA de la auditoría («AVX-512») queda refinada: lo que importa es qué núcleo carga OpenBLAS, no el conjunto de instrucciones por sí mismo (la VM EPYC 9V74 sin AVX-512 expuesto carga `Haswell`).
 
 ## 5. Propuesta matemática (documentada antes de aplicarla)
 
@@ -191,17 +206,39 @@ Pruebas de regresión **independientes de la CPU** (perturbación determinista, 
 
 ## 8. Causas confirmadas, hipótesis pendientes y límites
 
-**Confirmadas (con evidencia):** mecanismo `Solved → AlmostSolved` de H-1 y su suelo de residuo primal; reintento idéntico inútil; ausencia de relación con una CPU concreta (12/12 runners con el mismo entorno); criterio del oráculo SLSQP;
-causa de F-B55-1 (empates de ulp en `ranking_key`); su disparador entre CPU (núcleo OpenBLAS `SkylakeX` frente a `Haswell`, por intervención `OPENBLAS_CORETYPE`); eficacia de ambas correcciones en 12 CPU/entornos de CI y en Windows.
+**Confirmadas (con evidencia reproducible):**
 
-**Hipótesis pendientes (no se presentan como causas):** (1) qué cálculo numérico previo a Clarabel produce el ulp que lo desplaza (la factorización de Σ por autovalores `eigh`, productos de matrices…): se sabe que depende del entorno BLAS/numpy, no cuál es la operación;
-(2) en F-B55-1, que el orden de sumas **dentro de OSQP/QDLDL** no intervenga (no se aisló); (3) la deriva de numpy/OpenBLAS entre el run de B5.5 y este (el B5.5 Xeon 8573C daba `Solved`, este run no): no se registraron versiones en B5.5, así que no se puede atribuir.
+1. H-1: mecanismo `Solved → AlmostSolved` (el residuo primal sube a 4·10⁻⁹…10⁻⁸ la iteración siguiente a cumplir la brecha) y su carácter determinista por entorno; el reintento en frío idéntico no puede cambiarlo.
+2. H-1: el sentido lo marca el **núcleo de OpenBLAS** en el entorno de CI (`Haswell` falla, `SkylakeX` no; intervención con `OPENBLAS_CORETYPE`), no una CPU concreta.
+3. Criterio del oráculo SLSQP (`ftol = 1e-15` ≈ 70 ulp del óptimo).
+4. F-B55-1: causa en la búsqueda (empates matemáticos exactos desordenados por 1 ulp en `ranking_key`), reproducida con ruido de 10⁻¹⁶ **en una sola CPU**; su disparador entre CPU es, de nuevo, el núcleo de OpenBLAS (sentido contrario: `SkylakeX` diverge), por intervención.
+5. Eficacia: tras las correcciones, 0 divergencias de F-B55-1 y 0 soluciones inválidas de H-1 en **12/12** runners de CI y en Windows, con perturbaciones de ulp, y sin regresiones (926 tests de los módulos afectados en los 12 runners; suite completa 1962 passed/10 skipped en Windows y 1973 passed/2 skipped en CI).
 
-**Límites:** la CI **no instala el lock**; la evidencia de Linux es con numpy 2.4.6/scipy 1.17.1, la de Windows con numpy 2.5.3/scipy 1.18.1; no se probó ARM ni macOS; solo un lote de referencia (10 carteras, 2 W1) y un universo sintético con clones para F-B55-1;
-H-1 se ha estudiado en **una** instancia (la del test; existe un riesgo análogo en otras instancias degeneradas, ahora cubierto por el reintento con otra numérica salvo que esa también se estanque: en ese caso el estado seguirá siendo `OPTIMAL_INACCURATE`, correctamente distinguido).
+**Hipótesis pendientes (no se presentan como causas):**
 
-**Pendiente de decisión (propietario):** (a) fijar `retry_equilibrate = false` como valor de producción (el de ejemplo del repositorio) o elegir otra palanca del §3.3; (b) si el criterio de empate de B3 debe ser **invariante de conjunto** entre CPU (lo que implementa `rank_nodes`) o basta T1 sobre los pesos; (c) cuándo rebasar B5.5.
+1. Qué cálculo previo produce el ulp que desplaza a Clarabel/`CandidateEngine` (factorización de Σ por autovalores, productos matriz-vector…): se sabe que cambia con el núcleo BLAS, no cuál es la operación.
+2. Despacho SIMD de NumPy (bucles propios): la prueba con `NPY_DISABLE_CPU_FEATURES` fue **ineficaz** y no es concluyente.
+3. Orden de sumas dentro de OSQP/QDLDL en F-B55-1: no aislado.
+4. Deriva de versiones: el Xeon 8573C de B5.5 daba `Solved` y la misma CPU en este run con núcleos `SkylakeX` también (consistente), pero B5.5 no registró versiones de numpy/OpenBLAS; no puede atribuirse. La versión de OpenBLAS cuenta: Windows (`Haswell`, OpenBLAS 0.3.34) no falla.
+
+**Límites:** la CI **no instala el lock** (numpy 2.4.6/scipy 1.17.1 frente a 2.5.3/1.18.1 en Windows); no se probó ARM, macOS ni otras versiones de OpenBLAS; H-1 se estudió en **una** instancia (el riesgo análogo en otras instancias degeneradas está cubierto por el reintento
+con otra numérica salvo que esa también se estanque, caso en el que el estado seguirá siendo `OPTIMAL_INACCURATE`, correctamente distinguido y rechazado); F-B55-1 sobre un lote de referencia (10 carteras, 2 W1) y un universo sintético con clones. La remediación **no** demuestra que no existan otros
+puntos de decisión discontinuos en el motor de candidatos (p. ej. `argsort` estable sobre puntuaciones de screening empatadas): no se observaron en las 96 perturbaciones del lote de referencia (48 sobre `W1-GLOBAL-NET-000005`, 48 sobre las dos W1).
+
+**Decisiones del propietario (no tomadas aquí; no impiden auditar):** (a) confirmar `retry_equilibrate = false` como valor de ejemplo de producción o elegir otra palanca del §3.3; (b) confirmar que el desempate de B3 debe ser **invariante de conjunto** entre CPU (lo que implementa `rank_nodes`) en lugar de aceptar solo T1 sobre los pesos;
+(c) cuándo rebasar B5.5 (PR #9) sobre esta rama y qué hacer con su `xfail` y sus baselines (§7).
 
 ## 9. Estado de GitHub Actions
 
-Ver la sección final (se rellena con los runs publicados de la rama).
+Evidencia pública (anotaciones de check-runs de la API de GitHub; sin logs). Rama `fix/h1-fb551-numerical-remediation`, repositorio `DarioJara/portfolio-optimization-engine`.
+
+| Run | SHA | Workflow | Resultado | Contenido |
+|---|---|---|---|---|
+| `39672838576` | `3b1cc5c` | Portfolio Engine CI (job `Ubuntu / Python 3.11`, runner EPYC 7763) | **success** | mypy `--strict`, Ruff check/format, forkserver y evidencia B5.4, **suite completa: 1973 passed, 2 skipped** (302 s) |
+| `39672838602` | `3b1cc5c` | Remediation diagnostics (temporal, 12 runners) | **success** (12/12) | CPU, H-1 antes/después, F-B55-1 antes/después, base sin corregir, suite de los módulos afectados: **926 passed en los 12** |
+| `39666799848` / `39666799963` | `ab42ca7` | CI / diagnóstico | success / success | CI en EPYC 9V45: **1973 passed, 2 skipped**; mismos resultados por CPU |
+| `39663855062` / `39663855280` | `5cf463a` | CI / diagnóstico | success / success | CI en EPYC 7763: 1973 passed, 2 skipped (la CPU donde H-1 falló en el PR #9) |
+| `39665164224` | `0e710b9` | Diagnóstico | failure | Error mío de YAML (línea rota) en el workflow temporal, corregido en `76beb31`; sin relación con el código |
+| `39665206755` | `76beb31` | CI | cancelled | Cancelado (causa no investigada; la publicación siguiente llegó minutos después); no es un fallo de pruebas |
+
+Los 2 tests omitidos de CI son los mismos de la base. Los workflows temporales y el disparador de `ci.yml` se retiran en el último commit; **ese commit solo toca documentación y workflows** (verificado con `git diff`), así que la evidencia de código es la de `3b1cc5c`.

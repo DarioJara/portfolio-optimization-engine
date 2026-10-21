@@ -4,8 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    # TEMPORAL (remediacion H-1 / F-B55-1): se elimina antes de cerrar la fase.
-    branches: [main, fix/h1-fb551-numerical-remediation]
+    branches: [main]
   workflow_dispatch:
 
 permissions:

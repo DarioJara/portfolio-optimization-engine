@@ -1647,8 +1647,9 @@ Rama `fix/h1-fb551-numerical-remediation` (desde `main` = `8ceaf3a`; `REMEDIATIO
 |---|---|
 | Windows 11, Python 3.13.6 (lock), baseline `main` `8ceaf3a`: `tests/unit/{candidates,frontiers,scenarios,optimizers,config}` | **910 passed** (5 min 32 s) |
 | Mismo conjunto, rama de remediación | **926 passed** (5 min 28 s): +16 pruebas nuevas, 0 regresiones |
+| Windows 11, suite **completa** de la rama (sola, en un worktree limpio) | **1962 passed, 10 skipped** (20 min 12 s; los 10 omitidos son pruebas solo-Linux/POSIX, los mismos que en B5.4) |
 | mypy `--strict portfolio_engine`; Ruff check y format | limpios |
-| GitHub Actions (anotaciones públicas) | Ver `REMEDIATION_H1_FB551.md` §9 |
+| GitHub Actions, run `3b1cc5c` (anotaciones públicas) | CI: **1973 passed, 2 skipped**, mypy/Ruff ✔; 12 runners: **926 passed** en los módulos afectados; ver `REMEDIATION_H1_FB551.md` §9 |
 
 ### Limitaciones (abiertas)
 
