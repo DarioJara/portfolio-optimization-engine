@@ -23,6 +23,7 @@ from portfolio_engine.candidates.expansion import (
     NeighborhoodExpander,
     SearchNode,
     SearchServices,
+    rank_nodes,
 )
 from portfolio_engine.candidates.exploration import ExplorationPolicy, component_counts
 from portfolio_engine.candidates.local_search import LocalSearch, LocalSearchOutcome
@@ -71,6 +72,7 @@ __all__ = (
     "composition_hash_of",
     "current_portfolio_utility",
     "project_box_budget",
+    "rank_nodes",
     "select_survivors",
     "tightened_bounds",
 )

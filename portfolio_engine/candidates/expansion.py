@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import time
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -68,6 +68,32 @@ class SearchNode:
     def ranking_key(self) -> tuple[int, float, str]:
         """Orden de la búsqueda: estimaciones válidas primero, mayor mejora, luego hash."""
         return (0 if self.estimate.satisfies_constraints else 1, -self.gain, self.composition_hash)
+
+
+def rank_nodes(nodes: Iterable[SearchNode], tie_tolerance: float) -> list[SearchNode]:
+    """Ordena los nodos como ``ranking_key`` pero tratando como empate las mejoras equivalentes.
+
+    ``ranking_key`` desempata por hash solo si las mejoras son **idénticas en coma flotante**. Dos
+    composiciones con la misma utilidad matemática (p. ej. un entrante que recibe peso cero en el
+    óptimo) difieren en el último ulp según el orden de las sumas de la CPU, y entonces el orden, y
+    con él qué finalistas se conservan, dependía del hardware (F-B55-1). Aquí las mejoras que
+    distan menos de ``tie_tolerance`` de la **mejor del grupo** (ancla, sin encadenar) son un
+    empate y se ordenan por hash; los grupos se ordenan por mejora decreciente. Las estimaciones
+    válidas siguen yendo antes que las inválidas. Con ``tie_tolerance = 0`` equivale a ordenar por
+    ``ranking_key``. El orden es independiente del de entrada.
+    """
+    ordered = sorted(nodes, key=SearchNode.ranking_key)
+    ranked: list[SearchNode] = []
+    cluster: list[SearchNode] = []
+    anchor: tuple[bool, float] | None = None
+    for node in ordered:
+        group = (node.estimate.satisfies_constraints, node.gain)
+        if anchor is None or group[0] != anchor[0] or anchor[1] - group[1] > tie_tolerance:
+            ranked.extend(sorted(cluster, key=lambda n: n.composition_hash))
+            cluster, anchor = [], group
+        cluster.append(node)
+    ranked.extend(sorted(cluster, key=lambda n: n.composition_hash))
+    return ranked
 
 
 class EvaluationBudget:
