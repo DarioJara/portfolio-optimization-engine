@@ -40,7 +40,20 @@ sys.path.insert(0, str(ROOT))
 FLAG_PATTERN = re.compile(r"\b(avx|avx2|fma|avx512[a-z_0-9]*|sse4_2|bmi2)\b")
 
 
+def dispatch_context() -> dict[str, Any]:
+    """Qué núcleo de OpenBLAS está activo y si se forzó (para no confundir pasos de CI)."""
+    context: dict[str, Any] = {"forced_coretype": os.environ.get("OPENBLAS_CORETYPE", "")}
+    try:
+        from threadpoolctl import threadpool_info
+
+        context["blas_arch"] = [e.get("architecture") for e in threadpool_info()]
+    except ImportError:
+        pass
+    return context
+
+
 def emit(label: str, payload: dict[str, Any], annotate: bool) -> None:
+    payload = {**payload, "ctx": dispatch_context()}
     line = json.dumps(payload, sort_keys=True, default=str)
     print(f"{label}: {line}", flush=True)
     if annotate:
@@ -205,15 +218,18 @@ def clarabel_tail(config: Any, problem: Any, scenarios: Any) -> list[str]:
     clarabel_backend.ClarabelBackend._new_solver = verbose  # type: ignore[method-assign]
     try:
         with captured_stdout_fd() as read:
-            MultiScenarioOptimizer(config).solve_worst_case(
-                problem, scenarios, CostTreatment.GROSS, LAMBDA_OF_H1
+            outcome = (
+                MultiScenarioOptimizer(config)
+                .solve_worst_case(problem, scenarios, CostTreatment.GROSS, LAMBDA_OF_H1)
+                .single_solution
             )
             text = read()
     finally:
         clarabel_backend.ClarabelBackend._new_solver = original  # type: ignore[method-assign]
     rows = [line.strip() for line in text.splitlines() if re.match(r"^\s*\d+\s+[+-]", line)]
     status = [line.strip() for line in text.splitlines() if "Terminated with status" in line]
-    return rows[:1] + rows[-4:] + status[:2]
+    final = "none" if outcome is None else f"{outcome.status.value}/{outcome.status_source.value}"
+    return [f"engine status: {final}", *rows[:1], *rows[-4:], *status[:2]]
 
 
 LAMBDA_OF_H1 = 3.0
