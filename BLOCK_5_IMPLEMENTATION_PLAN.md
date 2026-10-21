@@ -283,3 +283,26 @@ Deudas de B5.2/B5.3 asignadas a B5.4: M-1 y D-DET **cerradas**; L-2 y L-3 **cerr
 pruebas específicas de B5.4 pasadas, incluidas `forkserver`, `flock`, permisos y zombis); R-1 (permisos de `events.jsonl`) hallado y corregido por esa
 evidencia. Estados: `P-01`, `P-03`, `P-04`, `P-06` **VALIDATED en Windows y Linux**; `P-05`, `P-07`, `P-08` siguen `PARTIAL` (sin cambio);
 `P-02` `PARTIAL`. Véase `REMEDIATION_BLOCK_5_4.md`.
+
+
+---
+
+## 11. Resultado de B5.5 (2026-10-21) y estado de los requisitos propuestos
+
+Rama `block5-benchmarks-final-audit` (sobre `main` `8ceaf3a`), pendiente de auditoría independiente. Detalle en `REPORT_BLOCK_5_5.md`, `BLOCK_5_5_LARGE_SCALE_PLAN.md`, `INVESTIGATION_H1_B4.md`, `CHANGELOG.md` (Bloque 5.5) y
+`ARCHITECTURE.md` §3.10. Evidencia: Windows 11 / Python 3.13.6 (memoria saturada) y CI de Linux (Ubuntu 22.04 / Python 3.11.17).
+
+* Ejecutado: 10 y 100 carteras (secuencial, `spawn`; `forkserver` en Linux por CI), clases W0–W5 puras y mezclas `ENG-MIX-*`, workers {1, 2, 4, 8}, lotes {1, 5, 10, 20, AUTO}, hilos BLAS {1, 2}, datos compartidos, caché,
+  recuperación, dimensión realista (20 posiciones, universo 50/200/700), perfilado, H-1 y baseline de regresión. **No ejecutado:** 1.000/1.200/5.000/22.000 (D-12), Arsys, E5 `fork`, E7, E11, E12, E14.
+* Requisitos oficiales: `VALIDATED` CFG-012, BEN-002, BEN-004, BEN-005, TST-005, PAR-003; `PARTIAL` BEN-001, BEN-006, BEN-007 (1.200 sin ejecutar), GOV-012. Total **316 = 244 / 39 / 33**.
+
+| ID | Estado tras B5.5 | Evidencia / pendiente |
+|---|---|---|
+| P-01, P-03, P-04, P-06 | VALIDATED (Windows y Linux) | Sin cambio; la CI de Linux de B5.5 reejecuta B5.4 (56 pruebas) |
+| P-02 | PARTIAL | RSS del coordinador medido hasta 300 tareas (173–283 MB); el criterio de 5.000 tareas no se ejecutó (D-12) |
+| P-05, P-07 | PARTIAL | Sin cambio (contrato D-04 y CLI de ejecución pendientes) |
+| P-08 | PARTIAL | Los benchmarks registran commit y `dirty`; la biblioteca sigue sin invocar `git` |
+| P-09 | CUMPLIDO con limitación | Sin cambio (`ELLIPSOIDAL`) |
+
+Hallazgos que condicionan el cierre del Bloque 5: **F-B55-1** (W1: candidatos distintos entre plataformas; remediación B3) y **H-1** (B4; remediación independiente). `BLOCK_5_STATUS` no se emite hasta validar 1.200 carteras y
+completar la auditoría independiente.

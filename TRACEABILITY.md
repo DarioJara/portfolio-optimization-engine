@@ -2,6 +2,14 @@
 
 # Matriz de trazabilidad de requisitos — MASTER_SPEC.md
 
+> **Estado B5.5 (2026-10-21):** benchmarks reproducibles, regresión de rendimiento y preparación de la auditoría final del Bloque 5 en la rama
+> `block5-benchmarks-final-audit` (sobre `main` `8ceaf3a`, B5.4 integrado); pendiente de auditoría independiente (`REPORT_BLOCK_5_5.md`). Total contractual
+> **316 `RequirementID` = 244 `VALIDATED` / 39 `PARTIAL` / 33 `NOT_IMPLEMENTED` / 0 `IMPLEMENTED`** (antes 238 / 42 / 36). Pasan a `VALIDATED`: `CFG-012`, `BEN-002`, `BEN-004`,
+> `BEN-005`, `TST-005`, `PAR-003`. Siguen `PARTIAL`: `BEN-001`, `BEN-006`, `GOV-012` y `BEN-007` (pasa de `NOT_IMPLEMENTED`: 10 y 100 carteras ejecutadas; **1.200 no ejecutada
+> por falta de autorización expresa, D-12**). Hallazgos abiertos: **F-B55-1** (la búsqueda de candidatos de W1 difiere entre Windows y Linux; C-28 `PARTIAL`) y **H-1** de B4
+> (mecanismo identificado en `INVESTIGATION_H1_B4.md`, sin remediar). Mediciones locales con la memoria saturada y datos sintéticos; nada medido en Arsys ni a ≥ 1.000 carteras
+> (`BLOCK_5_5_LARGE_SCALE_PLAN.md`). `BLOCK_5_STATUS` no se emite.
+>
 > **Remediación B5.4 (2026-10-20):** tras `AUDIT_BLOCK_5_4.md` (`PASS_WITH_CHANGES`) se corrigieron M-1 (presupuesto de plazos separado),
 > L-1 (shards inválidos/profundos ⇒ `.corrupt`), L-2 (identidad de proceso antes de terminar nada) y L-4 (cambio incompatible documentado), y se
 > ejecutó y conservó la evidencia Linux (L-3; run `39466030525`: suite completa 1957 passed / 2 skipped, evidencia B5.4 56 passed). La CI Linux
@@ -680,3 +688,4 @@ Cada sección del MASTER_SPEC está asociada al menos a un RequirementID.
 | 2026-10-20 | Bloque 5.3 (`BLOCK_5_3_EXECUTION_BRIEF.md`) | PAR-004, PAR-005, CCH-001, CCH-002, CCH-003, CCH-004, CCH-005, CFG-011 | NOT_IMPLEMENTED/PARTIAL → VALIDATED (8) | Ver `CHANGELOG.md` (Bloque 5.3): pytest, mypy y ruff ejecutados en Windows; suite completa, `forkserver` y benchmark en Linux (Ubuntu 22.04 / Python 3.11.17 en GitHub Actions: `spawn` y `forkserver`, T1 = 0 en las 36 celdas del benchmark y 1776 tests de B5.3 correctos (run 39428998923, `bcada73`); en los runners EPYC 7763 fallan además, de forma intermitente y también sobre `539d4b7`, dos tests de B4 ajenos a B5.3 (historial completo y límites en `CHANGELOG.md`, «Remediación tras AUDIT_BLOCK_5_3»)); equivalencia T1 por modo; E4/E8 locales |
 | 2026-10-20 | Bloque 5.3 | PAR-013, BEN-004, BEN-001, BEN-002, BEN-006 | Sin cambio de estado (PAR-013 y BEN-004 siguen `PARTIAL`); evidencia ampliada | Motivo en la columna *Estado* |
 | 2026-10-20 | Remediación de `AUDIT_BLOCK_5_3.md` (`PASS_WITH_CHANGES`) | PAR-004, CCH-001, CCH-003, CCH-005 | Sin cambio de estado (siguen `VALIDATED`); las condiciones M-1 (caché de `continuous`) y M-4 (pruebas de 100 ciclos y muerte del coordinador) de la auditoría quedan cumplidas | `CHANGELOG.md` (remediación): pytest 1775 passed, 2 skipped en Windows; CI Linux con la intermitencia B4 documentada |
+| 2026-10-21 | Bloque 5.5 (benchmarks y regresión de rendimiento; `REPORT_BLOCK_5_5.md`) | CFG-012, BEN-002, BEN-004, BEN-005, TST-005, PAR-003 | PARTIAL/NOT_IMPLEMENTED → VALIDATED (6); BEN-007 NOT_IMPLEMENTED → PARTIAL (`VALIDATED` 238 → 244, `PARTIAL` 42 → 39, `NOT_IMPLEMENTED` 36 → 33; total 316) | Windows 11: baseline 1946 passed / 10 skipped; Linux (CI `39527318745`): 2004 passed / 3 skipped / 1 xfailed; 100 celdas paralelas con T1 = 0 y 0 violaciones de restricciones. BEN-001, BEN-006, GOV-012 con evidencia ampliada y sin cambio de estado; hallazgos F-B55-1 y H-1 abiertos |
