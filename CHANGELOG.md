@@ -1622,3 +1622,34 @@ Auditoría independiente: `PASS_WITH_CHANGES` sobre `436a7eb` (0 BLOCKER, 0 HIGH
 
 `P-05` y `PAR-013` siguen `PARTIAL` hasta la re-auditoría; H-1 de B4 (CPU del runner) abierto y no manifestado en este run; sin benchmark de
 recuperación (B5.5); la identidad por hora de creación solo existe en Windows y Linux.
+
+---
+
+## [Remediación numérica H-1 (B4) y F-B55-1 (B3)] — 2026-10-21
+
+Rama `fix/h1-fb551-numerical-remediation` (desde `main` = `8ceaf3a`; `REMEDIATION_H1_FB551.md`). No toca B5 ni `main`; sin benchmarks de ≥ 1.000 carteras.
+
+### Corregido
+
+- **H-1 (B4)** — el reintento en frío de Clarabel (`COLD_RETRY`) repetía el mismo método determinista y caía en el mismo estancamiento (`AlmostSolved`, residuo primal en 4·10⁻⁹…10⁻⁸ > `tol_feas = 1e-9`).
+  Tras un estancamiento usa ahora otro equilibrado (`conic.retry_equilibrate`, **clave obligatoria nueva**) con las **mismas tolerancias**; tras `MaxIterations` conserva el primario; el estado del reintento
+  nunca se promueve. Primer intento sin cambios. El oráculo SLSQP del test usa `ftol = 1e-12` (el anterior, 1e-15, estaba por debajo de la resolución de coma flotante).
+- **F-B55-1 (B3)** — `rank_nodes`: las mejoras de utilidad a menos de `candidates.improvement_tolerance` del mejor del grupo son un empate y se desempatan por hash (antes, solo con mejoras idénticas bit a bit:
+  el ruido de ulp decidía los finalistas y W1 devolvía 11 o 12 composiciones según el núcleo de OpenBLAS). Sin parámetro nuevo.
+
+### Cambio incompatible
+
+`[conic] retry_equilibrate` obligatoria en el TOML del motor (sin valores por defecto implícitos); `config_hash` cambia (claves de caché y diarios previos no coinciden).
+
+### Pruebas (ejecutadas realmente)
+
+| Entorno | Resultado |
+|---|---|
+| Windows 11, Python 3.13.6 (lock), baseline `main` `8ceaf3a`: `tests/unit/{candidates,frontiers,scenarios,optimizers,config}` | **910 passed** (5 min 32 s) |
+| Mismo conjunto, rama de remediación | **926 passed** (5 min 28 s): +16 pruebas nuevas, 0 regresiones |
+| mypy `--strict portfolio_engine`; Ruff check y format | limpios |
+| GitHub Actions (anotaciones públicas) | Ver `REMEDIATION_H1_FB551.md` §9 |
+
+### Limitaciones (abiertas)
+
+El efecto sobre B5.5 (PR #9) requiere rebasarlo (`xfail` de F-B55-1, baselines de trabajo y `config_hash`); hipótesis pendientes en `REMEDIATION_H1_FB551.md` §8; la CI no instala el lock.
