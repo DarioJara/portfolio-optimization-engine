@@ -51,8 +51,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          a="$(NPY_DISABLE_CPU_FEATURES='AVX512F AVX512CD AVX512_SKX AVX512_CLX AVX512_CNL AVX512_ICL AVX512_SPR' python -c "import numpy as np; print('numpy avx512 features enabled:', sorted(k for k, v in np.__cpu_features__.items() if v and 'AVX512' in k))" 2>&1 | tail -n 2 | tr '
-' '|')"
+          a="$(NPY_DISABLE_CPU_FEATURES='AVX512F AVX512CD AVX512_SKX AVX512_CLX AVX512_CNL AVX512_ICL AVX512_SPR' python -c "import numpy as np; print('numpy avx512 features enabled:', sorted(k for k, v in np.__cpu_features__.items() if v and 'AVX512' in k))" 2>&1 | tail -n 1)"
           b="$(python -c "import numpy as np; print('default numpy avx512 features enabled:', sorted(k for k, v in np.__cpu_features__.items() if v and 'AVX512' in k))" 2>&1 | tail -n 1)"
           c="$(OPENBLAS_CORETYPE=Haswell python -c "import numpy; from threadpoolctl import threadpool_info; print('forced openblas arch:', [e.get('architecture') for e in threadpool_info()])" 2>&1 | tail -n 1)"
           echo "::notice title=diag-dispatch::${a} ${b} ${c}"
