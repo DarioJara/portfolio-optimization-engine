@@ -138,17 +138,42 @@ def _unit_from_classes(
     return (unit[0], unit[1], unit[2]), min(sizes[label] for label in used), source
 
 
-def _estimate(args: argparse.Namespace) -> None:
-    entries = _entries([Path(p) for p in args.inputs], args.mix)
-    largest = max(entries, key=lambda e: e["portfolios"])
-    sequential = next(c for c in largest["cells"] if c["mode"] == "sequential")
-    n = largest["portfolios"]
+def _unit_from_mix(
+    args: argparse.Namespace, entries: list[dict[str, Any]]
+) -> tuple[tuple[float, float, float], int, dict[str, Any]]:
+    """Rango de coste por cartera: mín., mediana y máx. de TODAS las mediciones secuenciales.
+
+    Se agrupan campañas distintas: la variación de fase de la máquina entra en el rango.
+    """
+    n = min(e["portfolios"] for e in entries)
+    seq_cells = [
+        (e["portfolios"], next(c for c in e["cells"] if c["mode"] == "sequential")) for e in entries
+    ]
     unit = (
-        sequential["wall"]["min"] / n,
-        sequential["wall"]["median"] / n,
-        sequential["wall"]["max"] / n,
+        min(c["wall"]["min"] / size for size, c in seq_cells),
+        statistics.median(c["wall"]["median"] / size for size, c in seq_cells),
+        max(c["wall"]["max"] / size for size, c in seq_cells),
     )
-    unit_source: dict[str, Any] = {"source": "mix", "mix": args.mix, "measured_portfolios": n}
+    source: dict[str, Any] = {
+        "source": "mix",
+        "mix": args.mix,
+        "measured_portfolios": n,
+        "measurements_pooled": len(seq_cells),
+    }
+    return unit, n, source
+
+
+def _estimate(args: argparse.Namespace) -> None:
+    entries = [
+        e
+        for e in _entries([Path(p) for p in args.inputs], args.mix)
+        if e["portfolios"] >= args.min_portfolios
+    ]
+    if not entries:
+        raise SystemExit(
+            f"No hay mediciones de {args.mix!r} con >= {args.min_portfolios} carteras."
+        )
+    unit, n, unit_source = _unit_from_mix(args, entries)
     if args.class_costs:
         unit, n, unit_source = _unit_from_classes(args)
     projections: list[dict[str, Any]] = []
@@ -255,6 +280,12 @@ def main() -> None:
     est = sub.add_parser("estimate", help="proyecta capacidad desde mediciones (no ejecuta)")
     est.add_argument("--inputs", nargs="+", required=True)
     est.add_argument("--mix", required=True)
+    est.add_argument(
+        "--min-portfolios",
+        type=int,
+        default=100,
+        help="mediciones con al menos este nº de carteras (por debajo domina el arranque)",
+    )
     est.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     est.add_argument(
         "--class-costs",
