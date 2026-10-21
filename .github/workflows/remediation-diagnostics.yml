@@ -31,6 +31,11 @@ jobs:
           # SHA de B5.5 auditado (AUDIT_BLOCK_5_5): defecto F-B55-1 sin remediar, solo lectura.
           ref: 41e426479dae210bc35208276a8f328ae9b3519c
           path: b55
+      - uses: actions/checkout@v4
+        with:
+          # Base sin remediar (main tras el PR #8): los dos tests originales de H-1, sin cambios.
+          ref: 8ceaf3add12c6fb37973142de23400b2f7cdeb6f
+          path: base
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -41,6 +46,25 @@ jobs:
           python -m pip install -e '.[dev,exact-mip,bench]'
       - name: CPU and library environment
         run: python benchmarks/scripts/remediation_diagnostics.py env --annotate
+      - name: Dispatch variables take effect (NumPy SIMD features and OpenBLAS kernel)
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          a="$(NPY_DISABLE_CPU_FEATURES='AVX512F AVX512CD AVX512_SKX AVX512_CLX AVX512_CNL AVX512_ICL AVX512_SPR' python -c "import numpy as np; print('numpy avx512 features enabled:', sorted(k for k, v in np.__cpu_features__.items() if v and 'AVX512' in k))" 2>&1 | tail -n 2 | tr '
+' '|')"
+          b="$(python -c "import numpy as np; print('default numpy avx512 features enabled:', sorted(k for k, v in np.__cpu_features__.items() if v and 'AVX512' in k))" 2>&1 | tail -n 1)"
+          c="$(OPENBLAS_CORETYPE=Haswell python -c "import numpy; from threadpoolctl import threadpool_info; print('forced openblas arch:', [e.get('architecture') for e in threadpool_info()])" 2>&1 | tail -n 1)"
+          echo "::notice title=diag-dispatch::${a} ${b} ${c}"
+      - name: Original H-1 tests on the unfixed base (before the remediation)
+        if: always()
+        shell: bash
+        working-directory: base
+        run: |
+          set +e
+          PYTHONPATH="$PWD" python -m pytest -q -p no:cacheprovider tests/unit/scenarios/test_multi_scenario.py -k "single_solutions_satisfy or worst_case_maximizes" -rf 2>&1 | tee out-base.txt
+          where="$(PYTHONPATH="$PWD" python -c "import portfolio_engine; print(portfolio_engine.__file__)")"
+          echo "::notice title=diag-base-tests::${where} | $(grep -E '^(FAILED|[0-9]+ (passed|failed))|passed|failed' out-base.txt | cut -c1-300 | paste -sd '|' | cut -c1-3000)"
       - name: H-1 on this CPU (before / after the retry change)
         if: always()
         run: python benchmarks/scripts/remediation_diagnostics.py h1 --annotate --repetitions 20
