@@ -68,6 +68,7 @@ from portfolio_engine.parallel.executor import (  # noqa: E402
     RunResult,
     SequentialExecutor,
 )
+from portfolio_engine.parallel.protocols import CancellationToken  # noqa: E402
 from portfolio_engine.parallel.shared_data import worker_bundle  # noqa: E402
 from portfolio_engine.parallel.task import ExecutionContext  # noqa: E402
 from portfolio_engine.parallel.threading_control import worker_thread_environment  # noqa: E402
@@ -141,7 +142,7 @@ def _startup_seconds(
     return time.perf_counter() - started
 
 
-def _parallel_cell(
+def _parallel_cell_unguarded(
     batch: synthetic_portfolios.SyntheticBatch,
     reference: RunResult,
     method: str,
@@ -152,6 +153,7 @@ def _parallel_cell(
     batch_size: int | None,
     blas_threads: int,
     shared_mode: str,
+    limits: _common.Limits,
 ) -> dict[str, Any]:
     pconfig = replace(
         parallel_config(workers=workers, batch_size=batch_size),
@@ -161,7 +163,14 @@ def _parallel_cell(
     )
 
     def execute() -> RunResult:
-        return ParallelExecutor(batch.config, batch.snapshot, pconfig).run(batch.requests)
+        token = CancellationToken()
+        with _common.Watchdog(token.cancel, limits) as watchdog:
+            run = ParallelExecutor(batch.config, batch.snapshot, pconfig).run(
+                batch.requests, control=token
+            )
+        if watchdog.reason is not None:
+            raise _common.RunAbortedError(watchdog.reason)
+        return run
 
     for _ in range(warmup):
         execute()
@@ -239,6 +248,21 @@ def _parallel_cell(
     }
 
 
+def _parallel_cell(*args: Any) -> dict[str, Any]:
+    """Celda paralela con topes: al superar uno se cancela y se marca ``aborted`` (no es PASS)."""
+    try:
+        return _parallel_cell_unguarded(*args)
+    except _common.RunAbortedError as stop:
+        batch_size, workers, method = args[7], args[3], args[2]
+        return {
+            "mode": method,
+            "workers": workers,
+            "batch_size": "AUTO" if batch_size is None else batch_size,
+            "aborted": stop.reason,
+            "valid_measurement": False,
+        }
+
+
 def _derive(cells: list[dict[str, Any]]) -> None:
     """Añade speedup, eficiencia y fracción serie respecto a la celda secuencial."""
     sequential = next(c for c in cells if c["mode"] == "sequential")
@@ -301,8 +325,15 @@ def run_batch_set(
                 batch_size,
                 args.blas_threads,
                 args.shared_data_mode,
+                _common.Limits(
+                    args.max_wall,
+                    None if args.max_rss_mb is None else int(args.max_rss_mb * 1e6),
+                ),
             )
             cells.append(cell)
+            if cell.get("aborted"):
+                print(f"  {method} w={workers}: ABORTADA ({cell['aborted']})")
+                continue
             print(
                 f"  {method:10s} w={workers} lote={cell['batch_size']} "
                 f"min={cell['wall']['min']:.2f} s "
@@ -310,7 +341,7 @@ def run_batch_set(
                 f"inicio={cell['pool_startup_seconds']['median']:.2f} s "
                 f"T1_dif={cell['t1_differences_vs_sequential']} válida={cell['valid_measurement']}"
             )
-    _derive([c for c in cells if c.get("available", True)])
+    _derive([c for c in cells if c.get("available", True) and not c.get("aborted")])
     solver_calls = None
     if args.count_solver_calls:
         from tests.fixtures.parallel import count_solver_calls
@@ -343,7 +374,7 @@ def _rates(
     frontiers = _common.frontier_count(reference.results)
     rates: dict[str, dict[str, float | None]] = {}
     for cell in cells:
-        if not cell.get("available", True):
+        if not cell.get("available", True) or cell.get("aborted"):
             continue
         wall = cell["wall"]["min"]
         key = f"{cell['mode']}:w{cell['workers']}:b{cell.get('batch_size', '-')}"
@@ -384,6 +415,12 @@ def main() -> None:
     parser.add_argument("--repetitions", type=int, default=0, help="0 = según la configuración")
     parser.add_argument(
         "--parallel-repetitions", type=int, default=0, help="0 = igual que --repetitions"
+    )
+    parser.add_argument(
+        "--max-wall", type=float, default=None, help="tope de pared (s) de CADA ejecución paralela"
+    )
+    parser.add_argument(
+        "--max-rss-mb", type=float, default=None, help="tope de RSS (MB) por worker"
     )
     parser.add_argument("--startup-repetitions", type=int, default=3)
     parser.add_argument("--blas-threads", type=int, default=1, help="hilos BLAS por worker (E6)")

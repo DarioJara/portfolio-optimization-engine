@@ -16,6 +16,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -257,6 +258,78 @@ class MemorySampler:
             return
         self.report.total_peak_rss = max(self.report.total_peak_rss, total)
         self.report.samples += 1
+
+
+# ---------------------------------------------------------------------- topes de seguridad
+
+
+@dataclass(frozen=True)
+class Limits:
+    """Topes de una ejecución (``None`` = sin tope): tiempo de pared y RSS por proceso hijo."""
+
+    max_wall_seconds: float | None = None
+    max_worker_rss_bytes: int | None = None
+
+
+class RunAbortedError(Exception):
+    """La ejecución superó un tope y se canceló; no cuenta como medición válida."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+class Watchdog:
+    """Cancela una ejecución al superar ``Limits`` (tiempo de pared o RSS de un worker).
+
+    ``cancel`` se invoca una sola vez (p. ej. ``CancellationToken.cancel``); ``reason`` queda con la
+    causa. La cancelación del ejecutor conserva lo completado y no envía más trabajo (P-04).
+    """
+
+    def __init__(
+        self, cancel: Callable[[], None], limits: Limits | None, interval: float = 0.2
+    ) -> None:
+        self._cancel = cancel
+        self._limits = limits or Limits()
+        self._interval = interval
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._started = 0.0
+        self.reason: str | None = None
+
+    def __enter__(self) -> Watchdog:
+        self._started = time.perf_counter()
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self._stop.set()
+        self._thread.join(timeout=5.0)
+
+    def _trip(self, reason: str) -> None:
+        if self.reason is None:
+            self.reason = reason
+            self._cancel()
+
+    def _loop(self) -> None:
+        me = psutil.Process()
+        while not self._stop.wait(self._interval):
+            limits = self._limits
+            elapsed = time.perf_counter() - self._started
+            if limits.max_wall_seconds is not None and elapsed > limits.max_wall_seconds:
+                self._trip(f"max-wall {limits.max_wall_seconds:g} s superado ({elapsed:.1f} s)")
+            if limits.max_worker_rss_bytes is None:
+                continue
+            try:
+                for child in me.children(recursive=True):
+                    rss = child.memory_info().rss
+                    if rss > limits.max_worker_rss_bytes:
+                        self._trip(
+                            f"RSS de un worker {rss / 1e6:.0f} MB > tope "
+                            f"{limits.max_worker_rss_bytes / 1e6:.0f} MB"
+                        )
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
 
 
 # ------------------------------------------------------------------ auditoría de restricciones

@@ -153,3 +153,47 @@ def test_the_scale_runner_refuses_mass_loads_without_authorization() -> None:
 
         sys.argv = ["scaling.py", "--scales", "1200", "--mix", "ENG-MIX-BASE"]
         scaling_script.main()
+
+
+def test_the_watchdog_cancels_once_on_the_wall_limit_and_on_a_worker_rss_limit() -> None:
+    """Los topes ``--max-wall`` y ``--max-rss-mb`` cancelan una sola vez y dejan su causa."""
+    import subprocess
+    import sys
+    import time
+
+    calls: list[int] = []
+    with COMMON.Watchdog(lambda: calls.append(1), COMMON.Limits(max_wall_seconds=0.3), 0.05) as dog:
+        time.sleep(1.0)
+    assert calls == [1] and dog.reason is not None and "max-wall" in dog.reason
+
+    calls.clear()
+    child = subprocess.Popen(
+        [sys.executable, "-c", "import time; blob = bytearray(80_000_000); time.sleep(10)"]
+    )
+    try:
+        limits = COMMON.Limits(max_worker_rss_bytes=40_000_000)
+        with COMMON.Watchdog(lambda: calls.append(1), limits, 0.05) as dog:
+            deadline = time.perf_counter() + 20.0
+            while not calls and time.perf_counter() < deadline:
+                time.sleep(0.05)
+        assert calls == [1] and dog.reason is not None and "RSS" in dog.reason
+    finally:
+        child.kill()
+        child.wait()
+
+    calls.clear()
+    with COMMON.Watchdog(lambda: calls.append(1), COMMON.Limits(), 0.05) as dog:
+        time.sleep(0.3)  # sin topes no se cancela nada
+    assert calls == [] and dog.reason is None
+
+
+def test_a_parallel_cell_that_exceeds_its_wall_limit_is_aborted_and_never_valid() -> None:
+    """Una celda cancelada por el tope se marca ``aborted`` y no es una medición válida."""
+    scaling_script = load_script("scaling")
+    batch = SYNTHETIC.generate(SCALING, _pure("W0-GROSS-RISK"), 4, 2)
+    reference = SequentialExecutor(batch.config, batch.snapshot).run(batch.requests)
+    cell = scaling_script._parallel_cell(
+        batch, reference, "spawn", 2, 1, 0, 0, None, 1, "BUNDLE_FILE", COMMON.Limits(0.5, None)
+    )
+    assert cell["valid_measurement"] is False and "max-wall" in cell["aborted"]
+    assert "wall" not in cell  # sin cifras de rendimiento de una ejecución abortada

@@ -39,6 +39,9 @@ def _scaling(document: dict[str, Any]) -> None:
             if not cell.get("available", True):
                 lines.append(f"{cell['mode']}: NO DISPONIBLE ({cell['reason']})")
                 continue
+            if cell.get("aborted"):
+                lines.append(f"{cell['mode']} w={cell['workers']}: ABORTADA ({cell['aborted']})")
+                continue
             wall = cell["wall"]
             extra = ""
             if cell["mode"] != "sequential":
