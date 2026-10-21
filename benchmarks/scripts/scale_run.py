@@ -95,6 +95,49 @@ def _entries(paths: list[Path], mix: str) -> list[dict[str, Any]]:
     return found
 
 
+def _unit_from_classes(
+    args: argparse.Namespace,
+) -> tuple[tuple[float, float, float], int, dict[str, Any]]:
+    """Coste unitario del mix ``--shares-mix`` a partir de costes por clase medidos (clases puras).
+
+    ``Σ sᵢ·cᵢ`` con las fracciones de la mezcla renormalizadas a las clases medidas; las clases sin
+    medición a esa dimensión se excluyen y su fracción se informa (nunca se les asigna un coste).
+    """
+    config = load_scaling_benchmark_config(args.config)
+    shares = {s.label: s.fraction for s in config.mix(args.shares_mix or args.mix).shares}
+    costs: dict[str, tuple[float, float, float]] = {}
+    sizes: dict[str, int] = {}
+    for path in args.class_costs:
+        document = json.loads(Path(path).read_text(encoding="utf-8"))
+        for entry in document["results"]:
+            if not entry["mix"].startswith("PURE:"):
+                continue
+            seq = next(c for c in entry["cells"] if c["mode"] == "sequential")
+            n_class = entry["portfolios"]
+            label = entry["mix"].removeprefix("PURE:")
+            costs[label] = (
+                seq["wall"]["min"] / n_class,
+                seq["wall"]["median"] / n_class,
+                seq["wall"]["max"] / n_class,
+            )
+            sizes[label] = n_class
+    used = {label: f for label, f in shares.items() if label in costs}
+    if not used:
+        raise SystemExit("Ninguna clase de la mezcla tiene coste medido en --class-costs.")
+    total = sum(used.values())
+    unit = tuple(sum(f / total * costs[label][k] for label, f in used.items()) for k in range(3))
+    source = {
+        "source": "pure-class costs",
+        "shares_mix": args.shares_mix or args.mix,
+        "class_cost_files": [Path(p).name for p in args.class_costs],
+        "classes_used": sorted(used),
+        "share_excluded_without_measurement": 1.0 - total,
+        "excluded_classes": sorted(set(shares) - set(used)),
+        "portfolios_measured_per_class": dict(sorted(sizes.items())),
+    }
+    return (unit[0], unit[1], unit[2]), min(sizes[label] for label in used), source
+
+
 def _estimate(args: argparse.Namespace) -> None:
     entries = _entries([Path(p) for p in args.inputs], args.mix)
     largest = max(entries, key=lambda e: e["portfolios"])
@@ -105,6 +148,9 @@ def _estimate(args: argparse.Namespace) -> None:
         sequential["wall"]["median"] / n,
         sequential["wall"]["max"] / n,
     )
+    unit_source: dict[str, Any] = {"source": "mix", "mix": args.mix, "measured_portfolios": n}
+    if args.class_costs:
+        unit, n, unit_source = _unit_from_classes(args)
     projections: list[dict[str, Any]] = []
     for workers in args.workers:
         efficiencies, startups, worker_rss, coordinator_rss = [], [], [], []
@@ -165,6 +211,7 @@ def _estimate(args: argparse.Namespace) -> None:
         "capacity_estimate",
         ["BEN-007", "GOV-012"],
         mix=args.mix,
+        unit_cost_source=unit_source,
         mode=args.method,
         source_files=[str(Path(p).name) for p in args.inputs],
         executed=False,
@@ -176,7 +223,8 @@ def _estimate(args: argparse.Namespace) -> None:
     )
     document = {"metadata": meta, "projections": projections}
     args.out.mkdir(parents=True, exist_ok=True)
-    path = args.out / f"capacity_estimate_{args.mix}_{meta['execution_timestamp_utc']}.json"
+    label = (args.shares_mix or args.mix) + ("-classcosts" if args.class_costs else "")
+    path = args.out / f"capacity_estimate_{label}_{meta['execution_timestamp_utc']}.json"
     path.write_text(json.dumps(document, indent=2, default=str), encoding="utf-8")
     header = "objetivo | workers | duración h (opt / central / pes) | horas-núcleo | GB"
     print(header)
@@ -207,6 +255,13 @@ def main() -> None:
     est = sub.add_parser("estimate", help="proyecta capacidad desde mediciones (no ejecuta)")
     est.add_argument("--inputs", nargs="+", required=True)
     est.add_argument("--mix", required=True)
+    est.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    est.add_argument(
+        "--class-costs",
+        nargs="*",
+        help="JSON de clases puras de las que sale el coste unitario (en vez del de --mix)",
+    )
+    est.add_argument("--shares-mix", help="mezcla cuyas fracciones pesan los costes por clase")
     est.add_argument("--targets", type=int, nargs="+", default=[1000, 1200, 5000, 22000])
     est.add_argument("--workers", type=int, nargs="+", required=True)
     est.add_argument("--method", default="spawn")
