@@ -1,0 +1,580 @@
+{
+  "metadata": {
+    "benchmark": "profile_class",
+    "evidence_for": [
+      "BEN-001",
+      "E1"
+    ],
+    "execution_timestamp_utc": "20261021T011017Z",
+    "git": {
+      "commit": "2ba515784d1b4848da24fdc0200f3ef39b644002",
+      "branch": "block5-benchmarks-final-audit",
+      "dirty": false,
+      "modified_tracked_files": [],
+      "untracked_in_code": [],
+      "untracked_outside_code": [
+        "AUDIT_BLOCK_5_4_CLOSURE.md",
+        "INVESTIGATION_H1_B4.md"
+      ]
+    },
+    "python": "3.13.6",
+    "versions": {
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "osqp": "1.1.3",
+      "clarabel": "0.11.1",
+      "pyscipopt": "6.2.1",
+      "threadpoolctl": "3.7.0",
+      "psutil": "7.2.2"
+    },
+    "host": {
+      "os": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "cpu_model": "13th Gen Intel(R) Core(TM) i7-13620H",
+      "cpu_logical": 16,
+      "cpu_physical": 10,
+      "smt_enabled": true,
+      "cpu_governor": null,
+      "ram_total_bytes": 16890322944,
+      "ram_available_bytes_at_start": 779575296,
+      "swap_used_bytes_at_start": 8382484480,
+      "system_cpu_percent_before": 43.1,
+      "load_note": "medido con psutil; no se consulta ning\u00fan servidor de base de datos"
+    },
+    "host_fingerprint": "00c905c7d527f3ca",
+    "command": "benchmarks/scripts/profile_class.py --label W0-NET-TARGET W1-GLOBAL-NET W3-MIN-CVAR W4-MAX-SHARPE W5-EXACT-MIP --portfolios 3",
+    "env_threads": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null
+    },
+    "random_seed": 7,
+    "portfolios": 3,
+    "note": "cProfile a\u00f1ade sobrecoste: \u00fasese para repartos relativos, no para tiempos absolutos"
+  },
+  "profiles": [
+    {
+      "label": "W0-NET-TARGET",
+      "portfolios": 3,
+      "total_profiled_seconds": 0.3001822,
+      "self_time_by_origin_fraction": {
+        "int\u00e9rprete (builtins)": 0.25671608776269883,
+        "motor (portfolio_engine)": 0.18615927260177315,
+        "numpy": 0.05167395002102057,
+        "resto (stdlib, pandas, otros)": 0.12528724221489485,
+        "scipy": 0.30412762648817954,
+        "solver nativo / bibliotecas": 0.07603582091143313
+      },
+      "top_functions_by_self_time": [
+        {
+          "function": "_highs_wrapper.py:306(check_option)",
+          "origin": "scipy",
+          "self_seconds": 0.06608610000000001,
+          "cumulative_seconds": 0.0553012
+        },
+        {
+          "function": "~:0(<built-in method nt.stat>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.0248436,
+          "cumulative_seconds": 0.0248436
+        },
+        {
+          "function": "interface.py:403(solve)",
+          "origin": "solver nativo / bibliotecas",
+          "self_seconds": 0.014679200000000002,
+          "cumulative_seconds": 0.0167074
+        },
+        {
+          "function": "~:0(<method 'reduce' of 'numpy.ufunc' objects>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.007965400000000001,
+          "cumulative_seconds": 0.007965400000000001
+        },
+        {
+          "function": "<frozen importlib._bootstrap_external>:101(_path_join)",
+          "origin": "resto (stdlib, pandas, otros)",
+          "self_seconds": 0.0066451,
+          "cumulative_seconds": 0.0097695
+        },
+        {
+          "function": "portfolio_metrics.py:122(compute_metrics)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.005299300000000001,
+          "cumulative_seconds": 0.0229433
+        },
+        {
+          "function": "interface.py:330(update)",
+          "origin": "solver nativo / bibliotecas",
+          "self_seconds": 0.004968200000000001,
+          "cumulative_seconds": 0.006941500000000001
+        },
+        {
+          "function": "_sputils.py:263(get_index_dtype)",
+          "origin": "scipy",
+          "self_seconds": 0.0041678,
+          "cumulative_seconds": 0.005896
+        },
+        {
+          "function": "transaction_cost_model.py:143(asset_costs_one_off)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.0040809,
+          "cumulative_seconds": 0.0068158
+        },
+        {
+          "function": "dedup.py:19(is_equivalent)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.0037858,
+          "cumulative_seconds": 0.007637700000000001
+        },
+        {
+          "function": "~:0(<built-in method builtins.getattr>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.0034767,
+          "cumulative_seconds": 0.0034806000000000004
+        },
+        {
+          "function": "~:0(<built-in method builtins.isinstance>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.0034607,
+          "cumulative_seconds": 0.0048596
+        },
+        {
+          "function": "feedparser.py:218(_parsegen)",
+          "origin": "resto (stdlib, pandas, otros)",
+          "self_seconds": 0.0028565,
+          "cumulative_seconds": 0.0130425
+        },
+        {
+          "function": "transaction_cost_model.py:57(expand)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.0027092,
+          "cumulative_seconds": 0.0036896000000000003
+        },
+        {
+          "function": "dataclasses.py:1599(_replace)",
+          "origin": "resto (stdlib, pandas, otros)",
+          "self_seconds": 0.0026783,
+          "cumulative_seconds": 0.008753
+        }
+      ]
+    },
+    {
+      "label": "W1-GLOBAL-NET",
+      "portfolios": 3,
+      "total_profiled_seconds": 5.0414386,
+      "self_time_by_origin_fraction": {
+        "int\u00e9rprete (builtins)": 0.13953217639108012,
+        "motor (portfolio_engine)": 0.30063188709667116,
+        "numpy": 0.06773804604106455,
+        "resto (stdlib, pandas, otros)": 0.04179679982614485,
+        "scipy": 0.42097616739793287,
+        "solver nativo / bibliotecas": 0.029324923247106494
+      },
+      "top_functions_by_self_time": [
+        {
+          "function": "_highs_wrapper.py:306(check_option)",
+          "origin": "scipy",
+          "self_seconds": 1.9119084000000002,
+          "cumulative_seconds": 0.49937050000000005
+        },
+        {
+          "function": "evaluation.py:292(value_and_gradient)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.287115,
+          "cumulative_seconds": 0.2912633
+        },
+        {
+          "function": "evaluation.py:72(project_box_budget)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.239273,
+          "cumulative_seconds": 0.3776195
+        },
+        {
+          "function": "~:0(<built-in method nt.stat>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.13612580000000002,
+          "cumulative_seconds": 0.13612580000000002
+        },
+        {
+          "function": "~:0(<method 'reduce' of 'numpy.ufunc' objects>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.11621870000000001,
+          "cumulative_seconds": 0.11621870000000001
+        },
+        {
+          "function": "interface.py:403(solve)",
+          "origin": "solver nativo / bibliotecas",
+          "self_seconds": 0.10521150000000001,
+          "cumulative_seconds": 0.12188120000000001
+        },
+        {
+          "function": "screening.py:60(average_rank_percentile)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.06335360000000001,
+          "cumulative_seconds": 0.13503020000000002
+        },
+        {
+          "function": "<frozen importlib._bootstrap_external>:101(_path_join)",
+          "origin": "resto (stdlib, pandas, otros)",
+          "self_seconds": 0.0568892,
+          "cumulative_seconds": 0.0835858
+        },
+        {
+          "function": "swap_generator.py:113(_swaps)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.049474300000000006,
+          "cumulative_seconds": 0.08941850000000001
+        },
+        {
+          "function": "evaluation.py:239(_refine)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.0471557,
+          "cumulative_seconds": 0.7162109000000001
+        },
+        {
+          "function": "transaction_cost_model.py:143(asset_costs_one_off)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.046549200000000006,
+          "cumulative_seconds": 0.0794759
+        },
+        {
+          "function": "portfolio_metrics.py:122(compute_metrics)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.039266600000000006,
+          "cumulative_seconds": 0.1869383
+        },
+        {
+          "function": "~:0(<built-in method builtins.getattr>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.0378493,
+          "cumulative_seconds": 0.0378888
+        },
+        {
+          "function": "dataclasses.py:1599(_replace)",
+          "origin": "resto (stdlib, pandas, otros)",
+          "self_seconds": 0.037017,
+          "cumulative_seconds": 0.10703570000000001
+        },
+        {
+          "function": "_sputils.py:263(get_index_dtype)",
+          "origin": "scipy",
+          "self_seconds": 0.0336098,
+          "cumulative_seconds": 0.0480843
+        }
+      ]
+    },
+    {
+      "label": "W3-MIN-CVAR",
+      "portfolios": 3,
+      "total_profiled_seconds": 0.0926865,
+      "self_time_by_origin_fraction": {
+        "int\u00e9rprete (builtins)": 0.2827380470726587,
+        "motor (portfolio_engine)": 0.06900681328996135,
+        "numpy": 0.04147637466081901,
+        "resto (stdlib, pandas, otros)": 0.13965248445027054,
+        "scipy": 0.46712628052629
+      },
+      "top_functions_by_self_time": [
+        {
+          "function": "_highs_wrapper.py:306(check_option)",
+          "origin": "scipy",
+          "self_seconds": 0.0276272,
+          "cumulative_seconds": 0.0146929
+        },
+        {
+          "function": "~:0(<built-in method nt.stat>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.0073165,
+          "cumulative_seconds": 0.0073165
+        },
+        {
+          "function": "_sputils.py:263(get_index_dtype)",
+          "origin": "scipy",
+          "self_seconds": 0.0022638000000000003,
+          "cumulative_seconds": 0.0032651000000000004
+        },
+        {
+          "function": "feedparser.py:218(_parsegen)",
+          "origin": "resto (stdlib, pandas, otros)",
+          "self_seconds": 0.0019532,
+          "cumulative_seconds": 0.0092926
+        },
+        {
+          "function": "feedparser.py:79(readline)",
+          "origin": "resto (stdlib, pandas, otros)",
+          "self_seconds": 0.0016968,
+          "cumulative_seconds": 0.0021411
+        },
+        {
+          "function": "~:0(<method 'reduce' of 'numpy.ufunc' objects>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.0015353,
+          "cumulative_seconds": 0.0015353
+        },
+        {
+          "function": "~:0(<built-in method _io.open>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.0014207,
+          "cumulative_seconds": 0.0018551000000000002
+        },
+        {
+          "function": "~:0(<method 'sub' of 're.Pattern' objects>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.0014086,
+          "cumulative_seconds": 0.0014086
+        },
+        {
+          "function": "feedparser.py:129(__next__)",
+          "origin": "resto (stdlib, pandas, otros)",
+          "self_seconds": 0.0011123,
+          "cumulative_seconds": 0.0032534
+        },
+        {
+          "function": "_coo.py:203(_check)",
+          "origin": "scipy",
+          "self_seconds": 0.0009146,
+          "cumulative_seconds": 0.0046238
+        },
+        {
+          "function": "_coo.py:32(__init__)",
+          "origin": "scipy",
+          "self_seconds": 0.0009140000000000001,
+          "cumulative_seconds": 0.0095096
+        },
+        {
+          "function": "feedparser.py:472(_parse_headers)",
+          "origin": "resto (stdlib, pandas, otros)",
+          "self_seconds": 0.000889,
+          "cumulative_seconds": 0.0022695000000000002
+        },
+        {
+          "function": "~:0(<method 'append' of 'list' objects>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.000888,
+          "cumulative_seconds": 0.000888
+        },
+        {
+          "function": "~:0(<built-in method builtins.isinstance>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.0008588000000000001,
+          "cumulative_seconds": 0.0013098
+        },
+        {
+          "function": "~:0(<built-in method numpy.array>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.0008081000000000001,
+          "cumulative_seconds": 0.0008081000000000001
+        }
+      ]
+    },
+    {
+      "label": "W4-MAX-SHARPE",
+      "portfolios": 3,
+      "total_profiled_seconds": 0.1480535,
+      "self_time_by_origin_fraction": {
+        "int\u00e9rprete (builtins)": 0.25955887567669805,
+        "motor (portfolio_engine)": 0.07726598830828048,
+        "numpy": 0.06962077897516773,
+        "resto (stdlib, pandas, otros)": 0.0970419476743204,
+        "scipy": 0.4965124093655333
+      },
+      "top_functions_by_self_time": [
+        {
+          "function": "_highs_wrapper.py:306(check_option)",
+          "origin": "scipy",
+          "self_seconds": 0.032651400000000004,
+          "cumulative_seconds": 0.024051600000000003
+        },
+        {
+          "function": "~:0(<built-in method nt.stat>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.008686600000000001,
+          "cumulative_seconds": 0.008686600000000001
+        },
+        {
+          "function": "_sputils.py:263(get_index_dtype)",
+          "origin": "scipy",
+          "self_seconds": 0.007078500000000001,
+          "cumulative_seconds": 0.010338100000000001
+        },
+        {
+          "function": "_coo.py:32(__init__)",
+          "origin": "scipy",
+          "self_seconds": 0.0029615,
+          "cumulative_seconds": 0.0294523
+        },
+        {
+          "function": "_coo.py:203(_check)",
+          "origin": "scipy",
+          "self_seconds": 0.0028268,
+          "cumulative_seconds": 0.013667700000000001
+        },
+        {
+          "function": "~:0(<method 'reduce' of 'numpy.ufunc' objects>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.0024508,
+          "cumulative_seconds": 0.0024508
+        },
+        {
+          "function": "~:0(<built-in method numpy.array>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.0020869,
+          "cumulative_seconds": 0.0020869
+        },
+        {
+          "function": "_compressed.py:30(__init__)",
+          "origin": "scipy",
+          "self_seconds": 0.00197,
+          "cumulative_seconds": 0.0220692
+        },
+        {
+          "function": "feedparser.py:218(_parsegen)",
+          "origin": "resto (stdlib, pandas, otros)",
+          "self_seconds": 0.0019500000000000001,
+          "cumulative_seconds": 0.009953400000000001
+        },
+        {
+          "function": "~:0(<built-in method builtins.any>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.0018199000000000002,
+          "cumulative_seconds": 0.0033106000000000003
+        },
+        {
+          "function": "feedparser.py:79(readline)",
+          "origin": "resto (stdlib, pandas, otros)",
+          "self_seconds": 0.0017966000000000002,
+          "cumulative_seconds": 0.0022699
+        },
+        {
+          "function": "_sputils.py:443(check_shape)",
+          "origin": "scipy",
+          "self_seconds": 0.0017615,
+          "cumulative_seconds": 0.0036187000000000003
+        },
+        {
+          "function": "_stride_tricks_impl.py:447(_broadcast_to)",
+          "origin": "numpy",
+          "self_seconds": 0.0016513,
+          "cumulative_seconds": 0.0025845
+        },
+        {
+          "function": "~:0(<built-in method builtins.isinstance>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.0016403000000000001,
+          "cumulative_seconds": 0.002483
+        },
+        {
+          "function": "_base.py:1695(_get_index_dtype)",
+          "origin": "scipy",
+          "self_seconds": 0.0016344,
+          "cumulative_seconds": 0.0125237
+        }
+      ]
+    },
+    {
+      "label": "W5-EXACT-MIP",
+      "portfolios": 3,
+      "total_profiled_seconds": 5.8160258,
+      "self_time_by_origin_fraction": {
+        "int\u00e9rprete (builtins)": 0.1419426646972577,
+        "motor (portfolio_engine)": 0.3370222154103925,
+        "numpy": 0.062464870771377926,
+        "resto (stdlib, pandas, otros)": 0.04627690956941766,
+        "scipy": 0.39127823332558126,
+        "solver nativo / bibliotecas": 0.02101510622597307
+      },
+      "top_functions_by_self_time": [
+        {
+          "function": "_highs_wrapper.py:306(check_option)",
+          "origin": "scipy",
+          "self_seconds": 1.9823805,
+          "cumulative_seconds": 0.6531893000000001
+        },
+        {
+          "function": "scip_backend.py:155(solve)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.3368646,
+          "cumulative_seconds": 0.35606350000000003
+        },
+        {
+          "function": "evaluation.py:292(value_and_gradient)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.2917754,
+          "cumulative_seconds": 0.29598
+        },
+        {
+          "function": "evaluation.py:72(project_box_budget)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.24412,
+          "cumulative_seconds": 0.388403
+        },
+        {
+          "function": "~:0(<built-in method nt.stat>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.19182200000000002,
+          "cumulative_seconds": 0.19182200000000002
+        },
+        {
+          "function": "~:0(<method 'reduce' of 'numpy.ufunc' objects>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.12349360000000001,
+          "cumulative_seconds": 0.12349360000000001
+        },
+        {
+          "function": "<frozen importlib._bootstrap_external>:101(_path_join)",
+          "origin": "resto (stdlib, pandas, otros)",
+          "self_seconds": 0.082745,
+          "cumulative_seconds": 0.1214892
+        },
+        {
+          "function": "interface.py:403(solve)",
+          "origin": "solver nativo / bibliotecas",
+          "self_seconds": 0.07017570000000001,
+          "cumulative_seconds": 0.087478
+        },
+        {
+          "function": "screening.py:60(average_rank_percentile)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.0691109,
+          "cumulative_seconds": 0.1481001
+        },
+        {
+          "function": "swap_generator.py:113(_swaps)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.054195600000000003,
+          "cumulative_seconds": 0.0984401
+        },
+        {
+          "function": "_sputils.py:263(get_index_dtype)",
+          "origin": "scipy",
+          "self_seconds": 0.0506706,
+          "cumulative_seconds": 0.07164000000000001
+        },
+        {
+          "function": "evaluation.py:239(_refine)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.0480681,
+          "cumulative_seconds": 0.7320637000000001
+        },
+        {
+          "function": "portfolio_metrics.py:122(compute_metrics)",
+          "origin": "motor (portfolio_engine)",
+          "self_seconds": 0.0410524,
+          "cumulative_seconds": 0.19326700000000002
+        },
+        {
+          "function": "~:0(<built-in method builtins.getattr>)",
+          "origin": "int\u00e9rprete (builtins)",
+          "self_seconds": 0.0407053,
+          "cumulative_seconds": 0.0407497
+        },
+        {
+          "function": "dataclasses.py:1599(_replace)",
+          "origin": "resto (stdlib, pandas, otros)",
+          "self_seconds": 0.0385987,
+          "cumulative_seconds": 0.110821
+        }
+      ]
+    }
+  ]
+}

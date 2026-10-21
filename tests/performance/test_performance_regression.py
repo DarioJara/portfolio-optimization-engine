@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+from typing import Any
 
 import pytest
 
@@ -40,7 +41,7 @@ TIMING_ENV = "PE_RUN_TIMING_REGRESSION"
 CONFIRMATION_ROUNDS = 3
 
 
-def _work_baseline() -> dict[str, dict[str, int]]:
+def _work_baseline() -> dict[str, dict[str, list[dict[str, Any]]]]:
     document = json.loads(PERF.WORK_BASELINE.read_text(encoding="utf-8"))
     return {key: value for key, value in document["cells"].items()}
 
@@ -50,18 +51,22 @@ def test_the_work_of_every_reference_cell_matches_the_versioned_baseline(
     label: str, portfolios: int
 ) -> None:
     """El trabajo determinista (llamadas al solver) no cambia respecto al baseline."""
-    expected = _work_baseline()[cell_key(label, portfolios, "sequential")]
+    variants = _work_baseline()[cell_key(label, portfolios, "sequential")]["variants"]
     measured = PERF.measure_cell(label, portfolios, repetitions=1)
-    assert measured.solver_calls == expected["solver_calls"], (
-        f"{label}: el trabajo cambió ({expected['solver_calls']} -> {measured.solver_calls} "
-        "llamadas al solver): es un cambio de trabajo, no de velocidad."
+    matching = [v for v in variants if v["solver_calls"] == measured.solver_calls]
+    assert matching, (
+        f"{label}: el trabajo cambió ({[v['solver_calls'] for v in variants]} -> "
+        f"{measured.solver_calls} llamadas al solver): es un cambio de trabajo (o una variante "
+        "de plataforma nueva), no de velocidad."
     )
-    # Las iteraciones pueden variar en una unidad entre CPU: tolerancia relativa configurada.
-    tolerance = max(
-        1,
-        round(PERF.scaling_config().iteration_relative_tolerance * expected["frontier_iterations"]),
-    )
-    assert abs(measured.frontier_iterations - expected["frontier_iterations"]) <= tolerance
+    # Las iteraciones pueden variar ligeramente entre CPU: tolerancia relativa configurada,
+    # respecto de la variante cuyas llamadas coinciden.
+    relative = PERF.scaling_config().iteration_relative_tolerance
+    assert any(
+        abs(measured.frontier_iterations - v["frontier_iterations"])
+        <= max(1, round(relative * v["frontier_iterations"]))
+        for v in matching
+    ), (label, measured.frontier_iterations, matching)
 
 
 def test_the_baseline_covers_every_reference_cell_and_records_its_provenance() -> None:

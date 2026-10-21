@@ -88,16 +88,24 @@ def explain(reference: dict[str, Any], current: dict[str, Any], tolerance: float
             f"{len(cur_ids - ref_ids)}; estados ref {dict(Counter(expected['point_statuses']))} "
             f"vs actual {dict(Counter(got['point_statuses']))}"
         )
-        shared = ref_ids & cur_ids
-        worst = 0.0
+        by_ref: dict[tuple[str, ...], list[list[float]]] = {}
+        by_cur: dict[tuple[str, ...], list[list[float]]] = {}
         for ids, weights in expected["solutions"]:
-            if tuple(ids) not in shared:
+            by_ref.setdefault(tuple(ids), []).append(weights)
+        for ids, weights in got["solutions"]:
+            by_cur.setdefault(tuple(ids), []).append(weights)
+        worst, mismatched = 0.0, 0
+        for ids in ref_ids & cur_ids:
+            ref_list, cur_list = by_ref[ids], by_cur[ids]
+            if len(ref_list) != len(cur_list):
+                mismatched += 1
                 continue
-            for other_ids, other in got["solutions"]:
-                if tuple(other_ids) == tuple(ids) and len(other) == len(weights):
-                    worst = max(worst, *(abs(a - b) for a, b in zip(weights, other, strict=True)))
-                    break
-        lines.append(f"  máx |Δpeso| entre soluciones de composiciones comunes: {worst:.3e}")
+            for a, b in zip(ref_list, cur_list, strict=True):
+                worst = max(worst, *(abs(x - y) for x, y in zip(a, b, strict=True)))
+        lines.append(
+            f"  composiciones comunes con distinto nº de soluciones: {mismatched}; "
+            f"máx |Δpeso| en las demás (k-ésima solución de cada composición): {worst:.3e}"
+        )
     return lines or ["sin divergencias"]
 
 

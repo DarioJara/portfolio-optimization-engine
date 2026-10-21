@@ -73,8 +73,14 @@ def main() -> None:
         key = cell_key(label, portfolios, "sequential")
         timing[key] = BaselineCell(measured.samples, measured.solver_calls, fingerprint)
         work[key] = {
-            "solver_calls": measured.solver_calls,
-            "frontier_iterations": measured.frontier_iterations,
+            "variants": [
+                {
+                    "solver_calls": measured.solver_calls,
+                    "frontier_iterations": measured.frontier_iterations,
+                    "observed_on": f"{meta['host']['os']} / {meta['host']['cpu_model']} / "
+                    f"Python {meta['python']}",
+                }
+            ]
         }
         print(f"{key}: min={min(measured.samples):.3f} s llamadas={measured.solver_calls}")
     save_baseline(timing_path, timing, meta)

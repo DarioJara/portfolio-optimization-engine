@@ -78,36 +78,87 @@
         "W4-VOL-TARGET",
         6
       ]
-    ]
+    ],
+    "note_variants": "Las llamadas al solver de W1 difieren entre Windows (484) y Linux (506) por F-B55-1; el test acepta las variantes observadas y falla ante cualquier otra. Las variantes de Linux proceden de la CI (anotaciones), a\u00f1adidas a mano tras la creaci\u00f3n del baseline."
   },
   "cells": {
     "W0-GROSS-RISK|6|sequential": {
-      "solver_calls": 132,
-      "frontier_iterations": 8156
+      "variants": [
+        {
+          "solver_calls": 132,
+          "frontier_iterations": 8156,
+          "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
+        },
+        {
+          "solver_calls": 132,
+          "frontier_iterations": 8131,
+          "observed_on": "Linux 6.8 (Ubuntu 22.04) / Intel(R) Xeon(R) 6973P-C / Python 3.11.17 (GitHub Actions run 39526528068, paso 'B5.5 cross-platform diagnostic')"
+        }
+      ]
     },
     "W0-NET-TARGET|6|sequential": {
-      "solver_calls": 132,
-      "frontier_iterations": 20499
+      "variants": [
+        {
+          "solver_calls": 132,
+          "frontier_iterations": 20499,
+          "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
+        },
+        {
+          "solver_calls": 132,
+          "frontier_iterations": 20399,
+          "observed_on": "Linux 6.8 (Ubuntu 22.04) / Intel(R) Xeon(R) 6973P-C / Python 3.11.17 (GitHub Actions run 39526528068, paso 'B5.5 cross-platform diagnostic')"
+        }
+      ]
     },
     "W1-GLOBAL-NET|2|sequential": {
-      "solver_calls": 484,
-      "frontier_iterations": 46934
+      "variants": [
+        {
+          "solver_calls": 484,
+          "frontier_iterations": 46934,
+          "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
+        },
+        {
+          "solver_calls": 506,
+          "frontier_iterations": 49012,
+          "observed_on": "Linux 6.8 (Ubuntu 22.04) / Intel(R) Xeon(R) 6973P-C / Python 3.11.17 (GitHub Actions run 39526528068, paso 'B5.5 cross-platform diagnostic')"
+        }
+      ]
     },
     "W3-MIN-CVAR|6|sequential": {
-      "solver_calls": 12,
-      "frontier_iterations": 0
+      "variants": [
+        {
+          "solver_calls": 12,
+          "frontier_iterations": 0,
+          "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
+        }
+      ]
     },
     "W4-ROBUST|6|sequential": {
-      "solver_calls": 6,
-      "frontier_iterations": 0
+      "variants": [
+        {
+          "solver_calls": 6,
+          "frontier_iterations": 0,
+          "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
+        }
+      ]
     },
     "W4-MAX-SHARPE|6|sequential": {
-      "solver_calls": 18,
-      "frontier_iterations": 0
+      "variants": [
+        {
+          "solver_calls": 18,
+          "frontier_iterations": 0,
+          "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
+        }
+      ]
     },
     "W4-VOL-TARGET|6|sequential": {
-      "solver_calls": 12,
-      "frontier_iterations": 0
+      "variants": [
+        {
+          "solver_calls": 12,
+          "frontier_iterations": 0,
+          "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
+        }
+      ]
     }
   }
 }
