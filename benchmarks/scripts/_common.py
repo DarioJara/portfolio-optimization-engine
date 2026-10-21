@@ -262,7 +262,7 @@ class MemorySampler:
 # ------------------------------------------------------------------ auditoría de restricciones
 
 
-def _weight_vectors(
+def weight_vectors(
     value: object,
 ) -> list[tuple[tuple[str, ...], np.ndarray]]:  # type: ignore[type-arg]
     """Pares ``(asset_ids, pesos)`` de todos los resultados de una operación."""
@@ -276,11 +276,11 @@ def _weight_vectors(
         children: list[object] = list(value.composition_results)
         children.append(value.continuous)
         for child in children:
-            found.extend(_weight_vectors(child))
+            found.extend(weight_vectors(child))
     elif isinstance(value, MultiScenarioResult):
         children = [*value.frontiers, *value.strategies, value.single_solution]
         for child in children:
-            found.extend(_weight_vectors(child))
+            found.extend(weight_vectors(child))
     return found
 
 
@@ -334,7 +334,7 @@ def audit_constraints(
             if status is not None:
                 key = getattr(status, "value", str(status))
                 audit.status_histogram[key] = audit.status_histogram.get(key, 0) + 1
-            for ids, weights in _weight_vectors(value):
+            for ids, weights in weight_vectors(value):
                 audit.solutions += 1
                 budget_error = abs(float(weights.sum()) - 1.0)
                 audit.max_budget_error = max(audit.max_budget_error, budget_error)
@@ -373,6 +373,48 @@ def frontier_iterations(results: tuple[TaskResult, ...]) -> int:
             elif isinstance(value, GlobalFrontierResult):
                 total += sum(r.diagnostics.total_iterations for r in value.composition_results)
     return total
+
+
+def _frontiers_in(value: object) -> int:
+    """Fronteras de composición contenidas en el resultado de una operación."""
+    if isinstance(value, CompositionFrontierResult):
+        return 1
+    if isinstance(value, GlobalFrontierResult):
+        return len(value.composition_results) + (0 if value.continuous is None else 1)
+    if isinstance(value, MultiScenarioResult):
+        return sum(_frontiers_in(frontier) for frontier in value.frontiers)
+    return 0
+
+
+def frontier_count(results: tuple[TaskResult, ...]) -> int:
+    """Número de fronteras de composición resueltas (contador determinista; BEN-002)."""
+    return sum(_frontiers_in(o.result) for r in results for o in r.operations)
+
+
+def solution_fingerprint(results: tuple[TaskResult, ...]) -> dict[str, Any]:
+    """Estado de ejecución y pesos de todas las soluciones de cada cartera (para C-28).
+
+    Los pesos se guardan con precisión completa; la comparación entre plataformas se hace bajo T1
+    (``|Δ| ≤ 1e-6``) y con igualdad exacta de recuentos y estados.
+    """
+    fingerprint: dict[str, Any] = {}
+    for result in results:
+        vectors = [
+            [list(ids), [float(w) for w in weights]]
+            for outcome in result.operations
+            for ids, weights in weight_vectors(outcome.result)
+        ]
+        statuses = [
+            getattr(getattr(point, "point", point).status, "value", "")
+            for outcome in result.operations
+            for point in getattr(outcome.result, "points", ())
+        ]
+        fingerprint[result.portfolio_id] = {
+            "execution_status": result.execution_status.value,
+            "solutions": vectors,
+            "point_statuses": statuses,
+        }
+    return fingerprint
 
 
 def status_counts(results: tuple[TaskResult, ...]) -> dict[str, int]:

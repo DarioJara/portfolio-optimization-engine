@@ -327,11 +327,32 @@ def run_batch_set(
         "parallel_repetitions": parallel_repetitions,
         "work_counters": {
             "frontier_solver_iterations": _common.frontier_iterations(reference.results),
+            "frontier_results": _common.frontier_count(reference.results),
             "solver_calls": solver_calls,
         },
+        "rates_at_min_wall": _rates(cells, reference, solver_calls),
         "snapshot_key": reference.manifest.snapshot_key,
         "cells": cells,
     }
+
+
+def _rates(
+    cells: list[dict[str, Any]], reference: RunResult, solver_calls: int | None
+) -> dict[str, dict[str, float | None]]:
+    """Carteras/s, fronteras/s y llamadas al solver/s por celda (trabajo determinista ÷ tiempo)."""
+    frontiers = _common.frontier_count(reference.results)
+    rates: dict[str, dict[str, float | None]] = {}
+    for cell in cells:
+        if not cell.get("available", True):
+            continue
+        wall = cell["wall"]["min"]
+        key = f"{cell['mode']}:w{cell['workers']}:b{cell.get('batch_size', '-')}"
+        rates[key] = {
+            "portfolios_per_second": len(reference.results) / wall,
+            "frontiers_per_second": frontiers / wall,
+            "solver_calls_per_second": None if solver_calls is None else solver_calls / wall,
+        }
+    return rates
 
 
 def _batch_sizes(args: argparse.Namespace) -> list[int | None]:
@@ -372,6 +393,10 @@ def main() -> None:
         choices=["BUNDLE_FILE", "FILE_MMAP", "SHARED_MEMORY"],
     )
     parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument("--universe-assets", type=int, default=0, help="0 = según la configuración")
+    parser.add_argument(
+        "--holdings", type=int, default=0, help="posiciones por cartera; 0 = config"
+    )
     parser.add_argument("--count-solver-calls", action="store_true")
     parser.add_argument("--authorized-by", help="autorización expresa (D-12) para ≥ 1.000 carteras")
     parser.add_argument("--out", type=Path, default=ROOT / "benchmarks" / "results")
@@ -379,6 +404,13 @@ def main() -> None:
     args = parser.parse_args()
 
     scaling = load_scaling_benchmark_config(args.config)
+    if args.universe_assets or args.holdings:
+        scaling = replace(
+            scaling,
+            universe_assets=args.universe_assets or scaling.universe_assets,
+            holdings_min=args.holdings or scaling.holdings_min,
+            holdings_max=args.holdings or scaling.holdings_max,
+        )
     if max(args.scales) > scaling.max_portfolios_without_authorization and not args.authorized_by:
         raise SystemExit(
             f"Cargas de más de {scaling.max_portfolios_without_authorization} carteras requieren "
@@ -400,6 +432,10 @@ def main() -> None:
         else str(args.config),
         scaling_config_sha256=_file_sha256(args.config),
         random_seed=args.seed,
+        universe_assets=scaling.universe_assets,
+        holdings_per_portfolio=[scaling.holdings_min, scaling.holdings_max],
+        degenerate_fraction=scaling.degenerate_fraction,
+        return_periods=scaling.return_periods,
         engine_config_hash=None,
         mixes_are_engineering_assumptions=True,
         start_methods_requested=args.methods,
