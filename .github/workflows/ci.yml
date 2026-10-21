@@ -4,9 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    # TEMPORAL (B5.5): la rama de benchmarks dispara la CI para archivar la evidencia de Linux sin
-    # abrir un PR (precedente: b53-branch-ci.yml). Se retira al cerrar la fase.
-    branches: [main, block5-benchmarks-final-audit]
+    branches: [main]
   workflow_dispatch:
 
 permissions:

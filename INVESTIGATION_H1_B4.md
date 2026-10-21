@@ -103,7 +103,7 @@ Linux 6.8 / Ubuntu 22.04 / Python 3.11.17):
 
 * **El mecanismo se reproduce en Linux/Intel con valores casi idénticos**: la degradación depende de que 1e-9 esté en el borde de lo alcanzable, no de Windows ni de una CPU concreta.
   Sin perturbar, el motor fue correcto en ambas plataformas (Linux: 9 iteraciones frente a 10 en Windows; brecha `|worst_case_utility − solver_t|` = 7·10⁻¹³ frente a 1·10⁻¹⁴).
-* En los runs de B5.5 con pruebas ejecutadas los runners fueron Xeon (8573C ×2, 6973P-C) y los dos tests de B4 **no fallaron**: coherente con que el fallo original dependa de que el redondeo de la CPU caiga
+* En los runs de B5.5 con pruebas ejecutadas los runners fueron Xeon (8573C ×2, 6973P-C) y un EPYC 9V45 (`ed3eab4`), y los dos tests de B4 **no fallaron** en ninguno: coherente con que el fallo original dependa de que el redondeo de la CPU caiga
   del lado `AlmostSolved`. El único EPYC 7763 sorteado (`f650607`) falló en la colección de pruebas por un defecto ajeno (extra `bench`), sin ejecutar ningún test: **el fallo original no se ha vuelto a observar ni
   descartado en esa CPU**.
 * No hay motivo, con esta evidencia, para cambiar el diagnóstico de §4 ni la remediación de §5.

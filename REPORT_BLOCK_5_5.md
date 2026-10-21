@@ -88,15 +88,15 @@ violaciones no es válida y el script termina con error.
 
 ### 5.1 Hallazgo F-B55-1 — la búsqueda de candidatos de W1 no es idéntica entre plataformas (abierto, Medio)
 
-**Qué se observó.** El lote de referencia (`ENG-MIX-BASE`, 10 carteras, semilla 7) se reprodujo en Linux (Ubuntu 22.04, Python 3.11.17, GitHub Actions; Xeon Platinum 8573C y
-Xeon 6973P-C). 9 de las 10 carteras (W0, W2, W3, W4 y una de las dos W1) coinciden con Windows bajo T1 (estados y número de soluciones idénticos). La cartera
+**Qué se observó.** El lote de referencia (`ENG-MIX-BASE`, 10 carteras, semilla 7) se reprodujo en Linux (Ubuntu 22.04, Python 3.11.17, GitHub Actions; Xeon Platinum 8573C,
+Xeon 6973P-C y AMD EPYC 9V45). 9 de las 10 carteras (W0, W2, W3, W4 y una de las dos W1) coinciden con Windows bajo T1 (estados y número de soluciones idénticos). La cartera
 `W1-GLOBAL-NET-000005-0000` no: en Linux la búsqueda de candidatos devuelve **12 composiciones frente a 11** (260 frente a 240 soluciones), todas `OPTIMAL`. En las 11 composiciones
 comunes el número de soluciones es el mismo y la diferencia máxima de pesos es **3,5·10⁻¹²** (≪ 1e-6): Linux es un **superconjunto** de Windows. A nivel de lote W1 de dos carteras, 506 llamadas al
 solver (Linux, los dos Xeon) frente a 484 (Windows) y 49.012 frente a 46.934 iteraciones.
 
 **Qué se sabe y qué no.** Es un cambio de *qué candidatos entran* (B3, `CandidateEngine` / `GlobalCandidateFrontierEngine`), no de la matemática de cada frontera ni del ejecutor
 paralelo de B5 (en cada plataforma, paralelo ≡ secuencial con T1 = 0). Es compatible con una decisión de umbral/orden sensible al redondeo (empates en la puntuación del haz, presupuesto de
-evaluaciones o deduplicación), pero **la causa no se ha determinado** y no se ha tocado ningún algoritmo ni tolerancia. No se ha podido comprobar en un runner EPYC (en los runs con pruebas ejecutadas los runners fueron Xeon).
+evaluaciones o deduplicación), pero **la causa no se ha determinado** y no se ha tocado ningún algoritmo ni tolerancia. La divergencia es **idéntica en los tres modelos de CPU** (dos Xeon y un EPYC 9V45: 12 frente a 11 composiciones, `|Δpeso|` 3,495·10⁻¹²): no varía con el fabricante de la CPU. Las dos plataformas difieren también en el SO, el compilador de las ruedas y las versiones (Python 3.13 frente a 3.11; NumPy/SciPy 2.5.3/1.18.1 frente a las versiones que resuelve la CI), por lo que **no se puede atribuir a una de esas causas**. El EPYC 7763 no se ha vuelto a sortear con pruebas ejecutadas.
 
 **Tratamiento.** La prueba `test_cross_platform_reference.py` es por cartera y marca esa cartera `xfail` (no estricto) **solo fuera de Windows**, con la causa visible en el informe de pytest;
 el baseline de trabajo (`perf_reference_work.json`) conserva ambas variantes observadas (484 y 506) y falla ante cualquier otra. C-28 queda **PARTIAL**. La remediación (decidir si el conjunto de
@@ -398,12 +398,14 @@ pasos de B5.5 publican en ellas lo esencial.
 | `6a8e79b` | `39525647162` | failure | Xeon 8573C | 1989 passed, **2 failed**: las dos comprobaciones nuevas de C-28 (§5.1) |
 | `0e05505` | `39526528068` | failure | Xeon 6973P-C | idéntico; añade diagnósticos de divergencia y de contadores de trabajo |
 | `933c0cc` | `39527318745` | **success** | Xeon 8573C (4 vCPU, SMT) | **2004 passed, 3 skipped, 1 xfailed** en 4 min 33 s; el *xfailed* es F-B55-1 |
+| `ed3eab4` (cabeza de documentación) | `39529975173` | **success** | AMD EPYC 9V45 (4 vCPU, SMT) | **2004 passed, 3 skipped, 1 xfailed** en 3 min 21 s; F-B55-1 idéntica; 56 pruebas de B5.4 en Linux |
 
 Evidencia de Linux de B5.5 (run `39527318745`, Python 3.11.17):
 
 * **Benchmark de escala 10 (`ENG-MIX-BASE`)**: secuencial 0,66 s; `spawn` 1 worker 2,04 s (pool listo en 1,34 s) y 2 workers 1,97 s; **`forkserver` 1,78 s (1,12 s) y 1,72 s**.
   Todas las celdas `valida=True`, T1 = 0, restricciones limpias. En Linux el arranque es 5–6× más rápido que en esta Windows (7–8 s) y `forkserver` gana un 13–16 % a `spawn`.
   Siguen valiendo las cautelas: 10 carteras, runner compartido de 4 vCPU.
+* **Mismo benchmark en el EPYC 9V45** (`ed3eab4`): secuencial 0,46 s; `spawn` 1 worker 1,38 s (pool listo en 0,99 s); **`forkserver` 1,25 s (0,80 s)**; todas válidas, T1 = 0.
 * **Pruebas de B5.4 en Linux** (`forkserver`, `flock`, permisos, zombis, limpieza): 56 passed.
 * **Sonda de H-1 en el Xeon 8573C** (§7): con la tolerancia cónica configurada, validez 1,00 / 0,47 / 0,45 / 0,37 / 0,27 / 0,02 para perturbaciones 0 / 1e-16 / 1e-15 / 1e-14 / 1e-12 / 1e-10; con 3e-9 y 1e-8,
   1,00 en todas; SLSQP `ftol=1e-15`: 0,73–0,80 con puntos iniciales perturbados. **El mecanismo de H-1 se reproduce en Linux/Intel**, no solo en Windows. En los runs en que se ejecutaron
@@ -419,7 +421,7 @@ El paso final retira el disparador temporal; el SHA que queda como cabeza de la 
 | `pytest` Windows 11 / Python 3.13.6, `933c0cc` (worktree limpio, sin carga concurrente). Los commits posteriores solo tocan el estimador `scale_run.py`, documentación y CI; los ficheros de pruebas nuevos se reejecutaron sobre la cabeza final (239 passed, 1 skipped en `tests/unit/benchmark`, `tests/performance`, el harness, la referencia multiplataforma, las reglas de arquitectura y la configuración) | **1994 passed, 11 skipped, 0 failed** (16 min 09 s) |
 | `pytest` baseline (`8ceaf3a`) | 1946 passed, 10 skipped |
 | Diferencia frente al baseline | solo pruebas **nuevas** (+metadatos, +regresión de rendimiento, +harness, +plataformas, +unitarias de `benchmark/`) y +1 *skipped* (comparación de tiempos opt-in); **ninguna prueba previa cambió de resultado** |
-| `pytest` Linux (CI `39527318745`, `933c0cc`, Ubuntu 22.04 / Python 3.11.17 / Xeon 8573C) | **2004 passed, 3 skipped, 1 xfailed** (4 min 33 s); xfail = F-B55-1 |
+| `pytest` Linux (CI `39527318745`, `933c0cc`, Xeon 8573C; y `39529975173`, `ed3eab4`, EPYC 9V45; Ubuntu 22.04 / Python 3.11.17) | **2004 passed, 3 skipped, 1 xfailed** en ambos (4 min 33 s y 3 min 21 s); xfail = F-B55-1 |
 | `mypy --strict portfolio_engine` | 0 errores (179 ficheros); Linux: paso «Static checks» ✔ |
 | `ruff check .` y `ruff format --check .` | limpios en Windows y en Linux |
 | Reglas de arquitectura (`test_architecture_rules.py`) | pasan; una entrada nueva en la lista de constantes con nombre (`SECONDS_PER_HOUR`) |

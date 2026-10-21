@@ -1677,6 +1677,7 @@ Fuera de alcance y **sin tocar**: solvers, algoritmos, formulaciones, tolerancia
 | Windows 11 — Python 3.13.6, baseline `8ceaf3a` (worktree limpio, sin carga concurrente) | **1946 passed, 10 skipped** (20 min 40 s); mypy `--strict` y Ruff limpios |
 | Windows 11 — cabeza de código final | **1994 passed, 11 skipped, 0 failed** (16 min 09 s; +48 pruebas nuevas frente al baseline de 1946) |
 | Linux — GitHub Actions `ubuntu-22.04`, Python 3.11.17, run `39527318745` (`933c0cc`, Xeon 8573C) | **2004 passed, 3 skipped, 1 xfailed** (4 min 33 s); benchmark de escala 10 con `spawn` y `forkserver` válido; 56 pruebas de B5.4 |
+| Linux — GitHub Actions, run `39529975173` (`ed3eab4`, cabeza de documentación, AMD EPYC 9V45) | **2004 passed, 3 skipped, 1 xfailed** (3 min 21 s); F-B55-1 idéntica a la de los Xeon |
 | Linux — runs previos | `f650607` (EPYC 7763): 3 errores de colección (extra `bench`); `6a8e79b` (Xeon 8573C) y `0e05505` (Xeon 6973P-C): 2 failed (C-28), diagnosticados |
 
 ### Estado de requisitos
