@@ -5,9 +5,9 @@
       "BEN-005",
       "TST-005"
     ],
-    "execution_timestamp_utc": "20261020T204048Z",
+    "execution_timestamp_utc": "20261022T115042Z",
     "git": {
-      "commit": "3d0463b94035859e2a668ff900fcf6285f571cb5",
+      "commit": "f0420ac8314fa89f8194a170edcdd003bea98115",
       "branch": "block5-benchmarks-final-audit",
       "dirty": false,
       "modified_tracked_files": [],
@@ -35,13 +35,13 @@
       "smt_enabled": true,
       "cpu_governor": null,
       "ram_total_bytes": 16890322944,
-      "ram_available_bytes_at_start": 746106880,
-      "swap_used_bytes_at_start": 6939000832,
-      "system_cpu_percent_before": 16.1,
+      "ram_available_bytes_at_start": 1517273088,
+      "swap_used_bytes_at_start": 8951328768,
+      "system_cpu_percent_before": 35.2,
       "load_note": "medido con psutil; no se consulta ning\u00fan servidor de base de datos"
     },
     "host_fingerprint": "00c905c7d527f3ca",
-    "command": "benchmarks/scripts/baseline.py --repetitions 7",
+    "command": "benchmarks/scripts/baseline.py --repetitions 7 --replace",
     "env_threads": {
       "OMP_NUM_THREADS": null,
       "OPENBLAS_NUM_THREADS": null,
@@ -78,8 +78,7 @@
         "W4-VOL-TARGET",
         6
       ]
-    ],
-    "note_variants": "Las llamadas al solver de W1 difieren entre Windows (484) y Linux (506) por F-B55-1; el test acepta las variantes observadas y falla ante cualquier otra. Las variantes de Linux proceden de la CI (anotaciones), a\u00f1adidas a mano tras la creaci\u00f3n del baseline."
+    ]
   },
   "cells": {
     "W0-GROSS-RISK|6|sequential": {
@@ -88,11 +87,6 @@
           "solver_calls": 132,
           "frontier_iterations": 8156,
           "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
-        },
-        {
-          "solver_calls": 132,
-          "frontier_iterations": 8131,
-          "observed_on": "Linux 6.8 (Ubuntu 22.04) / Intel(R) Xeon(R) 6973P-C / Python 3.11.17 (GitHub Actions run 39526528068, paso 'B5.5 cross-platform diagnostic')"
         }
       ]
     },
@@ -102,11 +96,6 @@
           "solver_calls": 132,
           "frontier_iterations": 20499,
           "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
-        },
-        {
-          "solver_calls": 132,
-          "frontier_iterations": 20399,
-          "observed_on": "Linux 6.8 (Ubuntu 22.04) / Intel(R) Xeon(R) 6973P-C / Python 3.11.17 (GitHub Actions run 39526528068, paso 'B5.5 cross-platform diagnostic')"
         }
       ]
     },
@@ -116,11 +105,6 @@
           "solver_calls": 484,
           "frontier_iterations": 46934,
           "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
-        },
-        {
-          "solver_calls": 506,
-          "frontier_iterations": 49012,
-          "observed_on": "Linux 6.8 (Ubuntu 22.04) / Intel(R) Xeon(R) 6973P-C / Python 3.11.17 (GitHub Actions run 39526528068, paso 'B5.5 cross-platform diagnostic')"
         }
       ]
     },
