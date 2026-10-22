@@ -1654,3 +1654,33 @@ Rama `fix/h1-fb551-numerical-remediation` (desde `main` = `8ceaf3a`; `REMEDIATIO
 ### Limitaciones (abiertas)
 
 El efecto sobre B5.5 (PR #9) requiere rebasarlo (`xfail` de F-B55-1, baselines de trabajo y `config_hash`); hipótesis pendientes en `REMEDIATION_H1_FB551.md` §8; la CI no instala el lock.
+
+---
+
+## [Cierre tras AUDIT_H1_FB551 (PR #10)] — 2026-10-22
+
+Auditoría independiente: `PASS_WITH_CHANGES` (0 BLOCKER, 0 HIGH, 2 MEDIUM, 4 LOW, 5 INFO). Esta fase es **solo documental y de herramientas**: sin cambios en código de producción, tolerancias, solvers ni algoritmos.
+
+### Corregido
+
+- **M-1** — `REMEDIATION_H1_FB551.md` §5.2/§7/§10.1: el cambio de B3 respecto a `main` se cuantifica (12/24 problemas aleatorios con conjunto de composiciones distinto, misma mejora, mejor mejora nunca peor; empates exactos en 14/14) en lugar de presentarse como caso marginal; «continuo» → «estable casi seguro».
+- **M-2** — decisiones D-1…D-5 registradas con fundamento y consecuencias (`REMEDIATION_H1_FB551.md` §10.2): `retry_equilibrate = false`; desempate por `improvement_tolerance` con invariancia de conjunto; τ = 1e-9 absoluto; conservar `OPTIMAL_INACCURATE` sin relajar tolerancias; integrar el PR #10 antes de rebasar B5.5.
+- Hallazgos LOW (L-1…L-4) e INFO documentados como pendientes (§10.3), sin corrección en esta fase.
+
+### Añadido
+
+- `AUDIT_H1_FB551.md` y `evidence/audit_h1_fb551/` (scripts reproducibles del auditor, sin modificar). `pyproject.toml`: esos scripts y el informe quedan fuera de Ruff (solo herramientas; `ruff check .` y `ruff format --check .` siguen activos sobre el resto).
+
+### Verificación (ejecutada realmente, Windows 11, Python 3.13.6, lock)
+
+| Comprobación | Resultado |
+|---|---|
+| Configuración por defecto | `retry_equilibrate = false`, `equilibrate = true`, `tol_feas = 1e-9`, `improvement_tolerance = 1e-9`, `accept_inaccurate_solutions = false` |
+| `tests/unit/{candidates,frontiers,scenarios,optimizers,config}` (incluye `test_h1_clarabel_numerics.py` y `test_tie_stability.py`) | **926 passed** (5 min 30 s) |
+| `mypy --strict portfolio_engine` | sin errores (176 ficheros) |
+| `ruff check .` y `ruff format --check .` | limpios (381 ficheros) |
+| CI de GitHub Actions | se consulta tras el push (ver informe de la fase) |
+
+### Limitaciones (abiertas)
+
+L-1…L-4 e I-1…I-3 (ver `REMEDIATION_H1_FB551.md` §10.3); PR #9 pendiente de rebase tras el merge del PR #10; la CI no instala el lock.

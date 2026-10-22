@@ -7,7 +7,7 @@ rama y aquí se **contrastan** con el código y la evidencia, no se asumen).
 Alcance de esta fase: investigar y remediar de forma independiente dos defectos numéricos; sin merge, sin cambios en B5, sin Arsys/Oracle/SQL Server, sin
 benchmarks de ≥ 1.000 carteras. **Fuera de alcance:** cualquier bloque posterior.
 
-## FINAL_STATUS = READY_FOR_INDEPENDENT_AUDIT
+## FINAL_STATUS = READY_FOR_INDEPENDENT_AUDIT (informe original; el estado tras la auditoría está en §10.5)
 
 La evidencia justifica la implementación y no hay una decisión matemática pendiente que impida auditarla. **No resuelto** (§8): el efecto sobre B5.5 requiere rebasar el PR #9 (no se ha tocado esa rama);
 quedan hipótesis abiertas sobre *qué* operación numérica introduce el ulp; y hay decisiones del propietario (valor de `retry_equilibrate`, invariancia de conjunto del desempate de B3).
@@ -158,9 +158,9 @@ apagar la regularización estática (riesgo de KKT singular).
 *Oráculo del segundo test.* `ftol = 1e-12` (100 % de éxito en toda celda de la sonda); las aserciones del test (`atol = 1e-4`, `abs = 1e-7`) no cambian: se exige exactamente lo mismo, con un oráculo cuyo
 criterio de éxito queda por encima de la resolución de coma flotante.
 
-### 5.2 F-B55-1 — el desempate debe ser continuo (banda de empate)
+### 5.2 F-B55-1 — desempate estable mediante banda de empate
 
-*Problema.* La función «orden de los nodos» es discontinua ante ruido de 1 ulp en las mejoras de utilidad empatadas matemáticamente.
+*Problema.* La función «orden de los nodos» es discontinua ante ruido de 1 ulp en las mejoras de utilidad empatadas matemáticamente. La corrección la hace **estable casi seguro, no continua** (§10, L-1): sigue discontinua en el borde `gap = τ`.
 
 *Propuesta.* `rank_nodes(nodos, τ)`: se ordena como antes; se agrupan las mejoras que distan **menos de τ de la mejor del grupo** (ancla, sin encadenar: un grupo no puede crecer por deriva) y dentro del grupo se ordena
 por hash; los grupos se ordenan por mejora decreciente; las estimaciones válidas siguen antes que las inválidas. `τ = candidates.improvement_tolerance` (= 10⁻⁹): el motor ya declara que
@@ -169,7 +169,7 @@ una diferencia de utilidad menor es «no una mejora» (parada del haz, ascenso l
 *Equivalencia.* Dos composiciones con mejoras a menos de 10⁻⁹ son indistinguibles para el criterio del propio motor; elegir entre ellas por hash es **tan arbitrario como la elección previa** (ruido de ulp) pero **determinista
 y reproducible entre CPU**. No cambia qué composiciones se evalúan ni sus pesos; cambia solo qué empates sobreviven.
 
-*Efectos previstos.* (a) Resultado idéntico entre CPU. (b) En entradas sin empates (todas las fixtures validadas) el orden es idéntico al anterior. (c) En entradas **con** empates exactos el resultado puede diferir del anterior *en la CPU que
+*Efectos previstos (corregido tras `AUDIT_H1_FB551.md` M-1; ver §10).* (a) Resultado idéntico entre CPU. (b) **Los empates no son un caso marginal**: en problemas aleatorios sin activos clonados, **12 de 24 casos devuelven un conjunto de composiciones distinto al de `main`** (4 con una composición más o menos; 8 con sustituciones de igual tamaño y **igual mejora**), con empates exactos en 14/14 problemas instrumentados y decenas a centenares de pares con 10⁻¹⁴ < gap ≤ 10⁻⁹ que antes se ordenaban por su diferencia real y ahora por hash. La mejor mejora no empeora en ningún caso. Solo las fixtures validadas existentes (sus tests) no cambian. (c) En el universo con clones la referencia pasa de 10 a 9 composiciones; en el lote de referencia de B5.5 el resultado de Windows no cambia.
 se tomó como referencia* (p. ej. el universo con clones de los tests pasa de 10 a 9 composiciones en esta máquina); en el lote de referencia de B5.5 el resultado de Windows **no cambia** (`cross_platform_reference.py explain` ⇒ «sin divergencias»).
 
 *Alternativas descartadas.* Redondear las mejoras (discontinuidad en el borde de la rejilla); ordenar solo por hash (rompe la prioridad de utilidad); un parámetro de banda nuevo (innecesario).
@@ -197,12 +197,12 @@ Pruebas de regresión **independientes de la CPU** (perturbación determinista, 
 
 * **Compatibilidad de configuración (cambio incompatible):** `[conic] retry_equilibrate` es **obligatoria** (el proyecto no admite valores por defecto implícitos); cualquier TOML propio sin ella falla con «Clave obligatoria ausente».
   `config_hash` cambia ⇒ las claves de caché y los diarios de reanudación creados antes no coinciden (comportamiento intencionado de B5.3/B5.4).
-* **Resultados:** primer intento y búsqueda sin empates, idénticos bit a bit (926 tests de los módulos afectados frente a 910 de la base: +16 nuevos, 0 regresiones). Solo cambian (a) las resoluciones cónicas que antes
+* **Resultados:** primer intento idéntico bit a bit cuando no hay reintento (57/57 en la auditoría); en B3 cambia el conjunto de composiciones en ~la mitad de los problemas aleatorios (M-1, §10.1) con igual calidad; se aceptan estos cambios y los baselines/golden de B3/B5 que dependan del conjunto exacto deben regenerarse (decisión D-2, §10.2).
   terminaban `OPTIMAL_INACCURATE` tras el reintento y (b) la selección entre composiciones con mejora empatada.
 * **B5.5 (PR #9):** sus baselines de trabajo (`perf_reference_work.json`) admitían dos variantes (484/506) por F-B55-1; con esta corrección la variante única es **484/11 composiciones**. Al rebasar B5.5 sobre esta rama hay que
   (1) retirar el `xfail` de `test_cross_platform_reference.py`, (2) sustituir las dos variantes por una, (3) regenerar `config_hash` de los baselines de rendimiento (los tiempos por host ya exigen reejecución) y
   (4) el criterio M-2 de la auditoría («conjunto de una variante superconjunto de la otra») deja de ser necesario. **No se ha hecho aquí** (la rama B5.5 no se altera).
-* **Decisión pendiente del propietario (§8):** ninguna impide la auditoría; sí se necesitan para el cierre de B5.5/B5.
+* **Decisiones del propietario:** formalizadas en §10.2 (D-1…D-5).
 
 ## 8. Causas confirmadas, hipótesis pendientes y límites
 
@@ -242,3 +242,60 @@ Evidencia pública (anotaciones de check-runs de la API de GitHub; sin logs). Ra
 | `39665206755` | `76beb31` | CI | cancelled | Cancelado (causa no investigada; la publicación siguiente llegó minutos después); no es un fallo de pruebas |
 
 Los 2 tests omitidos de CI son los mismos de la base. Los workflows temporales y el disparador de `ci.yml` se retiran en el último commit; **ese commit solo toca documentación y workflows** (verificado con `git diff`), así que la evidencia de código es la de `3b1cc5c`.
+
+## 10. Cierre tras `AUDIT_H1_FB551.md` (PASS_WITH_CHANGES: M-1, M-2, L-1…L-4, I-1…I-5)
+
+El informe de auditoría y sus scripts reproducibles se incorporan al repositorio: [`AUDIT_H1_FB551.md`](AUDIT_H1_FB551.md) y `evidence/audit_h1_fb551/` (`h1_sweep.py`, `retry_stress*.py`, `kkt_check.py`,
+`slsqp_oracle.py`, `fb_sweep*.py`, `fb_why.py`, `band_edge.py`, `cfg_compat.py`; comandos en su §12). Se conservan tal cual: están excluidos de Ruff (`pyproject.toml`, solo herramientas).
+Esta fase **no cambia código de producción, tolerancias, solvers ni algoritmos**.
+
+### 10.1 M-1 — cambio observable de B3 respecto a `main` (cuantificado)
+
+Medido por el auditor (`fb_why.py`; `random_problem`, 10 y 14 activos, 12 semillas, 24 casos, sin clones; numpy 2.2.6, OpenBLAS 0.3.29 `Haswell`):
+
+| Medida | Resultado |
+|---|---|
+| Casos con conjunto de composiciones distinto al de `main` | **12 de 24** |
+| — con una composición más o menos (10→11, 9→8, 11→12, 11→10) | 4 |
+| — con sustituciones de igual tamaño y **misma mejora** | 8 |
+| Casos en que la mejor mejora **empeora** | **0** (en `rand|14|2` el PR añade una candidata mejor: 0,0601 frente a 0,0570) |
+| Empates exactos de mejora (entrantes con peso cero) | en 14/14 problemas instrumentados: 16–215 pares por problema |
+| Pares con 10⁻¹⁴ < gap ≤ 10⁻⁹ (antes ordenados por su diferencia diminuta, ahora por hash) | decenas a centenares por problema (≈ 50 y ≈ 340 en los ejemplos) |
+| `rank_nodes` frente a `ranking_key` | el orden difiere en 4–8 de 12–13 llamadas por problema |
+| Invariancia ante ruido de ulp (universo con clones, 40 perturbaciones) | base: 13 conjuntos distintos; PR: **1** (40/40 iguales a su referencia) hasta ruido relativo 10⁻⁹; 6 conjuntos a 10⁻⁸ (el ruido supera τ y deja de ser un empate) |
+
+Lectura: `rank_nodes` **solo reordena**; no elimina ni agrupa composiciones. Cambia cuál de dos mejoras a menos de 10⁻⁹ se prefiere, y los candidatos que entran o salen tienen la misma mejora
+(indistinguibles para el criterio del propio motor). No es un defecto, pero **es un cambio de comportamiento de un bloque `VALIDATED`** que el texto original presentaba como acotado; queda corregido en §5.2 y aceptado en D-2.
+Consecuencia: los baselines/golden de B3 y B5 que dependan del conjunto exacto de composiciones deben regenerarse al rebasar B5.5 (D-5); los tests existentes de B3 no cambian (926 passed en los módulos afectados).
+
+### 10.2 M-2 — registro formal de decisiones metodológicas
+
+| ID | Decisión | Fundamento (evidencia) | Consecuencias aceptadas | Estado |
+|---|---|---|---|---|
+| **D-1** | `conic.retry_equilibrate = false` como configuración del reintento (`config/default_engine.toml`) | 0 reintentos peores que el de la base en 3.600 instancias de estrés; rescate 19/19 (escala 10³) y 85/91 (10⁶) a tol 10⁻⁹ (base: 0); 123/123 reintentos de H-1 acaban `Solved`; 12/12 runners de CI (`Haswell` y `SkylakeX`) | Clave obligatoria nueva (cambio incompatible de configuración); `config_hash` cambia; el reintento puede mover los pesos hasta ~2·10⁻⁴ en problemas mal escalados con igual objetivo a ~10⁻⁹ (I-1) | **Adoptada** |
+| **D-2** | Desempate determinista de B3 mediante `improvement_tolerance` (`rank_nodes`): **invariancia de conjunto** entre CPU en lugar de «solo T1 sobre pesos» | F-B55-1 reproducida con ruido de 10⁻¹⁶ en una sola CPU; con la corrección 40/40 conjuntos iguales (auditor) y 12/12 runners (CI) | El conjunto de composiciones de `main` cambia en ~12/24 problemas aleatorios, con igual mejora (§10.1); baselines/golden de B3/B5 a regenerar | **Adoptada** |
+| **D-3** | `τ = improvement_tolerance = 1e-9` **absoluto** en esta versión | Es la tolerancia con la que el propio motor declara «no una mejora»; margen ≈ 10⁷ sobre el ruido de 1 ulp; invariante hasta ruido relativo 10⁻⁹ | Limitaciones (L-1): no es relativo a la escala de la utilidad (un cambio de unidades/magnitud la haría material o inmaterial); estable casi seguro, no continuo (borde `gap = τ`, probabilidad ≈ 10⁻⁸ por par; agrupación por ancla no transitiva). Revisar si cambia la escala de la utilidad | **Adoptada** (con limitaciones) |
+| **D-4** | **Conservar `OPTIMAL_INACCURATE`** cuando el reintento no converge; **no relajar tolerancias**; `accept_inaccurate_solutions = false` | Relajar `tol_*` cambia la garantía de toda formulación cónica y el suelo del residuo es 4·10⁻⁹…10⁻⁸; en 6/91 casos extremos (escala 10⁶) el reintento también se estanca | Esos casos siguen rechazados como `OPTIMAL_INACCURATE` (correctamente distinguidos). Escalonar tolerancias queda como mejora posible, **no implementada** | **Adoptada** |
+| **D-5** | **Integrar el PR #10 antes de actualizar B5.5 (PR #9)**; después, rebasar B5.5: retirar el `xfail` de F-B55-1, una sola variante de baseline de trabajo (484/11 composiciones), regenerar `config_hash` y baselines; el criterio «superconjunto» de AUDIT_BLOCK_5_5 M-2 deja de ser necesario | Los baselines de B5.5 dependen del `config_hash` y del conjunto de composiciones, que este PR cambia | PR #9 queda **pendiente de rebase** hasta el merge del PR #10; no se toca aquí | **Adoptada** |
+
+### 10.3 Hallazgos LOW e INFO pendientes (documentados, no corregidos en esta fase)
+
+| ID | Hallazgo | Estado y acción futura |
+|---|---|---|
+| **L-1** | Desempate «continuo» inexacto: discontinuidad en el borde `gap = τ` (con dos mejoras separadas exactamente τ, ±3 ulp cambian el orden; 0 cambios en 20.000 perturbaciones lejos del borde); agrupación por ancla no transitiva; τ absoluto no validado frente a la escala | **Abierto, aceptado (D-3).** Terminología corregida a «estable casi seguro». Mejora futura: τ relativo a la escala de la utilidad |
+| **L-2** | `solve_with_policy` sustituye siempre el primer resultado por el reintento sin comparar calidad (diseño previo de B2); `_last_native_status` no se reinicia en `setup()/update()` y se compara con la cadena exacta `"MaxIterations"` en lugar de `map_clarabel_status(native) is SolverStatus.MAX_ITERATIONS` (un cambio del `repr` de Clarabel degradaría silenciosamente a «cambiar numérica» tras un límite de iteraciones) | **Abierto.** No se corrige aquí (sin cambios de algoritmo adicionales); no observado en 3.600 instancias de estrés. Corrección sugerida: normalizar con `map_clarabel_status` y reiniciar el estado en `setup`/`update` |
+| **L-3** | `retry_equilibrate == equilibrate` se acepta sin aviso y reproduce el defecto original (reintento idéntico) | **Abierto.** Solo nota en el docstring de `ConicSolverConfig`. Sugerencia: aviso o rechazo explícito en la validación |
+| **L-4** | El oráculo SLSQP no tiene referencia independiente de motor y SLSQP; la justificación «70 ulp» es heurística | **Abierto, sin impacto en la corrección del test** (márgenes ×580 en pesos y ×3·10⁴ en valor; éxito 200/200 con `ftol = 1e-12`) |
+| I-1 | H-1 medida sobre una instancia del repositorio más estrés sintético; 6/91 casos extremos siguen `OPTIMAL_INACCURATE`; pesos hasta ~2·10⁻⁴ de diferencia con objetivo igual a ~10⁻⁹ en problemas mal escalados | Informativo (D-1, D-4) |
+| I-2 | El disparador `Haswell`/`SkylakeX` se confirma indirectamente (el auditor reproduce la base con `Haswell`, `Sandybridge`, `Nehalem` y `Zen`, no con `Core2`); no pudo forzar `SkylakeX` | Informativo |
+| I-3 | F-B55-1 sobre el lote W1 de B5.5 no reproducido por el auditor (requiere rebasar B5.5) | Se verificará al rebasar (D-5) |
+| I-4 | mypy/ruff no ejecutados por el auditor; 2 omitidos de CI y 40 locales = los de la base | Ejecutados en esta fase (CHANGELOG, «Verificación») |
+| I-5 | Estados de requisitos coherentes con CLAUDE.md | Sin cambio |
+
+### 10.4 Verificación de esta fase
+
+Ver la entrada «Cierre tras AUDIT_H1_FB551» de `CHANGELOG.md` (configuración, regresión de H-1 y F-B55-1, módulos afectados, mypy `--strict`, Ruff).
+
+### 10.5 Estado
+
+**FINAL_STATUS (cierre) = READY_FOR_MERGE**, a falta de la confirmación del propietario de D-1…D-5 (propuestas por él mismo en el encargo de cierre y registradas aquí). Sin merge realizado.

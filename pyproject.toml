@@ -63,11 +63,13 @@ ignore_missing_imports = true
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# Scripts de evidencia del auditor independiente (AUDIT_H1_FB551.md): se conservan tal cual, sin reformatear.
+extend-exclude = ["evidence/audit_h1_fb551"]
 
 [tool.ruff.format]
 # Los informes de auditoría son evidencia histórica: el formateador de Markdown reescribiría sus
 # bloques de código. Solo se excluyen del formateador; ``ruff check`` sigue activo sobre todo.
-exclude = ["AUDIT_BLOCK_*.md"]
+exclude = ["AUDIT_BLOCK_*.md", "AUDIT_H1_FB551.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF", "C90"]
