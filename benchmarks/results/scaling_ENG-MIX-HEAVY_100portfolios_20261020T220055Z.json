@@ -1,0 +1,247 @@
+{
+  "metadata": {
+    "benchmark": "scaling",
+    "evidence_for": [
+      "BEN-001",
+      "BEN-002",
+      "BEN-004",
+      "BEN-006",
+      "BEN-007",
+      "GOV-012",
+      "PAR-008"
+    ],
+    "execution_timestamp_utc": "20261020T220055Z",
+    "git": {
+      "commit": "3d0463b94035859e2a668ff900fcf6285f571cb5",
+      "branch": "block5-benchmarks-final-audit",
+      "dirty": false,
+      "modified_tracked_files": [],
+      "untracked_in_code": [],
+      "untracked_outside_code": [
+        "AUDIT_BLOCK_5_4_CLOSURE.md",
+        "INVESTIGATION_H1_B4.md",
+        "benchmarks/results/baselines/",
+        "benchmarks/results/h1_numerical_probe_20261020T204243Z.json",
+        "benchmarks/results/scaling_ENG-MIX-BASE_10-100portfolios_20261020T204253Z.json",
+        "benchmarks/results/scaling_ENG-MIX-LIGHT_100portfolios_20261020T215723Z.json",
+        "benchmarks/results/scaling_classes_10portfolios_20261020T210640Z.json"
+      ]
+    },
+    "python": "3.13.6",
+    "versions": {
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "osqp": "1.1.3",
+      "clarabel": "0.11.1",
+      "pyscipopt": "6.2.1",
+      "threadpoolctl": "3.7.0",
+      "psutil": "7.2.2"
+    },
+    "host": {
+      "os": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "cpu_model": "13th Gen Intel(R) Core(TM) i7-13620H",
+      "cpu_logical": 16,
+      "cpu_physical": 10,
+      "smt_enabled": true,
+      "cpu_governor": null,
+      "ram_total_bytes": 16890322944,
+      "ram_available_bytes_at_start": 1278857216,
+      "swap_used_bytes_at_start": 7201918976,
+      "system_cpu_percent_before": 34.8,
+      "load_note": "medido con psutil; no se consulta ning\u00fan servidor de base de datos"
+    },
+    "host_fingerprint": "00c905c7d527f3ca",
+    "command": "benchmarks/scripts/scaling.py --scales 100 --mix ENG-MIX-HEAVY --workers 4 --methods sequential spawn --repetitions 3 --parallel-repetitions 3 --startup-repetitions 1 --count-solver-calls",
+    "env_threads": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null
+    },
+    "scaling_config": "config\\default_benchmark.toml",
+    "scaling_config_sha256": "64c7220f6d517c4e0f3cf2fe51f3506e7e89f9ca970c5565c6c13d5bb303e97c",
+    "random_seed": 7,
+    "engine_config_hash": "5d3cdc5e0e0c32c70fd6fac2ace95862172b2c5af9e346dc3b80a03973e33630",
+    "mixes_are_engineering_assumptions": true,
+    "start_methods_requested": [
+      "sequential",
+      "spawn"
+    ],
+    "start_methods_available": [
+      "spawn"
+    ],
+    "blas_threads_per_worker": 1,
+    "shared_data_mode": "BUNDLE_FILE",
+    "batch_sizes": [
+      "AUTO"
+    ],
+    "authorized_by": null
+  },
+  "note": "Medici\u00f3n local de una sola m\u00e1quina con datos sint\u00e9ticos; no es rendimiento de producci\u00f3n ni se extrapola. Tiempos bimodales: se informan m\u00ednimo y mediana. Una celda con diferencias T1 o violaciones de restricciones NO es una medici\u00f3n v\u00e1lida.",
+  "results": [
+    {
+      "mix": "ENG-MIX-HEAVY",
+      "mix_shares": {
+        "W0-GROSS-RISK": 0.05,
+        "W0-NET-TARGET": 0.05,
+        "W1-GLOBAL-NET": 0.5,
+        "W2-INDEPENDENT": 0.1,
+        "W2-EXPECTED": 0.05,
+        "W2-WORST-CASE": 0.05,
+        "W2-STRESS": 0.05,
+        "W3-MIN-CVAR": 0.05,
+        "W4-ROBUST": 0.04,
+        "W4-MAX-SHARPE": 0.05,
+        "W5-EXACT-MIP": 0.01
+      },
+      "portfolios": 100,
+      "class_counts": {
+        "W0-GROSS-RISK": 5,
+        "W0-NET-TARGET": 5,
+        "W1-GLOBAL-NET": 50,
+        "W2-INDEPENDENT": 10,
+        "W2-EXPECTED": 5,
+        "W2-WORST-CASE": 5,
+        "W2-STRESS": 5,
+        "W3-MIN-CVAR": 5,
+        "W4-ROBUST": 4,
+        "W4-MAX-SHARPE": 5,
+        "W5-EXACT-MIP": 1
+      },
+      "repetitions": 3,
+      "parallel_repetitions": 3,
+      "work_counters": {
+        "frontier_solver_iterations": 1242725,
+        "solver_calls": 13350
+      },
+      "snapshot_key": "86383d39d4aac4968a77fc1fe9851f9087b782e1a63f04a0c921e2c7574dc790",
+      "cells": [
+        {
+          "mode": "sequential",
+          "workers": 1,
+          "wall_seconds_samples": [
+            67.13729480002075,
+            68.09417759999633,
+            66.59478789998684
+          ],
+          "wall": {
+            "min": 66.59478789998684,
+            "median": 67.13729480002075,
+            "mean": 67.27542010000131,
+            "max": 68.09417759999633
+          },
+          "throughput_portfolios_per_second_min_wall": 1.5016190178453854,
+          "task_latency_seconds": {
+            "min": 0.009689300088211894,
+            "median": 1.1099232000415213,
+            "mean": 0.6709752890013624,
+            "max": 1.4577569999964908,
+            "p50": 1.1099232000415213,
+            "p95": 1.3666668500052765,
+            "p99": 1.4112868949712722
+          },
+          "memory": {
+            "coordinator_peak_rss_bytes": 317812736,
+            "worker_processes_observed": 0,
+            "worker_peak_rss_bytes_max": 0,
+            "worker_peak_rss_bytes_mean": 0,
+            "worker_peak_uss_bytes_max": 0,
+            "total_peak_rss_bytes": 317812736,
+            "samples": 1075
+          },
+          "t1_differences_between_repetitions": 0,
+          "valid_measurement": true,
+          "execution_statuses": {
+            "COMPLETED": 100
+          },
+          "warmup_runs_discarded": 1
+        },
+        {
+          "mode": "spawn",
+          "workers": 4,
+          "batch_size": "AUTO",
+          "blas_threads": 1,
+          "shared_data_mode": "BUNDLE_FILE",
+          "effective_batch_size": 7,
+          "batches": 15,
+          "pool_rebuilds": 0,
+          "wall_seconds_samples": [
+            31.56888869998511,
+            32.30887409998104,
+            31.286575600039214
+          ],
+          "wall": {
+            "min": 31.286575600039214,
+            "median": 31.56888869998511,
+            "mean": 31.72144613333512,
+            "max": 32.30887409998104
+          },
+          "throughput_portfolios_per_second_min_wall": 3.1962590370508512,
+          "task_latency_seconds": {
+            "min": 0.015764799900352955,
+            "median": 1.4313874999643303,
+            "mean": 0.8508349790086505,
+            "max": 1.793352699954994,
+            "p50": 1.4313874999643303,
+            "p95": 1.6569546199170873,
+            "p99": 1.7078492709435527
+          },
+          "sum_task_compute_seconds": 85.08349790086504,
+          "compute_occupancy": 0.6798722476738426,
+          "max_worker_busy_seconds": 22.129431599983945,
+          "overhead_estimate_seconds": 9.157144000055268,
+          "distinct_worker_pids": 4,
+          "pool_startup_seconds_samples": [
+            8.286286599934101
+          ],
+          "pool_startup_seconds": {
+            "min": 8.286286599934101,
+            "median": 8.286286599934101,
+            "mean": 8.286286599934101,
+            "max": 8.286286599934101
+          },
+          "ipc": {
+            "request_pickle_bytes": 811,
+            "result_pickle_bytes": 11395,
+            "result_dumps_loads_roundtrip_seconds": 0.003835539997089654
+          },
+          "memory": {
+            "coordinator_peak_rss_bytes": 317440000,
+            "worker_processes_observed": 4,
+            "worker_peak_rss_bytes_max": 193667072,
+            "worker_peak_rss_bytes_mean": 182588416,
+            "worker_peak_uss_bytes_max": 130596864,
+            "total_peak_rss_bytes": 1043546112,
+            "samples": 145
+          },
+          "t1_differences_vs_sequential": 0,
+          "t0_inexact_floats_vs_sequential": 0,
+          "t1_max_abs_difference": 0.0,
+          "exactly_once_and_balanced": true,
+          "constraint_audit": {
+            "solutions_checked": 12515,
+            "budget_violations": 0,
+            "bound_violations": 0,
+            "flag_inconsistencies": 0,
+            "max_budget_error": 1.2024492512807683e-11,
+            "max_bound_excess": 1.6246847200918069e-09,
+            "solver_status_histogram": {
+              "OPTIMAL": 14,
+              "point:OPTIMAL": 11440
+            }
+          },
+          "valid_measurement": true,
+          "execution_statuses": {
+            "COMPLETED": 100
+          },
+          "warmup_runs_discarded": 1,
+          "speedup_min": 2.128541926458176,
+          "speedup_median": 2.126691738757735,
+          "efficiency_min": 0.532135481614544,
+          "efficiency_median": 0.5316729346894338,
+          "karp_flatt_serial_fraction_min": 0.29307355899035054
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+{
+  "metadata": {
+    "benchmark": "perf_reference_baseline",
+    "evidence_for": [
+      "BEN-005",
+      "TST-005"
+    ],
+    "execution_timestamp_utc": "20261022T115042Z",
+    "git": {
+      "commit": "f0420ac8314fa89f8194a170edcdd003bea98115",
+      "branch": "block5-benchmarks-final-audit",
+      "dirty": false,
+      "modified_tracked_files": [],
+      "untracked_in_code": [],
+      "untracked_outside_code": [
+        "AUDIT_BLOCK_5_4_CLOSURE.md"
+      ]
+    },
+    "python": "3.13.6",
+    "versions": {
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "osqp": "1.1.3",
+      "clarabel": "0.11.1",
+      "pyscipopt": "6.2.1",
+      "threadpoolctl": "3.7.0",
+      "psutil": "7.2.2"
+    },
+    "host": {
+      "os": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "cpu_model": "13th Gen Intel(R) Core(TM) i7-13620H",
+      "cpu_logical": 16,
+      "cpu_physical": 10,
+      "smt_enabled": true,
+      "cpu_governor": null,
+      "ram_total_bytes": 16890322944,
+      "ram_available_bytes_at_start": 1517273088,
+      "swap_used_bytes_at_start": 8951328768,
+      "system_cpu_percent_before": 35.2,
+      "load_note": "medido con psutil; no se consulta ning\u00fan servidor de base de datos"
+    },
+    "host_fingerprint": "00c905c7d527f3ca",
+    "command": "benchmarks/scripts/baseline.py --repetitions 7 --replace",
+    "env_threads": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null
+    },
+    "repetitions": 7,
+    "random_seed": 7,
+    "cells": [
+      [
+        "W0-GROSS-RISK",
+        6
+      ],
+      [
+        "W0-NET-TARGET",
+        6
+      ],
+      [
+        "W1-GLOBAL-NET",
+        2
+      ],
+      [
+        "W3-MIN-CVAR",
+        6
+      ],
+      [
+        "W4-ROBUST",
+        6
+      ],
+      [
+        "W4-MAX-SHARPE",
+        6
+      ],
+      [
+        "W4-VOL-TARGET",
+        6
+      ]
+    ]
+  },
+  "cells": {
+    "W0-GROSS-RISK|6|sequential": {
+      "variants": [
+        {
+          "solver_calls": 132,
+          "frontier_iterations": 8156,
+          "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
+        }
+      ]
+    },
+    "W0-NET-TARGET|6|sequential": {
+      "variants": [
+        {
+          "solver_calls": 132,
+          "frontier_iterations": 20499,
+          "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
+        }
+      ]
+    },
+    "W1-GLOBAL-NET|2|sequential": {
+      "variants": [
+        {
+          "solver_calls": 484,
+          "frontier_iterations": 46934,
+          "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
+        }
+      ]
+    },
+    "W3-MIN-CVAR|6|sequential": {
+      "variants": [
+        {
+          "solver_calls": 12,
+          "frontier_iterations": 0,
+          "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
+        }
+      ]
+    },
+    "W4-ROBUST|6|sequential": {
+      "variants": [
+        {
+          "solver_calls": 6,
+          "frontier_iterations": 0,
+          "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
+        }
+      ]
+    },
+    "W4-MAX-SHARPE|6|sequential": {
+      "variants": [
+        {
+          "solver_calls": 18,
+          "frontier_iterations": 0,
+          "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
+        }
+      ]
+    },
+    "W4-VOL-TARGET|6|sequential": {
+      "variants": [
+        {
+          "solver_calls": 12,
+          "frontier_iterations": 0,
+          "observed_on": "Windows-11-10.0.26200-SP0 / 13th Gen Intel(R) Core(TM) i7-13620H / Python 3.13.6"
+        }
+      ]
+    }
+  }
+}

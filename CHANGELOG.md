@@ -1711,3 +1711,114 @@ El run `39748508753` se canceló a los 44 min en la suite completa. Diagnóstico
 ### Limitaciones (abiertas)
 
 Suite de integración completa de Windows no repetida tras la corrección; que el run cancelado fuese este cuelgue es coherente pero no demostrable (sin logs); `ci.yml` sigue sin tope por prueba (propuesta: `faulthandler_timeout`, no aplicada).
+
+---
+
+## [Bloque 5.5 — Benchmarks reproducibles, regresión de rendimiento y preparación de la auditoría final] — 2026-10-21
+
+Rama `block5-benchmarks-final-audit` sobre `main` `8ceaf3a` (B5.4 integrado). Pendiente de auditoría independiente. Informe completo: `REPORT_BLOCK_5_5.md`; estimación de
+gran escala y decisiones: `BLOCK_5_5_LARGE_SCALE_PLAN.md`; investigación de H-1: `INVESTIGATION_H1_B4.md`.
+
+### Alcance
+
+`RequirementID`: CFG-012, BEN-001, BEN-002, BEN-004, BEN-005, BEN-006, BEN-007, TST-005, GOV-012 (y PAR-003 por la calibración de AUTO). Módulos: `benchmark/` (`regression.py`,
+`scaling.py`), `config/` (`scaling_config.py`, `default_benchmark.toml`), `benchmarks/`, `tests/performance/`, `tests/integration/`, `tests/unit/benchmark/`, documentación y CI.
+Fuera de alcance y **sin tocar**: solvers, algoritmos, formulaciones, tolerancias y tests de B1–B5.4. Sin merge, sin despliegue, sin Arsys/Oracle/SQL Server, sin datos reales,
+**sin ninguna carga de ≥ 1.000 carteras**.
+
+### Añadido
+
+- `ScalingBenchmarkConfig` (mezclas `ENG-MIX-BASE/LIGHT/HEAVY/CONIC` como supuestos de ingeniería, repeticiones, tope D-12, umbral `k × MAD`, tolerancia de iteraciones) con carga estricta.
+- `benchmark/regression.py`: `compare_to_baseline` (umbral `k × MAD` del baseline, mínimo o mediana, guardas de host y de contador de trabajo, baselines JSON).
+- `benchmark/scaling.py`: speedup, eficiencia, Karp–Flatt, modelo de coste del mix y `project_capacity` (rango, factor de extrapolación, sin precios inventados).
+- `benchmarks/scripts/`: `synthetic_portfolios.py` (generador determinista con carteras degeneradas), `scaling.py` (secuencial/`spawn`/`forkserver` × workers × lote × hilos BLAS × modo de datos;
+  T1, integridad y auditoría independiente de restricciones como condición de validez; topes `--max-wall` y `--max-rss-mb`), `scale_run.py` (`run` con guarda D-12; `estimate` sin ejecutar),
+  `recovery_bench.py`, `profile_class.py`, `h1_numerical_probe.py`, `baseline.py`/`perf_reference.py`, `cross_platform_reference.py`, `ci_summary.py`, `_common.py`.
+- Pruebas: `tests/unit/benchmark/test_regression_and_scaling.py` y `test_result_metadata.py`; `tests/integration/test_benchmark_harness.py` (generador, degeneradas, mutación del auditor, pool real ≡ secuencial,
+  guarda D-12, `Watchdog`, tasas) y `test_cross_platform_reference.py` (por cartera); `tests/performance/test_performance_regression.py`.
+- CI (`ci.yml`): instala el extra `bench` (`psutil`); pasos «B5.5 cross-platform diagnostic», «B5.5 Linux benchmark evidence» y «B5.5 H-1 numerical probe» (siempre se ejecutan, anotaciones públicas);
+  disparador **temporal** por push a la rama (retirado al cerrar).
+- `SECONDS_PER_HOUR` en `ALLOWED_NAMED_CONSTANTS` (conversión de unidades; única modificación de `test_architecture_rules.py`).
+- Resultados versionados en `benchmarks/results/` (todos con commit limpio, versiones, host, comando y semilla).
+
+### Resultados medidos (Windows 11, i7-13620H, memoria saturada: 6,7–8,8 GB de swap; datos sintéticos; detalle y límites en el informe)
+
+- **Correctitud:** 100 celdas paralelas, **T1 = 0 y T0 = 0** (idénticas bit a bit a la secuencial), 208.452 soluciones revalidadas con **0 violaciones**, integridad de conteo al 100 %.
+- **Modelo de coste del mix** `N·Σ sᵢ·cᵢ`: error de −1,3 % a +1,3 % en cuatro mezclas. **W1 domina** (82 % del tiempo de `BASE` con el 20 % de las carteras).
+- **Escalado** (`BASE`, 100 carteras): 2 workers 1,12×; 4 workers 1,48×; 8 workers 1,68× (eficiencia 0,56 / 0,37 / 0,21; régimen estacionario 0,64–0,90 con 4). Arranque `spawn` en Windows 7–8 s (p95 21 s), en Linux 1,1–1,4 s.
+- **Lote:** 1–5 y AUTO equivalentes (±1,5 %); 10 y 20 pierden +21 % y +72 %. **Hilos BLAS:** 2 no aportan. **Memoria:** worker RSS 163–198 MB, pico 880 MB (4 workers), 1,5 GB (8).
+- **Recuperación:** diario +0,12 s/12 carteras; muerte de worker +13,6 s; tarea venenosa +21 s; cuelgue con plazo 3 s +1,8 s; cancelación 0,6 s; reanudación rehace exactamente lo no persistido.
+- **Dimensión realista** (20 posiciones, universo 50/200/700): W1 2,7–3,3 s/cartera (+22 % de 50 a 700); resto 0,013–0,075 s.
+- **Caché:** sin duplicados +9 % de tiempo; con 50 % / 75 % de duplicados 1,85× / 3,13×. **Datos compartidos:** modos equivalentes, sin ventaja de arranque.
+
+### Hallazgos
+
+- **F-B55-1 (Medio, abierto):** la búsqueda de candidatos de W1 devuelve una composición más en Linux que en Windows para 1 de las 2 carteras W1 de la referencia (12 frente a 11; 506 frente a 484 llamadas al solver); en las comunes
+  `|Δpeso|` ≤ 3,5·10⁻¹². Pruebas con `xfail` no estricto solo fuera de Windows; baseline con variantes por plataforma. Remediación B3 independiente.
+- **H-1 (B4):** mecanismo identificado y reproducido en Windows y Linux (tolerancia cónica 1e-9 en el borde + oráculo SLSQP `ftol=1e-15`); sin cambios (`INVESTIGATION_H1_B4.md`).
+- Defecto propio corregido: `psutil` (extra `bench`) no estaba en la instalación de CI ⇒ 3 errores de colección en el primer run de la rama.
+
+### Pruebas (ejecutadas realmente)
+
+| Entorno | Resultado |
+|---|---|
+| Windows 11 — Python 3.13.6, baseline `8ceaf3a` (worktree limpio, sin carga concurrente) | **1946 passed, 10 skipped** (20 min 40 s); mypy `--strict` y Ruff limpios |
+| Windows 11 — cabeza de código final | **1994 passed, 11 skipped, 0 failed** (16 min 09 s; +48 pruebas nuevas frente al baseline de 1946) |
+| Linux — GitHub Actions `ubuntu-22.04`, Python 3.11.17, run `39527318745` (`933c0cc`, Xeon 8573C) | **2004 passed, 3 skipped, 1 xfailed** (4 min 33 s); benchmark de escala 10 con `spawn` y `forkserver` válido; 56 pruebas de B5.4 |
+| Linux — GitHub Actions, run `39529975173` (`ed3eab4`, cabeza de documentación, AMD EPYC 9V45) | **2004 passed, 3 skipped, 1 xfailed** (3 min 21 s); F-B55-1 idéntica a la de los Xeon |
+| Linux — runs previos | `f650607` (EPYC 7763): 3 errores de colección (extra `bench`); `6a8e79b` (Xeon 8573C) y `0e05505` (Xeon 6973P-C): 2 failed (C-28), diagnosticados |
+
+### Estado de requisitos
+
+Total 316 = **244 `VALIDATED` / 39 `PARTIAL` / 33 `NOT_IMPLEMENTED`**. `VALIDATED`: CFG-012, BEN-002, BEN-004, BEN-005, TST-005, PAR-003. `PARTIAL`: BEN-001, BEN-006, BEN-007 (10 y 100 ejecutadas; 1.200 no), GOV-012.
+No se emite `BLOCK_5_STATUS`.
+
+### Limitaciones
+
+Medición local de una máquina con la memoria saturada (tiempos ×1,67 de variación observada con el mismo trabajo); nada medido en Arsys ni a ≥ 1.000 carteras; W2 y W5 sin medir a dimensión realista; E5 `fork`,
+E7, E11, E12 y E14 no ejecutados; el fallo original de H-1 (EPYC 7763) no se ha vuelto a observar ni se ha descartado; la validación de `forkserver` en Windows es imposible (no existe).
+
+
+---
+
+## [Bloque 5.5 — Cierre tras AUDIT_BLOCK_5_5] — 2026-10-22
+
+Rama `block5-benchmarks-final-audit` (PR #9) con `main` `75d8bb5` integrado (PR #10). Detalle y verificación en `REMEDIATION_BLOCK_5_5.md`. Sin merge, sin cambios directos en `main`, sin cargas de ≥ 1.000 carteras.
+
+### Integrado y configurado
+
+- `git merge origin/main` (conflictos solo de documentación en `CHANGELOG.md` y `TRACEABILITY.md`, resueltos conservando ambos lados). Entran: `conic.retry_equilibrate` (reintento en frío con otra numérica y las
+  mismas tolerancias), desempate por banda en `rank_nodes`, `kill_pool_workers` y las pruebas asociadas.
+- `conic.retry_equilibrate = false` en la configuración del motor usada por B5.5; `config_hash` **`5d3cdc5e…` → `86af211e…`**. Referencia multiplataforma, baselines de rendimiento, sonda H-1 y lote `ENG-MIX-BASE` regenerados sobre árbol limpio.
+
+### Cambios numéricos y de composiciones (medidos)
+
+- **Ninguno en la CPU de medida (Windows, núcleo `Haswell`)**: huella de 10 carteras / 565 soluciones bit a bit idéntica; W1 = 11 composiciones / 240 soluciones; contadores de `ENG-MIX-BASE` 10 y 100 idénticos
+  (72.728 / 688.707 iteraciones; 652 / 6.404 llamadas al solver). En Linux/`SkylakeX` desaparece la variante de 12 composiciones (506 → 484 llamadas, 47.009 iteraciones frente a 46.934 en Windows, +0,16 %).
+- Sonda H-1 con la tolerancia configurada: validez 1,00 en todas las perturbaciones (antes 0,35–1,00); el reintento termina `OPTIMAL` con las tolerancias configuradas, sin promover ningún estado.
+
+### Corregido (AUDIT_BLOCK_5_5)
+
+- **A-01/A-02/M-1/M-2:** `xfail` de F-B55-1 retirado; F-B55-1 reescrito como dependiente del núcleo de OpenBLAS; pruebas por cartera y de subproceso con `OPENBLAS_CORETYPE` forzado; paso de CI «OpenBLAS kernel matrix»;
+  informe, investigación de H-1, trazabilidad y changelog sin las afirmaciones «no se ha vuelto a observar».
+- **A-03/M-3:** contador `valid_weights_but_rejected` en la puerta de validez; cifras presentadas como re-auditorías; familias revalidadas declaradas. **A-04/M-4:** proyecciones rotuladas «orden de magnitud».
+  **A-05/M-5:** `BEN-005`, `TST-005`, `PAR-003` → `PARTIAL`; `BEN-004` `VALIDATED` con criterio justificado. **A-06:** estados de estrategia en la huella. **A-07:** swap 6,7–11,1 GB.
+
+### Estado de requisitos
+
+Total 316 = **241 `VALIDATED` / 42 `PARTIAL` / 33 `NOT_IMPLEMENTED`** (B5.5 había llegado a 244 / 39 / 33). Sin cambios en los requisitos de B1–B4 (la evidencia de PR #10 ya figura en `main`).
+
+### Pruebas (ejecutadas realmente)
+
+| Entorno | Resultado |
+|---|---|
+| Windows 11 — Python 3.13.6, *worktree* limpio de `0be043a` (cabeza de código; los commits posteriores solo son documentación), sin carga concurrente | **2016 passed, 12 skipped, 0 failed** (16 min 30 s) |
+| Ídem, baseline previo de B5.5 (`933c0cc`) | 1994 passed, 11 skipped; la diferencia son las pruebas de la remediación de `main` y las nuevas de este cierre |
+| Linux — GitHub Actions, run `39774545136` (`0be043a`, Xeon Platinum 8573C, núcleo `SkylakeX`, Python 3.11.17) | **2028 passed, 3 skipped** (4 min 13 s); huella con 0 divergencias en los núcleos nativo, `Haswell` y `SkylakeX`; H-1 + desempate + multiescenario: 33 passed por núcleo |
+| Linux — GitHub Actions, run `39776822484` (`389d897`, AMD EPYC 9V45, núcleo `SkylakeX`) | **2028 passed, 3 skipped** (5 min 00 s); mismas comprobaciones de núcleos con 0 divergencias |
+| `mypy --strict portfolio_engine` | 0 errores (179 ficheros) |
+| `ruff check .` y `ruff format --check .` | limpios |
+
+### Limitaciones (abiertas)
+
+BEN-007 (1.200 carteras) sin ejecutar por falta de autorización; W2/W5 y C-28 a dimensión realista/otras mezclas sin medir; sin comparación de tiempos en el destino; sin run nativo en EPYC 7763 posterior a la integración.

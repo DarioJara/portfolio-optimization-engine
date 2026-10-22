@@ -24,7 +24,9 @@ dependencies = [
 [project.optional-dependencies]
 # EXACT_MIP en modo validación (enmienda E-24): SCIP como backend de referencia; nunca obligatorio.
 exact-mip = ["pyscipopt>=6"]
-# Medición de memoria (RSS/USS/PSS) en los benchmarks de B5.3; los tests no la necesitan.
+# Medición de memoria (RSS/USS/PSS) y carga del sistema en los benchmarks (B5.3, B5.5). Desde B5.5 los
+# tests de metadatos y del harness de benchmarks importan los scripts, que la usan: instalar el extra
+# `bench` junto a `dev` (la CI lo hace).
 bench = ["psutil>=5.9"]
 # Desarrollo y tests. Nunca se instalan globalmente: usar el entorno local .venv.
 dev = [

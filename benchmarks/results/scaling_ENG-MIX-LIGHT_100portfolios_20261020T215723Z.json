@@ -1,0 +1,238 @@
+{
+  "metadata": {
+    "benchmark": "scaling",
+    "evidence_for": [
+      "BEN-001",
+      "BEN-002",
+      "BEN-004",
+      "BEN-006",
+      "BEN-007",
+      "GOV-012",
+      "PAR-008"
+    ],
+    "execution_timestamp_utc": "20261020T215723Z",
+    "git": {
+      "commit": "3d0463b94035859e2a668ff900fcf6285f571cb5",
+      "branch": "block5-benchmarks-final-audit",
+      "dirty": false,
+      "modified_tracked_files": [],
+      "untracked_in_code": [],
+      "untracked_outside_code": [
+        "AUDIT_BLOCK_5_4_CLOSURE.md",
+        "INVESTIGATION_H1_B4.md",
+        "benchmarks/results/baselines/",
+        "benchmarks/results/h1_numerical_probe_20261020T204243Z.json",
+        "benchmarks/results/scaling_ENG-MIX-BASE_10-100portfolios_20261020T204253Z.json",
+        "benchmarks/results/scaling_classes_10portfolios_20261020T210640Z.json"
+      ]
+    },
+    "python": "3.13.6",
+    "versions": {
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "osqp": "1.1.3",
+      "clarabel": "0.11.1",
+      "pyscipopt": "6.2.1",
+      "threadpoolctl": "3.7.0",
+      "psutil": "7.2.2"
+    },
+    "host": {
+      "os": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "cpu_model": "13th Gen Intel(R) Core(TM) i7-13620H",
+      "cpu_logical": 16,
+      "cpu_physical": 10,
+      "smt_enabled": true,
+      "cpu_governor": null,
+      "ram_total_bytes": 16890322944,
+      "ram_available_bytes_at_start": 1113337856,
+      "swap_used_bytes_at_start": 7172403200,
+      "system_cpu_percent_before": 19.3,
+      "load_note": "medido con psutil; no se consulta ning\u00fan servidor de base de datos"
+    },
+    "host_fingerprint": "00c905c7d527f3ca",
+    "command": "benchmarks/scripts/scaling.py --scales 100 --mix ENG-MIX-LIGHT --workers 4 --methods sequential spawn --repetitions 3 --parallel-repetitions 3 --startup-repetitions 1 --count-solver-calls",
+    "env_threads": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null
+    },
+    "scaling_config": "config\\default_benchmark.toml",
+    "scaling_config_sha256": "64c7220f6d517c4e0f3cf2fe51f3506e7e89f9ca970c5565c6c13d5bb303e97c",
+    "random_seed": 7,
+    "engine_config_hash": "5d3cdc5e0e0c32c70fd6fac2ace95862172b2c5af9e346dc3b80a03973e33630",
+    "mixes_are_engineering_assumptions": true,
+    "start_methods_requested": [
+      "sequential",
+      "spawn"
+    ],
+    "start_methods_available": [
+      "spawn"
+    ],
+    "blas_threads_per_worker": 1,
+    "shared_data_mode": "BUNDLE_FILE",
+    "batch_sizes": [
+      "AUTO"
+    ],
+    "authorized_by": null
+  },
+  "note": "Medici\u00f3n local de una sola m\u00e1quina con datos sint\u00e9ticos; no es rendimiento de producci\u00f3n ni se extrapola. Tiempos bimodales: se informan m\u00ednimo y mediana. Una celda con diferencias T1 o violaciones de restricciones NO es una medici\u00f3n v\u00e1lida.",
+  "results": [
+    {
+      "mix": "ENG-MIX-LIGHT",
+      "mix_shares": {
+        "W0-GROSS-RISK": 0.4,
+        "W0-NET-TARGET": 0.4,
+        "W1-GLOBAL-NET": 0.05,
+        "W2-EXPECTED": 0.05,
+        "W3-MIN-CVAR": 0.04,
+        "W4-ROBUST": 0.05,
+        "W5-EXACT-MIP": 0.01
+      },
+      "portfolios": 100,
+      "class_counts": {
+        "W0-GROSS-RISK": 40,
+        "W0-NET-TARGET": 40,
+        "W1-GLOBAL-NET": 5,
+        "W2-EXPECTED": 5,
+        "W3-MIN-CVAR": 4,
+        "W4-ROBUST": 5,
+        "W5-EXACT-MIP": 1
+      },
+      "repetitions": 3,
+      "parallel_repetitions": 3,
+      "work_counters": {
+        "frontier_solver_iterations": 436243,
+        "solver_calls": 3242
+      },
+      "snapshot_key": "86383d39d4aac4968a77fc1fe9851f9087b782e1a63f04a0c921e2c7574dc790",
+      "cells": [
+        {
+          "mode": "sequential",
+          "workers": 1,
+          "wall_seconds_samples": [
+            12.321172200026922,
+            12.603219600045122,
+            12.468173600034788
+          ],
+          "wall": {
+            "min": 12.321172200026922,
+            "median": 12.468173600034788,
+            "mean": 12.464188466702277,
+            "max": 12.603219600045122
+          },
+          "throughput_portfolios_per_second_min_wall": 8.116110900534407,
+          "task_latency_seconds": {
+            "min": 0.009829699993133545,
+            "median": 0.04968610004289076,
+            "mean": 0.12282114200410434,
+            "max": 1.4759094000328332,
+            "p50": 0.04968610004289076,
+            "p95": 1.1964018800179474,
+            "p99": 1.3697813009470707
+          },
+          "memory": {
+            "coordinator_peak_rss_bytes": 227454976,
+            "worker_processes_observed": 0,
+            "worker_peak_rss_bytes_max": 0,
+            "worker_peak_rss_bytes_mean": 0,
+            "worker_peak_uss_bytes_max": 0,
+            "total_peak_rss_bytes": 227454976,
+            "samples": 202
+          },
+          "t1_differences_between_repetitions": 0,
+          "valid_measurement": true,
+          "execution_statuses": {
+            "COMPLETED": 100
+          },
+          "warmup_runs_discarded": 1
+        },
+        {
+          "mode": "spawn",
+          "workers": 4,
+          "batch_size": "AUTO",
+          "blas_threads": 1,
+          "shared_data_mode": "BUNDLE_FILE",
+          "effective_batch_size": 7,
+          "batches": 15,
+          "pool_rebuilds": 0,
+          "wall_seconds_samples": [
+            15.417480299947783,
+            15.355346400057897,
+            15.509992999956012
+          ],
+          "wall": {
+            "min": 15.355346400057897,
+            "median": 15.417480299947783,
+            "mean": 15.427606566653898,
+            "max": 15.509992999956012
+          },
+          "throughput_portfolios_per_second_min_wall": 6.512389717214257,
+          "task_latency_seconds": {
+            "min": 0.012059499975293875,
+            "median": 0.06680595001671463,
+            "mean": 0.1534427969995886,
+            "max": 2.0626094999024644,
+            "p50": 0.06680595001671463,
+            "p95": 1.3030075599672273,
+            "p99": 1.6939237980661002
+          },
+          "sum_task_compute_seconds": 15.34427969995886,
+          "compute_occupancy": 0.24981982334017885,
+          "max_worker_busy_seconds": 6.8980282000266016,
+          "overhead_estimate_seconds": 8.457318200031295,
+          "distinct_worker_pids": 4,
+          "pool_startup_seconds_samples": [
+            8.391686500050128
+          ],
+          "pool_startup_seconds": {
+            "min": 8.391686500050128,
+            "median": 8.391686500050128,
+            "mean": 8.391686500050128,
+            "max": 8.391686500050128
+          },
+          "ipc": {
+            "request_pickle_bytes": 806,
+            "result_pickle_bytes": 11387,
+            "result_dumps_loads_roundtrip_seconds": 0.0030263599997851997
+          },
+          "memory": {
+            "coordinator_peak_rss_bytes": 226816000,
+            "worker_processes_observed": 4,
+            "worker_peak_rss_bytes_max": 182562816,
+            "worker_peak_rss_bytes_mean": 172800000,
+            "worker_peak_uss_bytes_max": 121782272,
+            "total_peak_rss_bytes": 916963328,
+            "samples": 78
+          },
+          "t1_differences_vs_sequential": 0,
+          "t0_inexact_floats_vs_sequential": 0,
+          "t1_max_abs_difference": 0.0,
+          "exactly_once_and_balanced": true,
+          "constraint_audit": {
+            "solutions_checked": 3054,
+            "budget_violations": 0,
+            "bound_violations": 0,
+            "flag_inconsistencies": 0,
+            "max_budget_error": 6.539657704252022e-12,
+            "max_bound_excess": 1.6246847200918069e-09,
+            "solver_status_histogram": {
+              "OPTIMAL": 9,
+              "point:OPTIMAL": 2920
+            }
+          },
+          "valid_measurement": true,
+          "execution_statuses": {
+            "COMPLETED": 100
+          },
+          "warmup_runs_discarded": 1,
+          "speedup_min": 0.8024027513948149,
+          "speedup_median": 0.8087037153585347,
+          "efficiency_min": 0.20060068784870372,
+          "efficiency_median": 0.20217592883963367,
+          "karp_flatt_serial_fraction_min": 1.3283425906532222
+        }
+      ]
+    }
+  ]
+}

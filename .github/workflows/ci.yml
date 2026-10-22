@@ -28,7 +28,7 @@ jobs:
       - name: Install package, tests and optional SCIP backend
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e '.[dev,exact-mip]'
+          python -m pip install -e '.[dev,exact-mip,bench]'
       - name: Static checks
         run: |
           python -m mypy --strict portfolio_engine
@@ -71,3 +71,60 @@ jobs:
           echo "::notice title=pytest-summary::$(tail -n 1 pytest-full.txt)"
           grep -E '^(FAILED|ERROR)' pytest-full.txt | cut -c1-300 | while IFS= read -r line; do echo "::warning title=pytest-failed::$line"; done
           exit $status
+      - name: B5.5 cross-platform diagnostic (C-28; does not gate)
+        # Describe, sin decidir el resultado, en qué se diferencia el lote de referencia de Windows del de
+        # esta plataforma (la prueba tests/integration/test_cross_platform_reference.py es la que decide).
+        if: always()
+        shell: bash
+        run: |
+          python benchmarks/scripts/cross_platform_reference.py explain 2>&1 | tee xplat.txt
+          while IFS= read -r line; do echo "::notice title=b55-xplat::$line"; done < xplat.txt
+          python benchmarks/scripts/baseline.py --show-work 2>&1 | tee work.txt
+          while IFS= read -r line; do echo "::notice title=b55-work::$line"; done < work.txt
+      - name: B5.5 Linux benchmark evidence (scale 10, spawn and forkserver)
+        if: always()
+        # Evidencia verificable (B5.5, BEN-004/007): 10 carteras sintéticas de ENG-MIX-BASE con
+        # secuencial, spawn y forkserver, 1 y 2 workers. El script termina con error si alguna
+        # ejecución difiere de la secuencial (T1), viola restricciones o pierde/duplica tareas.
+        # Los tiempos son informativos (runner compartido); las anotaciones los hacen consultables.
+        shell: bash
+        run: |
+          set +e
+          mkdir -p benchmarks/results/ci
+          python benchmarks/scripts/scaling.py --scales 10 --mix ENG-MIX-BASE --workers 1 2 \
+            --methods sequential spawn forkserver --repetitions 2 --parallel-repetitions 2 \
+            --startup-repetitions 2 --tag ci --out benchmarks/results/ci 2>&1 | tee scaling-ci.txt
+          status=${PIPESTATUS[0]}
+          python benchmarks/scripts/ci_summary.py scaling benchmarks/results/ci/scaling_*.json
+          exit $status
+      - name: B5.5 H-1 numerical probe (diagnostic, does not gate)
+        if: always()
+        # Reproduce el mecanismo de H-1 con perturbaciones de redondeo y lo anota junto al modelo de
+        # CPU del runner. No cambia ningún algoritmo ni tolerancia; es solo diagnóstico.
+        shell: bash
+        run: |
+          python benchmarks/scripts/h1_numerical_probe.py --repetitions 60 --out benchmarks/results/ci
+          python benchmarks/scripts/ci_summary.py h1 benchmarks/results/ci/h1_numerical_probe_*.json
+      - name: B5.5 OpenBLAS kernel matrix (native, Haswell and, with AVX-512, SkylakeX)
+        # Cierra A-01/A-02 sin depender de la lotería de CPU del runner: H-1 (B4) y F-B55-1 (B3) se
+        # deciden por el núcleo de OpenBLAS cargado, que aquí se fuerza con OPENBLAS_CORETYPE. Cada
+        # núcleo ejecuta los tests de H-1 y de desempate y la huella de referencia; el resultado de
+        # cada uno decide el paso y se anota con el núcleo realmente cargado.
+        if: always()
+        timeout-minutes: 20
+        shell: bash
+        run: |
+          set +e
+          failed=0
+          kernels="native Haswell"
+          grep -q avx512f /proc/cpuinfo && kernels="$kernels SkylakeX"
+          for k in $kernels; do
+            if [ "$k" = native ]; then unset OPENBLAS_CORETYPE; else export OPENBLAS_CORETYPE=$k; fi
+            check=$(timeout 600 python benchmarks/scripts/cross_platform_reference.py check 2>&1 | tr '\n' ' ' | cut -c1-600)
+            timeout 900 python -m pytest -q -p no:cacheprovider tests/unit/scenarios/test_h1_clarabel_numerics.py tests/unit/candidates/test_tie_stability.py tests/unit/scenarios/test_multi_scenario.py > kernel-$k.txt 2>&1
+            code=$?
+            [ $code -ne 0 ] && failed=1
+            echo "::notice title=b55-kernel::forzado=$k | huella: $check | pytest(H-1, desempate, multiescenario) exit=$code: $(tail -n 1 kernel-$k.txt)"
+          done
+          unset OPENBLAS_CORETYPE
+          exit $failed

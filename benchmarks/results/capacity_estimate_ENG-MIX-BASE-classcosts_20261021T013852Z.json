@@ -1,0 +1,565 @@
+{
+  "metadata": {
+    "benchmark": "capacity_estimate",
+    "evidence_for": [
+      "BEN-007",
+      "GOV-012"
+    ],
+    "execution_timestamp_utc": "20261021T013852Z",
+    "git": {
+      "commit": "4cf7d81378db018c4d1a166f6b89038134992510",
+      "branch": "block5-benchmarks-final-audit",
+      "dirty": false,
+      "modified_tracked_files": [],
+      "untracked_in_code": [],
+      "untracked_outside_code": [
+        "AUDIT_BLOCK_5_4_CLOSURE.md",
+        "INVESTIGATION_H1_B4.md",
+        "benchmarks/results/capacity_estimate_ENG-MIX-BASE_20261021T013842Z.json"
+      ]
+    },
+    "python": "3.13.6",
+    "versions": {
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "osqp": "1.1.3",
+      "clarabel": "0.11.1",
+      "pyscipopt": "6.2.1",
+      "threadpoolctl": "3.7.0",
+      "psutil": "7.2.2"
+    },
+    "host": {
+      "os": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "cpu_model": "13th Gen Intel(R) Core(TM) i7-13620H",
+      "cpu_logical": 16,
+      "cpu_physical": 10,
+      "smt_enabled": true,
+      "cpu_governor": null,
+      "ram_total_bytes": 16890322944,
+      "ram_available_bytes_at_start": 564146176,
+      "swap_used_bytes_at_start": 8846163968,
+      "system_cpu_percent_before": 40.2,
+      "load_note": "medido con psutil; no se consulta ning\u00fan servidor de base de datos"
+    },
+    "host_fingerprint": "00c905c7d527f3ca",
+    "command": "benchmarks/scripts/scale_run.py estimate --inputs benchmarks/results/scaling_ENG-MIX-BASE_10-100portfolios_20261020T204253Z.json benchmarks/results/scaling_ENG-MIX-BASE_100portfolios_rates_20261021T002510Z.json --mix ENG-MIX-BASE --shares-mix ENG-MIX-BASE --class-costs benchmarks/results/scaling_classes_3portfolios_universe700_20261021T005617Z.json --workers 1 4 8",
+    "env_threads": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null
+    },
+    "mix": "ENG-MIX-BASE",
+    "unit_cost_source": {
+      "source": "pure-class costs",
+      "shares_mix": "ENG-MIX-BASE",
+      "class_cost_files": [
+        "scaling_classes_3portfolios_universe700_20261021T005617Z.json"
+      ],
+      "classes_used": [
+        "W0-GROSS-RISK",
+        "W0-NET-TARGET",
+        "W1-GLOBAL-NET",
+        "W3-MIN-CVAR",
+        "W4-MAX-SHARPE",
+        "W4-ROBUST",
+        "W4-VOL-TARGET"
+      ],
+      "share_excluded_without_measurement": 0.15999999999999992,
+      "excluded_classes": [
+        "W2-EXPECTED",
+        "W2-INDEPENDENT",
+        "W2-STRESS",
+        "W2-WORST-CASE",
+        "W5-EXACT-MIP"
+      ],
+      "portfolios_measured_per_class": {
+        "W0-GROSS-RISK": 3,
+        "W0-NET-TARGET": 3,
+        "W1-GLOBAL-NET": 3,
+        "W3-MIN-CVAR": 3,
+        "W4-MAX-SHARPE": 3,
+        "W4-ROBUST": 3,
+        "W4-VOL-TARGET": 3
+      }
+    },
+    "mode": "spawn",
+    "source_files": [
+      "scaling_ENG-MIX-BASE_10-100portfolios_20261020T204253Z.json",
+      "scaling_ENG-MIX-BASE_100portfolios_rates_20261021T002510Z.json"
+    ],
+    "executed": false,
+    "price_per_core_hour": null,
+    "statement": "ESTIMACI\u00d3N aritm\u00e9tica sobre mediciones concretas; NO se ha ejecutado ninguna carga de esta escala. Requiere autorizaci\u00f3n expresa del usuario (D-12) para ejecutarse."
+  },
+  "projections": [
+    {
+      "target_portfolios": 1000,
+      "workers": 1,
+      "inputs": {
+        "unit_seconds_min_median_max": [
+          0.8061803166605791,
+          0.884055968250207,
+          0.961931619839835
+        ],
+        "steady_efficiency_low_mid_high": [
+          0.8986537854545429,
+          0.9324813106107455,
+          0.966308835766948
+        ],
+        "startup_seconds": 7.734584974998143,
+        "worker_rss_bytes_max": 197959680.0,
+        "coordinator_rss_bytes_max": 276766720.0,
+        "efficiency_samples": 2
+      },
+      "wall_seconds_optimistic_central_pessimistic": [
+        842.0230513747938,
+        955.8028820984854,
+        1078.1486147264957
+      ],
+      "wall_hours_optimistic_central_pessimistic": [
+        0.23389529204855383,
+        0.2655008005829126,
+        0.2994857263129155
+      ],
+      "core_hours_optimistic_central_pessimistic": [
+        0.23389529204855383,
+        0.2655008005829126,
+        0.2994857263129155
+      ],
+      "peak_memory_bytes": 474726400.0,
+      "money_optimistic_central_pessimistic": null,
+      "extrapolation_factor": 333.3333333333333,
+      "caveat": "Aritm\u00e9tica sobre una medici\u00f3n de 3 carteras (factor de extrapolaci\u00f3n \u00d7333.3); supone eficiencia y coste unitario constantes con el tama\u00f1o de la carga, lo que NO se ha verificado a esta escala. No sustituye a la ejecuci\u00f3n."
+    },
+    {
+      "target_portfolios": 1200,
+      "workers": 1,
+      "inputs": {
+        "unit_seconds_min_median_max": [
+          0.8061803166605791,
+          0.884055968250207,
+          0.961931619839835
+        ],
+        "steady_efficiency_low_mid_high": [
+          0.8986537854545429,
+          0.9324813106107455,
+          0.966308835766948
+        ],
+        "startup_seconds": 7.734584974998143,
+        "worker_rss_bytes_max": 197959680.0,
+        "coordinator_rss_bytes_max": 276766720.0,
+        "efficiency_samples": 2
+      },
+      "wall_seconds_optimistic_central_pessimistic": [
+        1008.880744654753,
+        1145.4165415231828,
+        1292.2314206767953
+      ],
+      "wall_hours_optimistic_central_pessimistic": [
+        0.2802446512929869,
+        0.31817126153421743,
+        0.3589531724102209
+      ],
+      "core_hours_optimistic_central_pessimistic": [
+        0.2802446512929869,
+        0.31817126153421743,
+        0.3589531724102209
+      ],
+      "peak_memory_bytes": 474726400.0,
+      "money_optimistic_central_pessimistic": null,
+      "extrapolation_factor": 400.0,
+      "caveat": "Aritm\u00e9tica sobre una medici\u00f3n de 3 carteras (factor de extrapolaci\u00f3n \u00d7400.0); supone eficiencia y coste unitario constantes con el tama\u00f1o de la carga, lo que NO se ha verificado a esta escala. No sustituye a la ejecuci\u00f3n."
+    },
+    {
+      "target_portfolios": 5000,
+      "workers": 1,
+      "inputs": {
+        "unit_seconds_min_median_max": [
+          0.8061803166605791,
+          0.884055968250207,
+          0.961931619839835
+        ],
+        "steady_efficiency_low_mid_high": [
+          0.8986537854545429,
+          0.9324813106107455,
+          0.966308835766948
+        ],
+        "startup_seconds": 7.734584974998143,
+        "worker_rss_bytes_max": 197959680.0,
+        "coordinator_rss_bytes_max": 276766720.0,
+        "efficiency_samples": 2
+      },
+      "wall_seconds_optimistic_central_pessimistic": [
+        4179.176916973976,
+        4748.076070592435,
+        5359.804733732486
+      ],
+      "wall_hours_optimistic_central_pessimistic": [
+        1.1608824769372157,
+        1.3189100196090098,
+        1.488834648259024
+      ],
+      "core_hours_optimistic_central_pessimistic": [
+        1.1608824769372157,
+        1.3189100196090098,
+        1.488834648259024
+      ],
+      "peak_memory_bytes": 474726400.0,
+      "money_optimistic_central_pessimistic": null,
+      "extrapolation_factor": 1666.6666666666667,
+      "caveat": "Aritm\u00e9tica sobre una medici\u00f3n de 3 carteras (factor de extrapolaci\u00f3n \u00d71666.7); supone eficiencia y coste unitario constantes con el tama\u00f1o de la carga, lo que NO se ha verificado a esta escala. No sustituye a la ejecuci\u00f3n."
+    },
+    {
+      "target_portfolios": 22000,
+      "workers": 1,
+      "inputs": {
+        "unit_seconds_min_median_max": [
+          0.8061803166605791,
+          0.884055968250207,
+          0.961931619839835
+        ],
+        "steady_efficiency_low_mid_high": [
+          0.8986537854545429,
+          0.9324813106107455,
+          0.966308835766948
+        ],
+        "startup_seconds": 7.734584974998143,
+        "worker_rss_bytes_max": 197959680.0,
+        "coordinator_rss_bytes_max": 276766720.0,
+        "efficiency_samples": 2
+      },
+      "wall_seconds_optimistic_central_pessimistic": [
+        18362.080845770506,
+        20865.237121691716,
+        23556.843239507947
+      ],
+      "wall_hours_optimistic_central_pessimistic": [
+        5.100578012714029,
+        5.795899200469921,
+        6.543567566529985
+      ],
+      "core_hours_optimistic_central_pessimistic": [
+        5.100578012714029,
+        5.795899200469921,
+        6.543567566529985
+      ],
+      "peak_memory_bytes": 474726400.0,
+      "money_optimistic_central_pessimistic": null,
+      "extrapolation_factor": 7333.333333333333,
+      "caveat": "Aritm\u00e9tica sobre una medici\u00f3n de 3 carteras (factor de extrapolaci\u00f3n \u00d77333.3); supone eficiencia y coste unitario constantes con el tama\u00f1o de la carga, lo que NO se ha verificado a esta escala. No sustituye a la ejecuci\u00f3n."
+    },
+    {
+      "target_portfolios": 1000,
+      "workers": 4,
+      "inputs": {
+        "unit_seconds_min_median_max": [
+          0.8061803166605791,
+          0.884055968250207,
+          0.961931619839835
+        ],
+        "steady_efficiency_low_mid_high": [
+          0.6447938764142607,
+          0.7725155215330284,
+          0.900237166651796
+        ],
+        "startup_seconds": 7.982522250036709,
+        "worker_rss_bytes_max": 187387904.0,
+        "coordinator_rss_bytes_max": 205398016.0,
+        "efficiency_samples": 2
+      },
+      "wall_seconds_optimistic_central_pessimistic": [
+        231.8625025831534,
+        294.0790289246957,
+        380.9434230223879
+      ],
+      "wall_hours_optimistic_central_pessimistic": [
+        0.0644062507175426,
+        0.0816886191457488,
+        0.10581761750621886
+      ],
+      "core_hours_optimistic_central_pessimistic": [
+        0.2576250028701704,
+        0.3267544765829952,
+        0.42327047002487544
+      ],
+      "peak_memory_bytes": 954949632.0,
+      "money_optimistic_central_pessimistic": null,
+      "extrapolation_factor": 333.3333333333333,
+      "caveat": "Aritm\u00e9tica sobre una medici\u00f3n de 3 carteras (factor de extrapolaci\u00f3n \u00d7333.3); supone eficiencia y coste unitario constantes con el tama\u00f1o de la carga, lo que NO se ha verificado a esta escala. No sustituye a la ejecuci\u00f3n."
+    },
+    {
+      "target_portfolios": 1200,
+      "workers": 4,
+      "inputs": {
+        "unit_seconds_min_median_max": [
+          0.8061803166605791,
+          0.884055968250207,
+          0.961931619839835
+        ],
+        "steady_efficiency_low_mid_high": [
+          0.6447938764142607,
+          0.7725155215330284,
+          0.900237166651796
+        ],
+        "startup_seconds": 7.982522250036709,
+        "worker_rss_bytes_max": 187387904.0,
+        "coordinator_rss_bytes_max": 205398016.0,
+        "efficiency_samples": 2
+      },
+      "wall_seconds_optimistic_central_pessimistic": [
+        276.63849864977675,
+        351.29833025962756,
+        455.53560317685816
+      ],
+      "wall_hours_optimistic_central_pessimistic": [
+        0.07684402740271576,
+        0.09758286951656321,
+        0.12653766754912726
+      ],
+      "core_hours_optimistic_central_pessimistic": [
+        0.30737610961086304,
+        0.39033147806625285,
+        0.5061506701965091
+      ],
+      "peak_memory_bytes": 954949632.0,
+      "money_optimistic_central_pessimistic": null,
+      "extrapolation_factor": 400.0,
+      "caveat": "Aritm\u00e9tica sobre una medici\u00f3n de 3 carteras (factor de extrapolaci\u00f3n \u00d7400.0); supone eficiencia y coste unitario constantes con el tama\u00f1o de la carga, lo que NO se ha verificado a esta escala. No sustituye a la ejecuci\u00f3n."
+    },
+    {
+      "target_portfolios": 5000,
+      "workers": 4,
+      "inputs": {
+        "unit_seconds_min_median_max": [
+          0.8061803166605791,
+          0.884055968250207,
+          0.961931619839835
+        ],
+        "steady_efficiency_low_mid_high": [
+          0.6447938764142607,
+          0.7725155215330284,
+          0.900237166651796
+        ],
+        "startup_seconds": 7.982522250036709,
+        "worker_rss_bytes_max": 187387904.0,
+        "coordinator_rss_bytes_max": 205398016.0,
+        "efficiency_samples": 2
+      },
+      "wall_seconds_optimistic_central_pessimistic": [
+        1127.3824239156202,
+        1438.465055623332,
+        1872.7870261117926
+      ],
+      "wall_hours_optimistic_central_pessimistic": [
+        0.3131617844210056,
+        0.3995736265620367,
+        0.5202186183643869
+      ],
+      "core_hours_optimistic_central_pessimistic": [
+        1.2526471376840225,
+        1.5982945062481468,
+        2.0808744734575475
+      ],
+      "peak_memory_bytes": 954949632.0,
+      "money_optimistic_central_pessimistic": null,
+      "extrapolation_factor": 1666.6666666666667,
+      "caveat": "Aritm\u00e9tica sobre una medici\u00f3n de 3 carteras (factor de extrapolaci\u00f3n \u00d71666.7); supone eficiencia y coste unitario constantes con el tama\u00f1o de la carga, lo que NO se ha verificado a esta escala. No sustituye a la ejecuci\u00f3n."
+    },
+    {
+      "target_portfolios": 22000,
+      "workers": 4,
+      "inputs": {
+        "unit_seconds_min_median_max": [
+          0.8061803166605791,
+          0.884055968250207,
+          0.961931619839835
+        ],
+        "steady_efficiency_low_mid_high": [
+          0.6447938764142607,
+          0.7725155215330284,
+          0.900237166651796
+        ],
+        "startup_seconds": 7.982522250036709,
+        "worker_rss_bytes_max": 187387904.0,
+        "coordinator_rss_bytes_max": 205398016.0,
+        "efficiency_samples": 2
+      },
+      "wall_seconds_optimistic_central_pessimistic": [
+        4933.342089578604,
+        6302.105669092535,
+        8213.122339241763
+      ],
+      "wall_hours_optimistic_central_pessimistic": [
+        1.3703728026607234,
+        1.7505849080812599,
+        2.2814228720116008
+      ],
+      "core_hours_optimistic_central_pessimistic": [
+        5.4814912106428935,
+        7.0023396323250395,
+        9.125691488046403
+      ],
+      "peak_memory_bytes": 954949632.0,
+      "money_optimistic_central_pessimistic": null,
+      "extrapolation_factor": 7333.333333333333,
+      "caveat": "Aritm\u00e9tica sobre una medici\u00f3n de 3 carteras (factor de extrapolaci\u00f3n \u00d77333.3); supone eficiencia y coste unitario constantes con el tama\u00f1o de la carga, lo que NO se ha verificado a esta escala. No sustituye a la ejecuci\u00f3n."
+    },
+    {
+      "target_portfolios": 1000,
+      "workers": 8,
+      "inputs": {
+        "unit_seconds_min_median_max": [
+          0.8061803166605791,
+          0.884055968250207,
+          0.961931619839835
+        ],
+        "steady_efficiency_low_mid_high": [
+          0.5932493519595631,
+          0.5932493519595631,
+          0.5932493519595631
+        ],
+        "startup_seconds": 6.85601874999702,
+        "worker_rss_bytes_max": 183029760.0,
+        "coordinator_rss_bytes_max": 170848256.0,
+        "efficiency_samples": 1
+      },
+      "wall_seconds_optimistic_central_pessimistic": [
+        176.7214206247912,
+        193.1301304136002,
+        209.53884020240923
+      ],
+      "wall_hours_optimistic_central_pessimistic": [
+        0.04908928350688644,
+        0.053647258448222275,
+        0.05820523338955812
+      ],
+      "core_hours_optimistic_central_pessimistic": [
+        0.3927142680550915,
+        0.4291780675857782,
+        0.46564186711646494
+      ],
+      "peak_memory_bytes": 1635086336.0,
+      "money_optimistic_central_pessimistic": null,
+      "extrapolation_factor": 333.3333333333333,
+      "caveat": "Aritm\u00e9tica sobre una medici\u00f3n de 3 carteras (factor de extrapolaci\u00f3n \u00d7333.3); supone eficiencia y coste unitario constantes con el tama\u00f1o de la carga, lo que NO se ha verificado a esta escala. No sustituye a la ejecuci\u00f3n."
+    },
+    {
+      "target_portfolios": 1200,
+      "workers": 8,
+      "inputs": {
+        "unit_seconds_min_median_max": [
+          0.8061803166605791,
+          0.884055968250207,
+          0.961931619839835
+        ],
+        "steady_efficiency_low_mid_high": [
+          0.5932493519595631,
+          0.5932493519595631,
+          0.5932493519595631
+        ],
+        "startup_seconds": 6.85601874999702,
+        "worker_rss_bytes_max": 183029760.0,
+        "coordinator_rss_bytes_max": 170848256.0,
+        "efficiency_samples": 1
+      },
+      "wall_seconds_optimistic_central_pessimistic": [
+        210.69450099975,
+        230.38495274632083,
+        250.0754044928917
+      ],
+      "wall_hours_optimistic_central_pessimistic": [
+        0.05852625027770834,
+        0.06399582020731134,
+        0.06946539013691436
+      ],
+      "core_hours_optimistic_central_pessimistic": [
+        0.4682100022216667,
+        0.5119665616584907,
+        0.5557231210953149
+      ],
+      "peak_memory_bytes": 1635086336.0,
+      "money_optimistic_central_pessimistic": null,
+      "extrapolation_factor": 400.0,
+      "caveat": "Aritm\u00e9tica sobre una medici\u00f3n de 3 carteras (factor de extrapolaci\u00f3n \u00d7400.0); supone eficiencia y coste unitario constantes con el tama\u00f1o de la carga, lo que NO se ha verificado a esta escala. No sustituye a la ejecuci\u00f3n."
+    },
+    {
+      "target_portfolios": 5000,
+      "workers": 8,
+      "inputs": {
+        "unit_seconds_min_median_max": [
+          0.8061803166605791,
+          0.884055968250207,
+          0.961931619839835
+        ],
+        "steady_efficiency_low_mid_high": [
+          0.5932493519595631,
+          0.5932493519595631,
+          0.5932493519595631
+        ],
+        "startup_seconds": 6.85601874999702,
+        "worker_rss_bytes_max": 183029760.0,
+        "coordinator_rss_bytes_max": 170848256.0,
+        "efficiency_samples": 1
+      },
+      "wall_seconds_optimistic_central_pessimistic": [
+        856.1830281239679,
+        938.2265770680131,
+        1020.2701260120581
+      ],
+      "wall_hours_optimistic_central_pessimistic": [
+        0.2378286189233244,
+        0.2606184936300036,
+        0.2834083683366828
+      ],
+      "core_hours_optimistic_central_pessimistic": [
+        1.9026289513865953,
+        2.084947949040029,
+        2.2672669466934625
+      ],
+      "peak_memory_bytes": 1635086336.0,
+      "money_optimistic_central_pessimistic": null,
+      "extrapolation_factor": 1666.6666666666667,
+      "caveat": "Aritm\u00e9tica sobre una medici\u00f3n de 3 carteras (factor de extrapolaci\u00f3n \u00d71666.7); supone eficiencia y coste unitario constantes con el tama\u00f1o de la carga, lo que NO se ha verificado a esta escala. No sustituye a la ejecuci\u00f3n."
+    },
+    {
+      "target_portfolios": 22000,
+      "workers": 8,
+      "inputs": {
+        "unit_seconds_min_median_max": [
+          0.8061803166605791,
+          0.884055968250207,
+          0.961931619839835
+        ],
+        "steady_efficiency_low_mid_high": [
+          0.5932493519595631,
+          0.5932493519595631,
+          0.5932493519595631
+        ],
+        "startup_seconds": 6.85601874999702,
+        "worker_rss_bytes_max": 183029760.0,
+        "coordinator_rss_bytes_max": 170848256.0,
+        "efficiency_samples": 1
+      },
+      "wall_seconds_optimistic_central_pessimistic": [
+        3743.894859995469,
+        4104.886475349267,
+        4465.878090703066
+      ],
+      "wall_hours_optimistic_central_pessimistic": [
+        1.0399707944431857,
+        1.1402462431525742,
+        1.2405216918619628
+      ],
+      "core_hours_optimistic_central_pessimistic": [
+        8.319766355545486,
+        9.121969945220593,
+        9.924173534895703
+      ],
+      "peak_memory_bytes": 1635086336.0,
+      "money_optimistic_central_pessimistic": null,
+      "extrapolation_factor": 7333.333333333333,
+      "caveat": "Aritm\u00e9tica sobre una medici\u00f3n de 3 carteras (factor de extrapolaci\u00f3n \u00d77333.3); supone eficiencia y coste unitario constantes con el tama\u00f1o de la carga, lo que NO se ha verificado a esta escala. No sustituye a la ejecuci\u00f3n."
+    }
+  ]
+}

@@ -1,0 +1,1079 @@
+{
+  "metadata": {
+    "benchmark": "shared_data_cache",
+    "evidence_for": [
+      "PAR-004",
+      "PAR-005",
+      "CCH-001..005",
+      "BEN-004",
+      "BEN-006"
+    ],
+    "execution_timestamp_utc": "20261020T225530Z",
+    "git_commit": "3d0463b94035859e2a668ff900fcf6285f571cb5",
+    "engine_config_hash": "5d3cdc5e0e0c32c70fd6fac2ace95862172b2c5af9e346dc3b80a03973e33630",
+    "random_seed": 7,
+    "universe_assets": [
+      50,
+      500
+    ],
+    "held_assets": 20,
+    "workers": [
+      1,
+      2,
+      4
+    ],
+    "start_methods": [
+      "spawn"
+    ],
+    "repetitions": 3,
+    "python": "3.13.6",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel",
+    "logical_cpus_informational": 16,
+    "psutil_available": true,
+    "tempdir": "C:\\Users\\dario\\AppData\\Local\\Temp",
+    "note": "Medici\u00f3n local y peque\u00f1a con universos sint\u00e9ticos. No es rendimiento de producci\u00f3n ni se extrapola. Tiempos bimodales de esta m\u00e1quina: m\u00ednimo y mediana. USS excluye p\u00e1ginas compartidas; en Linux PSS reparte las compartidas."
+  },
+  "snapshot_sizes": {
+    "50": {
+      "sigma_mb": 0.02,
+      "returns_mb": 0.12,
+      "snapshot_key": "6a4378faa6e326213bdcc1ca50b45e6d1209876cde38c15814477f926a52f6f5"
+    },
+    "500": {
+      "sigma_mb": 2.0,
+      "returns_mb": 1.2,
+      "snapshot_key": "6e53880e7b1a9819416d107c7df70a3bd86c282db95a24ea1b20f7febfb2514b"
+    }
+  },
+  "e4_shared_data": [
+    {
+      "mode": "BUNDLE_FILE",
+      "start_method": "spawn",
+      "workers": 1,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 6.557103200000711,
+        "median": 6.721488900016993,
+        "max": 6.949791999999434
+      },
+      "publish_seconds": {
+        "min": 0.006306800059974194,
+        "median": 0.007020000019110739,
+        "max": 0.012729699956253171
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.044204500038176775,
+        "median": 0.04787469992879778,
+        "max": 0.07259129988960922
+      },
+      "handle_bytes": 228,
+      "header_bytes": 156252,
+      "data_bytes": 0,
+      "n_buffers": 0,
+      "sigma_backing": [
+        "bytes"
+      ],
+      "workers_observed": 1,
+      "worker_rss_mb": [
+        161.7
+      ],
+      "worker_uss_mb": [
+        113.27
+      ],
+      "worker_pss_mb": [
+        null
+      ],
+      "worker_uss_mb_sum": 113.27,
+      "coordinator_rss_mb_after": 172.62,
+      "w0_run_wall_seconds": 7.626312699983828,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 50
+    },
+    {
+      "mode": "FILE_MMAP",
+      "start_method": "spawn",
+      "workers": 1,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 6.611919800052419,
+        "median": 6.644053700030781,
+        "max": 6.99148129997775
+      },
+      "publish_seconds": {
+        "min": 0.01360409997869283,
+        "median": 0.015501699992455542,
+        "max": 0.04067180003039539
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.07828650006558746,
+        "median": 0.07973360002506524,
+        "max": 0.08343310002237558
+      },
+      "handle_bytes": 559,
+      "header_bytes": 12215,
+      "data_bytes": 144224,
+      "n_buffers": 7,
+      "sigma_backing": [
+        "mmap"
+      ],
+      "workers_observed": 1,
+      "worker_rss_mb": [
+        162.27
+      ],
+      "worker_uss_mb": [
+        113.68
+      ],
+      "worker_pss_mb": [
+        null
+      ],
+      "worker_uss_mb_sum": 113.68,
+      "coordinator_rss_mb_after": 173.61,
+      "w0_run_wall_seconds": 7.522225300082937,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 50
+    },
+    {
+      "mode": "SHARED_MEMORY",
+      "start_method": "spawn",
+      "workers": 1,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 6.809730399982072,
+        "median": 6.8873489000834525,
+        "max": 6.898009399999864
+      },
+      "publish_seconds": {
+        "min": 0.012382899993099272,
+        "median": 0.014142600004561245,
+        "max": 0.0259129999903962
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.06445500010158867,
+        "median": 0.06681729992851615,
+        "max": 0.06707670004107058
+      },
+      "handle_bytes": 504,
+      "header_bytes": 12215,
+      "data_bytes": 144224,
+      "n_buffers": 7,
+      "sigma_backing": [
+        "mmap"
+      ],
+      "workers_observed": 1,
+      "worker_rss_mb": [
+        162.06
+      ],
+      "worker_uss_mb": [
+        113.47
+      ],
+      "worker_pss_mb": [
+        null
+      ],
+      "worker_uss_mb_sum": 113.47,
+      "coordinator_rss_mb_after": 175.86,
+      "w0_run_wall_seconds": 7.62120519997552,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 50
+    },
+    {
+      "mode": "BUNDLE_FILE",
+      "start_method": "spawn",
+      "workers": 2,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 6.3673845999874175,
+        "median": 7.6203302999492735,
+        "max": 7.9637920000823215
+      },
+      "publish_seconds": {
+        "min": 0.006292100064456463,
+        "median": 0.006592400022782385,
+        "max": 0.006776800029911101
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.039610700099729,
+        "median": 0.045739500084891915,
+        "max": 0.04771469999104738
+      },
+      "handle_bytes": 228,
+      "header_bytes": 156252,
+      "data_bytes": 0,
+      "n_buffers": 0,
+      "sigma_backing": [
+        "bytes"
+      ],
+      "workers_observed": 2,
+      "worker_rss_mb": [
+        162.06,
+        160.87
+      ],
+      "worker_uss_mb": [
+        113.64,
+        112.93
+      ],
+      "worker_pss_mb": [
+        null,
+        null
+      ],
+      "worker_uss_mb_sum": 226.57,
+      "coordinator_rss_mb_after": 175.94,
+      "w0_run_wall_seconds": 7.791167499963194,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 50
+    },
+    {
+      "mode": "FILE_MMAP",
+      "start_method": "spawn",
+      "workers": 2,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 6.955046699964441,
+        "median": 7.021062599960715,
+        "max": 7.304647700046189
+      },
+      "publish_seconds": {
+        "min": 0.015944499988108873,
+        "median": 0.016246899962425232,
+        "max": 0.01725040003657341
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.0698413000209257,
+        "median": 0.0783244000049308,
+        "max": 0.07884630002081394
+      },
+      "handle_bytes": 559,
+      "header_bytes": 12215,
+      "data_bytes": 144224,
+      "n_buffers": 7,
+      "sigma_backing": [
+        "mmap"
+      ],
+      "workers_observed": 2,
+      "worker_rss_mb": [
+        162.6,
+        161.31
+      ],
+      "worker_uss_mb": [
+        114.01,
+        113.26
+      ],
+      "worker_pss_mb": [
+        null,
+        null
+      ],
+      "worker_uss_mb_sum": 227.27,
+      "coordinator_rss_mb_after": 176.23,
+      "w0_run_wall_seconds": 7.535577000002377,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 50
+    },
+    {
+      "mode": "SHARED_MEMORY",
+      "start_method": "spawn",
+      "workers": 2,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 6.4206849000183865,
+        "median": 6.561186399892904,
+        "max": 6.799940700060688
+      },
+      "publish_seconds": {
+        "min": 0.011800000094808638,
+        "median": 0.012708399910479784,
+        "max": 0.017387500032782555
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.052310099941678345,
+        "median": 0.05600399989634752,
+        "max": 0.061629600008018315
+      },
+      "handle_bytes": 504,
+      "header_bytes": 12215,
+      "data_bytes": 144224,
+      "n_buffers": 7,
+      "sigma_backing": [
+        "mmap"
+      ],
+      "workers_observed": 2,
+      "worker_rss_mb": [
+        162.16,
+        161.21
+      ],
+      "worker_uss_mb": [
+        113.58,
+        113.09
+      ],
+      "worker_pss_mb": [
+        null,
+        null
+      ],
+      "worker_uss_mb_sum": 226.67,
+      "coordinator_rss_mb_after": 176.57,
+      "w0_run_wall_seconds": 7.134150700061582,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 50
+    },
+    {
+      "mode": "BUNDLE_FILE",
+      "start_method": "spawn",
+      "workers": 4,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 7.813276099972427,
+        "median": 7.876052499981597,
+        "max": 7.910743999993429
+      },
+      "publish_seconds": {
+        "min": 0.006735800066962838,
+        "median": 0.007874200004152954,
+        "max": 0.008019200060516596
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.03544120001606643,
+        "median": 0.04253000009339303,
+        "max": 0.04274129995610565
+      },
+      "handle_bytes": 228,
+      "header_bytes": 156252,
+      "data_bytes": 0,
+      "n_buffers": 0,
+      "sigma_backing": [
+        "bytes"
+      ],
+      "workers_observed": 4,
+      "worker_rss_mb": [
+        161.88,
+        161.95,
+        161.33,
+        161.29
+      ],
+      "worker_uss_mb": [
+        113.46,
+        113.52,
+        112.91,
+        113.39
+      ],
+      "worker_pss_mb": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "worker_uss_mb_sum": 453.28,
+      "coordinator_rss_mb_after": 176.65,
+      "w0_run_wall_seconds": 8.455929299932905,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 50
+    },
+    {
+      "mode": "FILE_MMAP",
+      "start_method": "spawn",
+      "workers": 4,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 7.67693670000881,
+        "median": 7.730434000026435,
+        "max": 7.985324900015257
+      },
+      "publish_seconds": {
+        "min": 0.01359830005094409,
+        "median": 0.01792020001448691,
+        "max": 0.01900440000463277
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.08076540008187294,
+        "median": 0.08101259998511523,
+        "max": 0.12666650000028312
+      },
+      "handle_bytes": 559,
+      "header_bytes": 12215,
+      "data_bytes": 144224,
+      "n_buffers": 7,
+      "sigma_backing": [
+        "mmap"
+      ],
+      "workers_observed": 4,
+      "worker_rss_mb": [
+        161.76,
+        161.78,
+        161.89,
+        161.69
+      ],
+      "worker_uss_mb": [
+        113.17,
+        113.19,
+        113.3,
+        113.64
+      ],
+      "worker_pss_mb": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "worker_uss_mb_sum": 453.3,
+      "coordinator_rss_mb_after": 176.73,
+      "w0_run_wall_seconds": 8.536044299951755,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 50
+    },
+    {
+      "mode": "SHARED_MEMORY",
+      "start_method": "spawn",
+      "workers": 4,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 7.6796138000208884,
+        "median": 7.8153608000138775,
+        "max": 8.037123700021766
+      },
+      "publish_seconds": {
+        "min": 0.014362000045366585,
+        "median": 0.015405700076371431,
+        "max": 0.01801789994351566
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.05555829999502748,
+        "median": 0.05898119998164475,
+        "max": 0.0627675000578165
+      },
+      "handle_bytes": 504,
+      "header_bytes": 12215,
+      "data_bytes": 144224,
+      "n_buffers": 7,
+      "sigma_backing": [
+        "mmap"
+      ],
+      "workers_observed": 4,
+      "worker_rss_mb": [
+        161.98,
+        161.79,
+        162.1,
+        161.8
+      ],
+      "worker_uss_mb": [
+        113.39,
+        113.21,
+        113.5,
+        113.23
+      ],
+      "worker_pss_mb": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "worker_uss_mb_sum": 453.33,
+      "coordinator_rss_mb_after": 176.98,
+      "w0_run_wall_seconds": 8.259944099932909,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 50
+    },
+    {
+      "mode": "BUNDLE_FILE",
+      "start_method": "spawn",
+      "workers": 1,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 2.0502498999703676,
+        "median": 3.4334950000047684,
+        "max": 3.4376626999583095
+      },
+      "publish_seconds": {
+        "min": 0.007779299980029464,
+        "median": 0.008399999933317304,
+        "max": 0.03073430003132671
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.019838299951516092,
+        "median": 0.021107199951075017,
+        "max": 0.026126099983230233
+      },
+      "handle_bytes": 228,
+      "header_bytes": 3308528,
+      "data_bytes": 0,
+      "n_buffers": 0,
+      "sigma_backing": [
+        "bytes"
+      ],
+      "workers_observed": 1,
+      "worker_rss_mb": [
+        165.36
+      ],
+      "worker_uss_mb": [
+        116.94
+      ],
+      "worker_pss_mb": [
+        null
+      ],
+      "worker_uss_mb_sum": 116.94,
+      "coordinator_rss_mb_after": 185.09,
+      "w0_run_wall_seconds": 2.832506800070405,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 500
+    },
+    {
+      "mode": "FILE_MMAP",
+      "start_method": "spawn",
+      "workers": 1,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 4.699863500078209,
+        "median": 7.727110799984075,
+        "max": 7.732028100057505
+      },
+      "publish_seconds": {
+        "min": 0.017438100068829954,
+        "median": 0.046422500046901405,
+        "max": 0.04944760003127158
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.06486359995324165,
+        "median": 0.09994740004185587,
+        "max": 0.24228840006981045
+      },
+      "handle_bytes": 559,
+      "header_bytes": 90082,
+      "data_bytes": 3218528,
+      "n_buffers": 7,
+      "sigma_backing": [
+        "mmap"
+      ],
+      "workers_observed": 1,
+      "worker_rss_mb": [
+        165.21
+      ],
+      "worker_uss_mb": [
+        113.55
+      ],
+      "worker_pss_mb": [
+        null
+      ],
+      "worker_uss_mb_sum": 113.55,
+      "coordinator_rss_mb_after": 185.14,
+      "w0_run_wall_seconds": 8.961637799977325,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 500
+    },
+    {
+      "mode": "SHARED_MEMORY",
+      "start_method": "spawn",
+      "workers": 1,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 1.7872593000065535,
+        "median": 3.356323800049722,
+        "max": 5.879322799970396
+      },
+      "publish_seconds": {
+        "min": 0.006691299960948527,
+        "median": 0.007770400028675795,
+        "max": 0.03205939999315888
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.01874359999783337,
+        "median": 0.026605999912135303,
+        "max": 0.02813400002196431
+      },
+      "handle_bytes": 504,
+      "header_bytes": 90082,
+      "data_bytes": 3218528,
+      "n_buffers": 7,
+      "sigma_backing": [
+        "mmap"
+      ],
+      "workers_observed": 1,
+      "worker_rss_mb": [
+        165.51
+      ],
+      "worker_uss_mb": [
+        113.86
+      ],
+      "worker_pss_mb": [
+        null
+      ],
+      "worker_uss_mb_sum": 113.86,
+      "coordinator_rss_mb_after": 188.37,
+      "w0_run_wall_seconds": 2.039873000001535,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 500
+    },
+    {
+      "mode": "BUNDLE_FILE",
+      "start_method": "spawn",
+      "workers": 2,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 3.494174399995245,
+        "median": 7.138740699971095,
+        "max": 7.5551721000811085
+      },
+      "publish_seconds": {
+        "min": 0.00650559994392097,
+        "median": 0.026789400028064847,
+        "max": 0.029615000006742775
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.054336900007911026,
+        "median": 0.06073549995198846,
+        "max": 0.062211399897933006
+      },
+      "handle_bytes": 228,
+      "header_bytes": 3308528,
+      "data_bytes": 0,
+      "n_buffers": 0,
+      "sigma_backing": [
+        "bytes"
+      ],
+      "workers_observed": 2,
+      "worker_rss_mb": [
+        166.1,
+        165.2
+      ],
+      "worker_uss_mb": [
+        117.69,
+        116.79
+      ],
+      "worker_pss_mb": [
+        null,
+        null
+      ],
+      "worker_uss_mb_sum": 234.48,
+      "coordinator_rss_mb_after": 185.15,
+      "w0_run_wall_seconds": 8.278539899969473,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 500
+    },
+    {
+      "mode": "FILE_MMAP",
+      "start_method": "spawn",
+      "workers": 2,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 1.8221729999640957,
+        "median": 4.859114499995485,
+        "max": 5.000341000035405
+      },
+      "publish_seconds": {
+        "min": 0.01188250002451241,
+        "median": 0.012144000036641955,
+        "max": 0.05543409998062998
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.02961020008660853,
+        "median": 0.032917700009420514,
+        "max": 0.10187039989978075
+      },
+      "handle_bytes": 559,
+      "header_bytes": 90082,
+      "data_bytes": 3218528,
+      "n_buffers": 7,
+      "sigma_backing": [
+        "mmap"
+      ],
+      "workers_observed": 2,
+      "worker_rss_mb": [
+        165.82,
+        164.72
+      ],
+      "worker_uss_mb": [
+        114.17,
+        113.55
+      ],
+      "worker_pss_mb": [
+        null,
+        null
+      ],
+      "worker_uss_mb_sum": 227.72,
+      "coordinator_rss_mb_after": 185.27,
+      "w0_run_wall_seconds": 7.923411800060421,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 500
+    },
+    {
+      "mode": "SHARED_MEMORY",
+      "start_method": "spawn",
+      "workers": 2,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 3.6798435000237077,
+        "median": 4.196036099921912,
+        "max": 7.048612800077535
+      },
+      "publish_seconds": {
+        "min": 0.018683700007386506,
+        "median": 0.029627899988554418,
+        "max": 0.04012959997635335
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.025959499995224178,
+        "median": 0.07695180003065616,
+        "max": 0.0912673999555409
+      },
+      "handle_bytes": 504,
+      "header_bytes": 90082,
+      "data_bytes": 3218528,
+      "n_buffers": 7,
+      "sigma_backing": [
+        "mmap"
+      ],
+      "workers_observed": 2,
+      "worker_rss_mb": [
+        165.14,
+        165.81
+      ],
+      "worker_uss_mb": [
+        113.49,
+        114.16
+      ],
+      "worker_pss_mb": [
+        null,
+        null
+      ],
+      "worker_uss_mb_sum": 227.65,
+      "coordinator_rss_mb_after": 188.46,
+      "w0_run_wall_seconds": 10.202877899981104,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 500
+    },
+    {
+      "mode": "BUNDLE_FILE",
+      "start_method": "spawn",
+      "workers": 4,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 7.964259600033984,
+        "median": 8.429114500060678,
+        "max": 8.941573600051925
+      },
+      "publish_seconds": {
+        "min": 0.030107400030829012,
+        "median": 0.03682120004668832,
+        "max": 0.045002999948337674
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.061614600010216236,
+        "median": 0.062087300000712276,
+        "max": 0.06459630001336336
+      },
+      "handle_bytes": 228,
+      "header_bytes": 3308528,
+      "data_bytes": 0,
+      "n_buffers": 0,
+      "sigma_backing": [
+        "bytes"
+      ],
+      "workers_observed": 4,
+      "worker_rss_mb": [
+        165.34,
+        165.66,
+        165.63,
+        165.09
+      ],
+      "worker_uss_mb": [
+        116.92,
+        117.24,
+        117.21,
+        117.22
+      ],
+      "worker_pss_mb": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "worker_uss_mb_sum": 468.59,
+      "coordinator_rss_mb_after": 185.24,
+      "w0_run_wall_seconds": 5.056551499990746,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 500
+    },
+    {
+      "mode": "FILE_MMAP",
+      "start_method": "spawn",
+      "workers": 4,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 2.675962100038305,
+        "median": 5.650355399935506,
+        "max": 10.23487250006292
+      },
+      "publish_seconds": {
+        "min": 0.01407700008712709,
+        "median": 0.05521489994134754,
+        "max": 0.057438199990428984
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.036639700061641634,
+        "median": 0.11001129995565861,
+        "max": 0.12190799997188151
+      },
+      "handle_bytes": 559,
+      "header_bytes": 90082,
+      "data_bytes": 3218528,
+      "n_buffers": 7,
+      "sigma_backing": [
+        "mmap"
+      ],
+      "workers_observed": 4,
+      "worker_rss_mb": [
+        165.52,
+        165.38,
+        165.31,
+        165.61
+      ],
+      "worker_uss_mb": [
+        113.87,
+        113.72,
+        113.66,
+        113.95
+      ],
+      "worker_pss_mb": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "worker_uss_mb_sum": 455.2,
+      "coordinator_rss_mb_after": 185.24,
+      "w0_run_wall_seconds": 9.398031900054775,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 500
+    },
+    {
+      "mode": "SHARED_MEMORY",
+      "start_method": "spawn",
+      "workers": 4,
+      "repetitions": 3,
+      "ready_seconds": {
+        "min": 2.2407997000264004,
+        "median": 3.912626600009389,
+        "max": 7.628230000031181
+      },
+      "publish_seconds": {
+        "min": 0.009173700003884733,
+        "median": 0.010210399981588125,
+        "max": 0.03064560005441308
+      },
+      "attach_seconds_max_over_workers": {
+        "min": 0.026601399993523955,
+        "median": 0.028580600046552718,
+        "max": 0.044342500041238964
+      },
+      "handle_bytes": 504,
+      "header_bytes": 90082,
+      "data_bytes": 3218528,
+      "n_buffers": 7,
+      "sigma_backing": [
+        "mmap"
+      ],
+      "workers_observed": 4,
+      "worker_rss_mb": [
+        165.51,
+        164.85,
+        164.74,
+        165.89
+      ],
+      "worker_uss_mb": [
+        113.86,
+        113.73,
+        113.09,
+        114.23
+      ],
+      "worker_pss_mb": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "worker_uss_mb_sum": 454.91,
+      "coordinator_rss_mb_after": 188.46,
+      "w0_run_wall_seconds": 6.922938099945895,
+      "w0_run_t1_differences_vs_sequential": 0,
+      "w0_valid_frontier_points": 160,
+      "valid_measurement": true,
+      "leftover_directories": 0,
+      "leftover_shared_memory": 0,
+      "universe_assets": 500
+    }
+  ],
+  "e8_cache": [
+    {
+      "repeated_operations_k": 1,
+      "portfolios": 12,
+      "cache_off": {
+        "wall_seconds": {
+          "min": 0.704963400028646,
+          "median": 0.7697088000131771,
+          "max": 0.7718913999851793
+        },
+        "solver_calls": 264,
+        "hits": 0,
+        "misses": 0,
+        "stores": 0,
+        "cache_entries": 0,
+        "cache_bytes": 0,
+        "t1_differences_vs_cache_off": 0,
+        "valid_frontier_points": 240
+      },
+      "cache_on": {
+        "wall_seconds": {
+          "min": 0.7701608999632299,
+          "median": 0.7976303999312222,
+          "max": 0.8365254999371246
+        },
+        "solver_calls": 264,
+        "hits": 0,
+        "misses": 12,
+        "stores": 12,
+        "cache_entries": 12,
+        "cache_bytes": 263129,
+        "t1_differences_vs_cache_off": 0,
+        "valid_frontier_points": 240
+      },
+      "speedup_min": 0.9153456116277824,
+      "solver_calls_avoided": 0
+    },
+    {
+      "repeated_operations_k": 2,
+      "portfolios": 12,
+      "cache_off": {
+        "wall_seconds": {
+          "min": 1.4462472000159323,
+          "median": 1.4931826000101864,
+          "max": 1.5588013000087813
+        },
+        "solver_calls": 528,
+        "hits": 0,
+        "misses": 0,
+        "stores": 0,
+        "cache_entries": 0,
+        "cache_bytes": 0,
+        "t1_differences_vs_cache_off": 0,
+        "valid_frontier_points": 480
+      },
+      "cache_on": {
+        "wall_seconds": {
+          "min": 0.7810613000765443,
+          "median": 0.7918988999444991,
+          "max": 0.796248700004071
+        },
+        "solver_calls": 264,
+        "hits": 12,
+        "misses": 12,
+        "stores": 12,
+        "cache_entries": 12,
+        "cache_bytes": 263129,
+        "t1_differences_vs_cache_off": 0,
+        "valid_frontier_points": 480
+      },
+      "speedup_min": 1.8516436544406945,
+      "solver_calls_avoided": 264
+    },
+    {
+      "repeated_operations_k": 4,
+      "portfolios": 12,
+      "cache_off": {
+        "wall_seconds": {
+          "min": 2.7516591999446973,
+          "median": 2.852642499958165,
+          "max": 2.8530044000362977
+        },
+        "solver_calls": 1056,
+        "hits": 0,
+        "misses": 0,
+        "stores": 0,
+        "cache_entries": 0,
+        "cache_bytes": 0,
+        "t1_differences_vs_cache_off": 0,
+        "valid_frontier_points": 960
+      },
+      "cache_on": {
+        "wall_seconds": {
+          "min": 0.8796620999928564,
+          "median": 0.8810654999688268,
+          "max": 0.9388966000406072
+        },
+        "solver_calls": 264,
+        "hits": 36,
+        "misses": 12,
+        "stores": 12,
+        "cache_entries": 12,
+        "cache_bytes": 263129,
+        "t1_differences_vs_cache_off": 0,
+        "valid_frontier_points": 960
+      },
+      "speedup_min": 3.1280865686574915,
+      "solver_calls_avoided": 792
+    }
+  ]
+}

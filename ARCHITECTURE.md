@@ -709,6 +709,30 @@ limpiar, `inventory_orphans`/`remove_orphans` (B5.3) lo detectan (probado con un
 * **Permisos (R-1, hallado por la evidencia Linux).** `events.jsonl` se crea con `0600`.
 * **Evidencia Linux (L-3).** `tests/integration/test_recovery_linux.py` y el paso de CI «B5.4 Linux recovery evidence»; run `39466030525`.
 
+### 3.10 Bloque 5.5: harness de benchmarks, regresión de rendimiento y capacidad
+
+Pendiente de auditoría independiente. Detalle y cifras en `REPORT_BLOCK_5_5.md`. **No se modifica ningún módulo de B1–B5.4**; solo se añaden módulos de medida.
+
+| Pieza | Ubicación | Responsabilidad |
+|---|---|---|
+| Configuración de medida | `config/scaling_config.py`, `config/default_benchmark.toml` | `ScalingBenchmarkConfig`: repeticiones, tope D-12 de carteras sin autorización, `k × MAD`, mezclas `ENG-MIX-*` (supuestos de ingeniería). Fuera del `ConfigHash`. Módulo propio porque `loader` ya importa `benchmark_config` (la regla de ciclos de imports lo impide) |
+| Detección de deterioros | `benchmark/regression.py` | `compare_to_baseline` con umbral derivado de la MAD del baseline, guarda de host y de contador de trabajo (un cambio de trabajo no es un cambio de velocidad), baselines JSON |
+| Aritmética de escalado | `benchmark/scaling.py` | speedup, eficiencia, Karp–Flatt, modelo de coste `N·Σ sᵢ·cᵢ`, `project_capacity` (rango y factor de extrapolación; sin precios) |
+| Harness | `benchmarks/scripts/` | generador determinista, `scaling.py` (la validez de cada celda exige T1, integridad y auditoría independiente de restricciones), `scale_run.py`, `recovery_bench.py`, `profile_class.py`, `h1_numerical_probe.py`, `baseline.py`, `cross_platform_reference.py`, `ci_summary.py`, `_common.py` (metadatos BEN-006, muestreador de memoria, `Watchdog`) |
+| Pruebas | `tests/performance/`, `tests/integration/test_benchmark_harness.py`, `test_cross_platform_reference.py`, `tests/unit/benchmark/` | regresión de trabajo y de tiempo (opt-in), metadatos, plataformas |
+
+Decisiones de diseño:
+
+* **El trabajo determinista acompaña al tiempo.** La máquina de desarrollo es bimodal (×1,67 con el mismo trabajo): se informan mínimo y mediana, contadores (iteraciones, llamadas al solver, fronteras) y un
+  veredicto `WORK_CHANGED` distinto de `SLOWER`. Los contadores **no son idénticos entre plataformas** (F-B55-1: W1 506 llamadas en Linux frente a 484 en Windows), por lo que el baseline de trabajo guarda las
+  variantes observadas.
+* **Una medición solo es válida si el resultado es correcto**: T1, integridad de conteo y auditoría independiente (presupuesto, largo-solo, `MaxWeight`) por celda; los topes `--max-wall`/`--max-rss-mb` cancelan por el control del ejecutor
+  y marcan la celda `aborted` sin cifras.
+* **Las proyecciones son aritmética sobre mediciones** (`scale_run.py estimate`): usan solo números de workers medidos, agrupan las campañas con rangos y declaran el factor de extrapolación. Ninguna carga de ≥ 1.000 carteras se ejecuta sin
+  `--authorized-by`.
+* `benchmark/suite.py::scaling_benchmark` (nombre previsto en el plan) se materializó como `benchmarks/scripts/scaling.py` + funciones puras de `benchmark/scaling.py`: el ejecutor paralelo y el comparador T1 viven en `parallel/` y
+  `tests/fixtures/`, y la biblioteca no debe depender de fixtures de prueba.
+
 ## 4. Grafo lógico de dependencias
 
 ### 4.1 Dependencias entre paquetes (dirección: "depende de")

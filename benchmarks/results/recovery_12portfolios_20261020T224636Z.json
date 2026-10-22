@@ -1,0 +1,739 @@
+{
+  "metadata": {
+    "benchmark": "recovery_bench",
+    "evidence_for": [
+      "BEN-001",
+      "BEN-004",
+      "BEN-006",
+      "PAR-011",
+      "P-03",
+      "P-04",
+      "P-05",
+      "P-06"
+    ],
+    "execution_timestamp_utc": "20261020T224636Z",
+    "git": {
+      "commit": "3d0463b94035859e2a668ff900fcf6285f571cb5",
+      "branch": "block5-benchmarks-final-audit",
+      "dirty": false,
+      "modified_tracked_files": [],
+      "untracked_in_code": [],
+      "untracked_outside_code": [
+        "AUDIT_BLOCK_5_4_CLOSURE.md",
+        "INVESTIGATION_H1_B4.md",
+        "benchmarks/results/baselines/",
+        "benchmarks/results/h1_numerical_probe_20261020T204243Z.json",
+        "benchmarks/results/scaling_ENG-MIX-BASE_10-100portfolios_20261020T204253Z.json",
+        "benchmarks/results/scaling_ENG-MIX-BASE_100portfolios_batchsweep_20261020T221830Z.json",
+        "benchmarks/results/scaling_ENG-MIX-BASE_100portfolios_blas2_20261020T223434Z.json",
+        "benchmarks/results/scaling_ENG-MIX-CONIC_100portfolios_20261020T221407Z.json",
+        "benchmarks/results/scaling_ENG-MIX-HEAVY_100portfolios_20261020T220055Z.json",
+        "benchmarks/results/scaling_ENG-MIX-LIGHT_100portfolios_20261020T215723Z.json",
+        "benchmarks/results/scaling_classes_10portfolios_20261020T210640Z.json"
+      ]
+    },
+    "python": "3.13.6",
+    "versions": {
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "osqp": "1.1.3",
+      "clarabel": "0.11.1",
+      "pyscipopt": "6.2.1",
+      "threadpoolctl": "3.7.0",
+      "psutil": "7.2.2"
+    },
+    "host": {
+      "os": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "cpu_model": "13th Gen Intel(R) Core(TM) i7-13620H",
+      "cpu_logical": 16,
+      "cpu_physical": 10,
+      "smt_enabled": true,
+      "cpu_governor": null,
+      "ram_total_bytes": 16890322944,
+      "ram_available_bytes_at_start": 840200192,
+      "swap_used_bytes_at_start": 6710464512,
+      "system_cpu_percent_before": 31.3,
+      "load_note": "medido con psutil; no se consulta ning\u00fan servidor de base de datos"
+    },
+    "host_fingerprint": "00c905c7d527f3ca",
+    "command": "benchmarks/scripts/recovery_bench.py --portfolios 12 --workers 2 --repetitions 3",
+    "env_threads": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null
+    },
+    "portfolios": 12,
+    "workers": 2,
+    "repetitions": 3,
+    "workload_class": "W0-NET-TARGET",
+    "random_seed": 7,
+    "start_method": "spawn",
+    "task_timeout_seconds": 3.0,
+    "injected_delay_per_task_seconds": 0.3,
+    "threads_alive_at_end": 1,
+    "children_alive_at_end": 0
+  },
+  "note": "Medici\u00f3n local de una sola m\u00e1quina con datos sint\u00e9ticos; los fallos se inyectan dentro del worker (os._exit / cuelgue). No es rendimiento de producci\u00f3n.",
+  "overhead_vs_clean_min_wall_seconds": {
+    "clean_journal": 0.11931219999678433,
+    "worker_killed_once": 13.632805199944414,
+    "poison_task": 21.31179979990702,
+    "hanging_task": 1.8202144999522716
+  },
+  "scenarios": {
+    "clean": {
+      "samples": [
+        {
+          "wall_seconds": 8.888648500083946,
+          "journal_bytes": 0,
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 0,
+          "isolated_retries": 0,
+          "poisoned_tasks": 0,
+          "timeouts": 0,
+          "pool_rebuilds": 0,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 12
+          },
+          "accounting": {
+            "COMPLETED": 12
+          }
+        },
+        {
+          "wall_seconds": 9.157226799987257,
+          "journal_bytes": 0,
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 0,
+          "isolated_retries": 0,
+          "poisoned_tasks": 0,
+          "timeouts": 0,
+          "pool_rebuilds": 0,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 12
+          },
+          "accounting": {
+            "COMPLETED": 12
+          }
+        },
+        {
+          "wall_seconds": 8.311005300027318,
+          "journal_bytes": 0,
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 0,
+          "isolated_retries": 0,
+          "poisoned_tasks": 0,
+          "timeouts": 0,
+          "pool_rebuilds": 0,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 12
+          },
+          "accounting": {
+            "COMPLETED": 12
+          }
+        }
+      ],
+      "summary": {
+        "repetitions": 3,
+        "wall_seconds": {
+          "min": 8.311005300027318,
+          "median": 8.888648500083946,
+          "mean": 8.785626866699507,
+          "max": 9.157226799987257
+        },
+        "journal_bytes": {
+          "min": 0.0,
+          "median": 0.0,
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "all_valid": true
+      }
+    },
+    "clean_journal": {
+      "samples": [
+        {
+          "wall_seconds": 8.430317500024103,
+          "journal_bytes": 714339,
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 0,
+          "isolated_retries": 0,
+          "poisoned_tasks": 0,
+          "timeouts": 0,
+          "pool_rebuilds": 0,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 12
+          },
+          "accounting": {
+            "COMPLETED": 12
+          }
+        },
+        {
+          "wall_seconds": 8.769279500003904,
+          "journal_bytes": 714362,
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 0,
+          "isolated_retries": 0,
+          "poisoned_tasks": 0,
+          "timeouts": 0,
+          "pool_rebuilds": 0,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 12
+          },
+          "accounting": {
+            "COMPLETED": 12
+          }
+        },
+        {
+          "wall_seconds": 8.553542700014077,
+          "journal_bytes": 714371,
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 0,
+          "isolated_retries": 0,
+          "poisoned_tasks": 0,
+          "timeouts": 0,
+          "pool_rebuilds": 0,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 12
+          },
+          "accounting": {
+            "COMPLETED": 12
+          }
+        }
+      ],
+      "summary": {
+        "repetitions": 3,
+        "wall_seconds": {
+          "min": 8.430317500024103,
+          "median": 8.553542700014077,
+          "mean": 8.584379900014028,
+          "max": 8.769279500003904
+        },
+        "journal_bytes": {
+          "min": 714339.0,
+          "median": 714362.0,
+          "mean": 714357.3333333334,
+          "max": 714371.0
+        },
+        "all_valid": true
+      }
+    },
+    "worker_killed_once": {
+      "samples": [
+        {
+          "wall_seconds": 21.943810499971732,
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 1,
+          "isolated_retries": 2,
+          "poisoned_tasks": 0,
+          "timeouts": 0,
+          "pool_rebuilds": 1,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 12
+          },
+          "accounting": {
+            "COMPLETED": 12
+          }
+        },
+        {
+          "wall_seconds": 22.991970699978992,
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 1,
+          "isolated_retries": 2,
+          "poisoned_tasks": 0,
+          "timeouts": 0,
+          "pool_rebuilds": 1,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 12
+          },
+          "accounting": {
+            "COMPLETED": 12
+          }
+        },
+        {
+          "wall_seconds": 23.16660380002577,
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 1,
+          "isolated_retries": 2,
+          "poisoned_tasks": 0,
+          "timeouts": 0,
+          "pool_rebuilds": 1,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 12
+          },
+          "accounting": {
+            "COMPLETED": 12
+          }
+        }
+      ],
+      "summary": {
+        "repetitions": 3,
+        "wall_seconds": {
+          "min": 21.943810499971732,
+          "median": 22.991970699978992,
+          "mean": 22.700794999992166,
+          "max": 23.16660380002577
+        },
+        "all_valid": true
+      }
+    },
+    "poison_task": {
+      "samples": [
+        {
+          "wall_seconds": 29.62280509993434,
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 3,
+          "isolated_retries": 3,
+          "poisoned_tasks": 1,
+          "timeouts": 0,
+          "pool_rebuilds": 3,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 11,
+            "WORKER_CRASHED": 1
+          },
+          "accounting": {
+            "COMPLETED": 11,
+            "WORKER_CRASHED": 1
+          }
+        },
+        {
+          "wall_seconds": 30.54873000003863,
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 3,
+          "isolated_retries": 3,
+          "poisoned_tasks": 1,
+          "timeouts": 0,
+          "pool_rebuilds": 3,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 11,
+            "WORKER_CRASHED": 1
+          },
+          "accounting": {
+            "COMPLETED": 11,
+            "WORKER_CRASHED": 1
+          }
+        },
+        {
+          "wall_seconds": 30.40378779999446,
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 3,
+          "isolated_retries": 3,
+          "poisoned_tasks": 1,
+          "timeouts": 0,
+          "pool_rebuilds": 3,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 11,
+            "WORKER_CRASHED": 1
+          },
+          "accounting": {
+            "COMPLETED": 11,
+            "WORKER_CRASHED": 1
+          }
+        }
+      ],
+      "summary": {
+        "repetitions": 3,
+        "wall_seconds": {
+          "min": 29.62280509993434,
+          "median": 30.40378779999446,
+          "mean": 30.191774299989145,
+          "max": 30.54873000003863
+        },
+        "all_valid": true
+      }
+    },
+    "hanging_task": {
+      "samples": [
+        {
+          "wall_seconds": 10.43988459999673,
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 0,
+          "isolated_retries": 0,
+          "poisoned_tasks": 0,
+          "timeouts": 1,
+          "pool_rebuilds": 1,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 11,
+            "TIMED_OUT": 1
+          },
+          "accounting": {
+            "COMPLETED": 11,
+            "TIMED_OUT": 1
+          }
+        },
+        {
+          "wall_seconds": 10.13121979997959,
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 0,
+          "isolated_retries": 0,
+          "poisoned_tasks": 0,
+          "timeouts": 1,
+          "pool_rebuilds": 1,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 11,
+            "TIMED_OUT": 1
+          },
+          "accounting": {
+            "COMPLETED": 11,
+            "TIMED_OUT": 1
+          }
+        },
+        {
+          "wall_seconds": 10.412733300006948,
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 0,
+          "isolated_retries": 0,
+          "poisoned_tasks": 0,
+          "timeouts": 1,
+          "pool_rebuilds": 1,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 11,
+            "TIMED_OUT": 1
+          },
+          "accounting": {
+            "COMPLETED": 11,
+            "TIMED_OUT": 1
+          }
+        }
+      ],
+      "summary": {
+        "repetitions": 3,
+        "wall_seconds": {
+          "min": 10.13121979997959,
+          "median": 10.412733300006948,
+          "mean": 10.327945899994424,
+          "max": 10.43988459999673
+        },
+        "all_valid": true
+      }
+    },
+    "cancel_then_resume": {
+      "samples": [
+        {
+          "first_run_wall_seconds": 8.980519299977459,
+          "cancel_latency_seconds": 0.6262803999707103,
+          "completed_before_cancel": 4,
+          "damaged_shards": 0,
+          "resume_wall_seconds": 8.430345300002955,
+          "tasks_restored_from_journal": 4,
+          "tasks_redone": 8,
+          "journal_scan": "JournalScan(valid_shards=2, corrupt_shards=(), restorable_tasks=4, duplicate_tasks=0, temporaries_removed=0)",
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 0,
+          "isolated_retries": 0,
+          "poisoned_tasks": 0,
+          "timeouts": 0,
+          "pool_rebuilds": 0,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 12
+          },
+          "accounting": {
+            "COMPLETED": 8,
+            "SKIPPED_BY_RESUME": 4
+          }
+        },
+        {
+          "first_run_wall_seconds": 8.643504100036807,
+          "cancel_latency_seconds": 0.6109499000012875,
+          "completed_before_cancel": 4,
+          "damaged_shards": 0,
+          "resume_wall_seconds": 8.034051500028,
+          "tasks_restored_from_journal": 4,
+          "tasks_redone": 8,
+          "journal_scan": "JournalScan(valid_shards=2, corrupt_shards=(), restorable_tasks=4, duplicate_tasks=0, temporaries_removed=0)",
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 0,
+          "isolated_retries": 0,
+          "poisoned_tasks": 0,
+          "timeouts": 0,
+          "pool_rebuilds": 0,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 12
+          },
+          "accounting": {
+            "COMPLETED": 8,
+            "SKIPPED_BY_RESUME": 4
+          }
+        },
+        {
+          "first_run_wall_seconds": 8.483136199996807,
+          "cancel_latency_seconds": 0.5978559999493882,
+          "completed_before_cancel": 4,
+          "damaged_shards": 0,
+          "resume_wall_seconds": 8.488250599941239,
+          "tasks_restored_from_journal": 4,
+          "tasks_redone": 8,
+          "journal_scan": "JournalScan(valid_shards=2, corrupt_shards=(), restorable_tasks=4, duplicate_tasks=0, temporaries_removed=0)",
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 0,
+          "isolated_retries": 0,
+          "poisoned_tasks": 0,
+          "timeouts": 0,
+          "pool_rebuilds": 0,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 12
+          },
+          "accounting": {
+            "COMPLETED": 8,
+            "SKIPPED_BY_RESUME": 4
+          }
+        }
+      ],
+      "summary": {
+        "repetitions": 3,
+        "first_run_wall_seconds": {
+          "min": 8.483136199996807,
+          "median": 8.643504100036807,
+          "mean": 8.702386533337025,
+          "max": 8.980519299977459
+        },
+        "resume_wall_seconds": {
+          "min": 8.034051500028,
+          "median": 8.430345300002955,
+          "mean": 8.317549133324064,
+          "max": 8.488250599941239
+        },
+        "cancel_latency_seconds": {
+          "min": 0.5978559999493882,
+          "median": 0.6109499000012875,
+          "mean": 0.6116954333071286,
+          "max": 0.6262803999707103
+        },
+        "tasks_redone": {
+          "min": 8.0,
+          "median": 8.0,
+          "mean": 8.0,
+          "max": 8.0
+        },
+        "all_valid": true
+      }
+    },
+    "corrupt_shard_then_resume": {
+      "samples": [
+        {
+          "first_run_wall_seconds": 8.51512019999791,
+          "cancel_latency_seconds": 0.6078825000440702,
+          "completed_before_cancel": 4,
+          "damaged_shards": 1,
+          "resume_wall_seconds": 8.00706699991133,
+          "tasks_restored_from_journal": 2,
+          "tasks_redone": 10,
+          "journal_scan": "JournalScan(valid_shards=1, corrupt_shards=('s-0000000000-67802efb2d852e00.json',), restorable_tasks=2, duplicate_tasks=0, temporaries_removed=0)",
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 0,
+          "isolated_retries": 0,
+          "poisoned_tasks": 0,
+          "timeouts": 0,
+          "pool_rebuilds": 0,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 12
+          },
+          "accounting": {
+            "COMPLETED": 10,
+            "SKIPPED_BY_RESUME": 2
+          }
+        },
+        {
+          "first_run_wall_seconds": 8.823304799967445,
+          "cancel_latency_seconds": 0.6306367999641225,
+          "completed_before_cancel": 4,
+          "damaged_shards": 1,
+          "resume_wall_seconds": 8.094077399931848,
+          "tasks_restored_from_journal": 2,
+          "tasks_redone": 10,
+          "journal_scan": "JournalScan(valid_shards=1, corrupt_shards=('s-0000000000-352a0a54885a7473.json',), restorable_tasks=2, duplicate_tasks=0, temporaries_removed=0)",
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 0,
+          "isolated_retries": 0,
+          "poisoned_tasks": 0,
+          "timeouts": 0,
+          "pool_rebuilds": 0,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 12
+          },
+          "accounting": {
+            "COMPLETED": 10,
+            "SKIPPED_BY_RESUME": 2
+          }
+        },
+        {
+          "first_run_wall_seconds": 8.421905700000934,
+          "cancel_latency_seconds": 0.6274389999452978,
+          "completed_before_cancel": 4,
+          "damaged_shards": 1,
+          "resume_wall_seconds": 8.730068899923936,
+          "tasks_restored_from_journal": 2,
+          "tasks_redone": 10,
+          "journal_scan": "JournalScan(valid_shards=1, corrupt_shards=('s-0000000000-060074e6124a0a06.json',), restorable_tasks=2, duplicate_tasks=0, temporaries_removed=0)",
+          "canonical_order": true,
+          "accounting_balanced": true,
+          "each_task_exactly_once": true,
+          "t1_differences_healthy_tasks": 0,
+          "valid": true,
+          "crashes": 0,
+          "isolated_retries": 0,
+          "poisoned_tasks": 0,
+          "timeouts": 0,
+          "pool_rebuilds": 0,
+          "cancelled": false,
+          "aborted": false,
+          "execution_statuses": {
+            "COMPLETED": 12
+          },
+          "accounting": {
+            "COMPLETED": 10,
+            "SKIPPED_BY_RESUME": 2
+          }
+        }
+      ],
+      "summary": {
+        "repetitions": 3,
+        "first_run_wall_seconds": {
+          "min": 8.421905700000934,
+          "median": 8.51512019999791,
+          "mean": 8.586776899988763,
+          "max": 8.823304799967445
+        },
+        "resume_wall_seconds": {
+          "min": 8.00706699991133,
+          "median": 8.094077399931848,
+          "mean": 8.277071099922372,
+          "max": 8.730068899923936
+        },
+        "cancel_latency_seconds": {
+          "min": 0.6078825000440702,
+          "median": 0.6274389999452978,
+          "mean": 0.6219860999844968,
+          "max": 0.6306367999641225
+        },
+        "tasks_redone": {
+          "min": 10.0,
+          "median": 10.0,
+          "mean": 10.0,
+          "max": 10.0
+        },
+        "all_valid": true
+      }
+    }
+  }
+}
