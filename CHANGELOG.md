@@ -1684,3 +1684,30 @@ Auditoría independiente: `PASS_WITH_CHANGES` (0 BLOCKER, 0 HIGH, 2 MEDIUM, 4 LO
 ### Limitaciones (abiertas)
 
 L-1…L-4 e I-1…I-3 (ver `REMEDIATION_H1_FB551.md` §10.3); PR #9 pendiente de rebase tras el merge del PR #10; la CI no instala el lock.
+
+---
+
+## [Cuelgue de CI en `_terminate_pool` (B5.4) — PR #10] — 2026-10-22
+
+El run `39748508753` se canceló a los 44 min en la suite completa. Diagnóstico con ejecuciones acotadas y `py-spy` (`REMEDIATION_H1_FB551.md` §11): cuelgue **preexistente de B5.4**, no causado por H-1/F-B55-1 (4 de 10 ejecuciones de `test_recovery.py`, tres modelos de CPU).
+
+### Corregido
+
+- `kill_pool_workers(pool)` en `portfolio_engine/parallel/supervisor.py`, llamada por `_terminate_pool` antes de `shutdown(wait=True)`: terminar solo a los workers registrados podía dejar tomado el semáforo de lectura de `call_queue` y bloquear el cierre para siempre. Sin cambios en tolerancias, solvers ni algoritmos.
+
+### Añadido
+
+- `tests/integration/test_pool_shutdown_orphan_lock.py` (3 pruebas): cierre con cada worker como víctima (subproceso con vigilante) y orden determinista de `_terminate_pool`. Un control inicial no determinista falló en Linux y se sustituyó (documentado).
+
+### Pruebas (ejecutadas realmente)
+
+| Entorno | Resultado |
+|---|---|
+| CI, diagnóstico `test_recovery.py` ×10, antes de la corrección | **4/10 cuelgues** (EPYC 9V74, EPYC 7763, Xeon 8573C) |
+| CI, mismo diagnóstico, después (runs `39761730686`, `39762891716`) | **0/20 cuelgues**, 21 passed por trabajo |
+| CI completa `39762897683` (`fdef2ba`, EPYC 9V74) | **1976 passed, 2 skipped** (245 s), mypy/Ruff ✔ |
+| Windows: `test_recovery.py`, `test_supervisor.py`, tests nuevos | 21 + 31 + 3 passed; mypy `--strict` y Ruff limpios |
+
+### Limitaciones (abiertas)
+
+Suite de integración completa de Windows no repetida tras la corrección; que el run cancelado fuese este cuelgue es coherente pero no demostrable (sin logs); `ci.yml` sigue sin tope por prueba (propuesta: `faulthandler_timeout`, no aplicada).

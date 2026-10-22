@@ -299,3 +299,48 @@ Ver la entrada «Cierre tras AUDIT_H1_FB551» de `CHANGELOG.md` (configuración,
 ### 10.5 Estado
 
 **FINAL_STATUS (cierre) = READY_FOR_MERGE**, a falta de la confirmación del propietario de D-1…D-5 (propuestas por él mismo en el encargo de cierre y registradas aquí). Sin merge realizado.
+
+## 11. Cuelgue de CI en `_terminate_pool` (B5.4, preexistente) — diagnóstico y corrección
+
+### 11.1 Qué ocurrió
+
+El run `39748508753` (PR #10, `1af0b8d`, solo documentación frente a `d5e1a57`) se canceló a los 44 min 16 s en «Full test suite» (runner EPYC 9V74); los pasos estáticos pasaron y ninguna prueba falló. Los logs de Actions no son públicos,
+así que ese run no revela la prueba. Los runs posteriores del mismo código de producción tardaron 186 s (`39754399455`, EPYC 9V45) y 245 s (`39762897683`, EPYC 9V74): **no es una regresión de rendimiento**, es un cuelgue intermitente.
+Entre `d5e1a57` y `1af0b8d` no cambia `portfolio_engine/`, `tests/` ni `config/` (solo `pyproject.toml` de Ruff, documentación y evidencia).
+
+### 11.2 Diagnóstico (evidencia reproducible)
+
+* **Descarte local (Windows).** Los 926 tests afectados por H-1/F-B55-1 pasan en 161 s con `faulthandler_timeout=150`; la prueba más lenta dura 21 s (`test_determinism`, procesos con semillas de hash). Nada de H-1/F-B55-1 usa multiprocessing.
+* **Diagnóstico acotado en CI** (workflow temporal, tope de 12 min y `faulthandler`): run `39755161544`, 8 trabajos de `tests/integration tests/unit/parallel tests/performance`: **2 de 3** trabajos en EPYC 9V45 colgaron; los 5 EPYC 7763 y el Xeon 8573C pasaron (538 passed en 148–235 s).
+* **Reproducción y pilas** (run `39756986439`, `tests/integration/test_recovery.py` ×10, `py-spy`): **4 de 10 colgaron, en tres modelos de CPU** (EPYC 9V74, EPYC 7763, Xeon 8573C) ⇒ **no es del runner ni de H-1/F-B55-1**. Siempre en
+  `test_an_initializer_that_always_fails_ends_with_bounded_rebuilds[tamper-WORKER_INIT_FAILED-hash]` (la prueba siguiente a `test_workers_that_are_recycled_are_not_mistaken_for_crashes`). Estado del proceso en el cuelgue:
+  * hilo principal: `_terminate_pool` (`supervisor.py:435`) → `ProcessPoolExecutor.shutdown(wait=True)` → `join` del hilo gestor;
+  * hilo gestor: `join_executor_internals` esperando a un worker;
+  * ese worker (`spawn`), ocioso: `call_queue.get` → `multiprocessing/queues.py:102` → **`synchronize.py:95 __enter__`**, es decir, esperando el **semáforo de lectura de la cola**; el otro worker era un zombi (`<defunct>`).
+
+### 11.3 Causa (confirmada por las pilas)
+
+Los workers ociosos esperan trabajo dentro de `call_queue.get()` **con el semáforo de lectura tomado**: uno lo sostiene y los demás lo esperan. `_terminate_pool` terminaba solo a los workers *registrados* (`markers.terminate_owned`) y llamaba a
+`shutdown(wait=True)`. Si el terminado era el que sostenía el semáforo, el semáforo quedaba tomado para siempre; el superviviente nunca recibía el centinela de cierre y `shutdown` no terminaba. Es una carrera (depende de cuál de los dos workers sostenía el semáforo y de
+si el hilo gestor detectó la muerte antes de entrar en `shutdown`), de ahí el ~40 % de cuelgues. El código es de B5.4 (`block5-recovery-journal`, ya en `main`): **preexistente**, no introducido por este PR.
+*Hipótesis no confirmada:* que el run cancelado `39748508753` fuese este mismo cuelgue (misma CPU modelo y código, 44 min, sin log); es coherente pero no demostrable sin sus logs.
+
+### 11.4 Corrección
+
+`kill_pool_workers(pool)` (`portfolio_engine/parallel/supervisor.py`) mata todos los workers vivos del pool (hijos propios, `pool._processes`) y `_terminate_pool` la llama antes de `shutdown(wait=True)`. El pool se descarta de todos modos (`_recover` lo reconstruye),
+así que no se pierde ningún resultado: los futuros terminados se recogen antes. No cambia tolerancias, solvers ni algoritmos; el comportamiento de recuperación (estados, contadores, orden) no cambia.
+
+Pruebas específicas (`tests/integration/test_pool_shutdown_orphan_lock.py`): (a) cierre con cada uno de los dos workers como víctima, en un subproceso con vigilante (el cuelgue nunca bloquea la suite); (b) prueba determinista del orden de `_terminate_pool`
+(todos los vivos, registrados o no, se matan antes de esperar el cierre). Un primer «control» que exigía que el cierre simple se colgara **falló en Linux** (la carrera no se dispara si el hilo gestor ya detectó la muerte) y se sustituyó por (b); no se ocultó.
+
+### 11.5 Resultado
+
+| Comprobación | Antes | Después |
+|---|---|---|
+| `test_recovery.py` ×10 en CI (diagnóstico acotado) | **4 de 10 cuelgues** (3 modelos de CPU) | **0 de 10** (run `39761730686`, `cb5aa72`: 5 × EPYC 7763, 3 × 9V45, 1 × 9V74, 1 × Xeon 6973P-C; 21 passed, ~60 s) y **0 de 10** (run `39762891716`, `fdef2ba`: 4 × 7763, 2 × 9V45, 2 × 9V74, Xeon 8573C, Xeon 8370C) |
+| CI completa del PR | cancelada a los 44 min (`39748508753`) | `39762897683` (`fdef2ba`): **1976 passed, 2 skipped en 245 s**, success (runner EPYC 9V74); anterior `39754399455` (`1af0b8d`, sin la corrección): 1973 passed en 186 s |
+| Windows, `test_recovery.py` (lento en esta máquina por el arranque `spawn`) | — | 21 passed en 471 s; `tests/unit/parallel/test_supervisor.py` 31 passed |
+
+**Limitaciones.** La suite de integración completa de Windows no se ha repetido tras la corrección (≈ 20 min; se ejecutaron `test_recovery.py`, `test_supervisor.py` y los tests nuevos); la evidencia por-test del cuelgue procede de 4 ejecuciones colgadas (pilas idénticas);
+la corrección no prueba la ausencia de otros bloqueos de multiprocessing; la CI no tiene un tope por prueba (`pytest-timeout` no está en las dependencias): un futuro cuelgue volvería a costar 45 min hasta el tope del job (propuesta, **no aplicada**: añadir `faulthandler_timeout`
+al `pytest` de `ci.yml` para que el próximo cuelgue deje la pila en el log).
