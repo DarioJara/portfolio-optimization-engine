@@ -1,9 +1,10 @@
 name: Hang diagnostics (temporary)
 
-# TEMPORAL: diagnostica el run cancelado 39748508753 (suite completa >44 min en un runner EPYC 9V74).
-# Ejecuta solo las pruebas con multiprocessing, con tope de 12 min, salida por prueba (-v) y volcado de
-# pilas de faulthandler a los 120 s; si se agota el tope, anota el nombre de la prueba en curso.
-# Se elimina al cerrar el diagnóstico.
+# TEMPORAL: el run 39755161544 (diagnóstico acotado) colgó 2 de 3 veces en EPYC 9V45 en
+# tests/integration/test_recovery.py::test_an_initializer_that_always_fails_ends_with_bounded_rebuilds[tamper-...]
+# (hilo de gestión de ProcessPoolExecutor esperando a un worker que no sale). Este workflow ejecuta solo
+# ese fichero, con tope de 7 min, y al colgarse vuelca: pila completa del proceso de pruebas, árbol y estado
+# de procesos hijos (ps, wchan) y pilas de Python de cada hijo (py-spy). Se elimina al cerrar el diagnóstico.
 on:
   push:
     branches: [fix/h1-fb551-numerical-remediation]
@@ -13,14 +14,14 @@ permissions:
   contents: read
 
 jobs:
-  mp-tests:
-    name: multiprocessing tests ${{ matrix.shard }}
+  recovery-hang:
+    name: recovery hang ${{ matrix.shard }}
     runs-on: ubuntu-22.04
-    timeout-minutes: 25
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     env:
       OMP_NUM_THREADS: "1"
       OPENBLAS_NUM_THREADS: "1"
@@ -34,20 +35,47 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e '.[dev,exact-mip,bench]'
-      - name: Multiprocessing tests with a hard cap and per-test output
+          python -m pip install -e '.[dev,exact-mip,bench]' py-spy
+      - name: test_recovery.py with a hard cap; on a hang dump stacks and child processes
         shell: bash
         run: |
           set +e
           cpu="$(lscpu | grep 'Model name' | sed 's/  */ /g')"
           echo "::notice title=hang-cpu::${cpu}"
+          python -m pytest -p no:cacheprovider -v -o faulthandler_timeout=90 tests/integration/test_recovery.py > out.txt 2>&1 &
+          pytest_pid=$!
           started=$(date +%s)
-          timeout 720 python -m pytest -p no:cacheprovider -v -o faulthandler_timeout=120 --durations=12 \
-            tests/integration tests/unit/parallel tests/performance 2>&1 | tee out.txt
-          status=${PIPESTATUS[0]}
-          elapsed=$(( $(date +%s) - started ))
-          echo "::notice title=hang-summary::exit=${status} elapsed=${elapsed}s | $(tail -n 1 out.txt)"
-          echo "::notice title=hang-last-lines::$(grep -E '::' out.txt | tail -n 3 | cut -c1-300 | paste -sd '|')"
-          grep -nE 'Timeout \(|Thread 0x|File "' out.txt | head -n 12 | cut -c1-250 | while IFS= read -r line; do echo "::warning title=hang-stack::$line"; done
-          grep -E '^[0-9.]+s (call|setup|teardown)' out.txt | head -n 6 | while IFS= read -r line; do echo "::notice title=hang-slowest::$line"; done
-          exit $status
+          dumped=0
+          while kill -0 "$pytest_pid" 2>/dev/null; do
+            sleep 5
+            now=$(date +%s)
+            if [ "$dumped" = 0 ] && grep -q 'Timeout (0:01:30)' out.txt; then
+              dumped=1
+              echo "::notice title=hang-detected::after $((now - started))s: $(grep -B1 'Timeout (0:01:30)' out.txt | head -n 1 | cut -c1-300)"
+              ps -eo pid,ppid,stat,etimes,wchan:22,args --forest 2>&1 | grep -E 'python|pytest|PID' | cut -c1-230 > ps.txt
+              echo "::notice title=hang-ps::$(paste -sd '|' ps.txt | cut -c1-3800)"
+              : > spy.txt
+              for pid in $(pgrep -P "$pytest_pid") $(pgrep -f 'multiprocessing' ); do
+                echo "=== pid $pid ($(ps -o stat=,wchan:22=,args= -p "$pid" | cut -c1-120))" >> spy.txt
+                sudo "$(command -v py-spy)" dump --pid "$pid" >> spy.txt 2>&1
+              done
+              echo "::notice title=hang-pyspy-1::$(paste -sd '|' spy.txt | cut -c1-3800)"
+              echo "::notice title=hang-pyspy-2::$(paste -sd '|' spy.txt | cut -c3801-7600)"
+              echo "::notice title=hang-pyspy-3::$(paste -sd '|' spy.txt | cut -c7601-11400)"
+              sleep 20
+              awk '/Timeout \(0:01:30\)/{f=1} f' out.txt | head -n 80 | cut -c1-170 > stack.txt
+              echo "::notice title=hang-stack-1::$(paste -sd '|' stack.txt | cut -c1-3800)"
+              echo "::notice title=hang-stack-2::$(paste -sd '|' stack.txt | cut -c3801-7600)"
+              kill -9 "$pytest_pid" 2>/dev/null
+              pkill -9 -f multiprocessing 2>/dev/null
+              break
+            fi
+            if [ $((now - started)) -gt 420 ]; then
+              echo "::notice title=hang-timeout::cap reached without the faulthandler marker"
+              kill -9 "$pytest_pid" 2>/dev/null
+              break
+            fi
+          done
+          wait "$pytest_pid" 2>/dev/null
+          echo "::notice title=hang-summary::dumped=${dumped} elapsed=$(( $(date +%s) - started ))s | $(grep -E 'passed|failed' out.txt | tail -n 1 | cut -c1-200)"
+          [ "$dumped" = 0 ]
