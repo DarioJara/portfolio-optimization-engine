@@ -18,8 +18,14 @@ from portfolio_engine.config.data_config import DataConfig
 from portfolio_engine.config.engine_config import EngineConfig
 from portfolio_engine.config.exact_mip_config import ExactMIPConfig
 from portfolio_engine.config.frontier_config import FrontierConfig
+from portfolio_engine.config.hard_constraints_config import (
+    HardConstraintsConfig,
+    MandateLevel,
+    MandateSettings,
+    RelaxationAuthorization,
+)
 from portfolio_engine.config.hashing import config_hash, config_snapshot, config_to_dict
-from portfolio_engine.config.loader import load_engine_config
+from portfolio_engine.config.loader import load_engine_config, load_hard_constraints
 from portfolio_engine.config.parallel_config import (
     CacheConfig,
     ParallelConfig,
@@ -45,6 +51,7 @@ from portfolio_engine.config.scenario_definitions import (
 )
 from portfolio_engine.config.solver_config import SolverConfig
 from portfolio_engine.config.transaction_cost_config import TransactionCostConfig
+from portfolio_engine.models.enums import CardinalityPolicy, VolatilityBandEnforcement
 
 __all__ = (
     "AssetShock",
@@ -52,6 +59,7 @@ __all__ = (
     "CVaRConfig",
     "CacheConfig",
     "CandidateConfig",
+    "CardinalityPolicy",
     "ConicSolverConfig",
     "ConstraintConfig",
     "ConstraintOverrides",
@@ -65,10 +73,14 @@ __all__ = (
     "FrontierConfig",
     "FxRate",
     "GroupLimit",
+    "HardConstraintsConfig",
     "LiquidityConfig",
+    "MandateLevel",
+    "MandateSettings",
     "ParallelConfig",
     "ProcessStartMethod",
     "RecoveryConfig",
+    "RelaxationAuthorization",
     "ReturnConfig",
     "RiskConfig",
     "RobustConfig",
@@ -80,10 +92,12 @@ __all__ = (
     "SolverConfig",
     "StressLimits",
     "TransactionCostConfig",
+    "VolatilityBandEnforcement",
     "config_hash",
     "config_snapshot",
     "config_to_dict",
     "load_engine_config",
+    "load_hard_constraints",
     "load_parallel_config",
     "load_scenario_definitions",
     "validate_scenario_set",

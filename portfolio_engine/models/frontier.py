@@ -20,6 +20,7 @@ from portfolio_engine.models.enums import (
     StatusSource,
     StrategyID,
 )
+from portfolio_engine.models.hard_constraints import HardConstraintAudit
 from portfolio_engine.models.solution import SolveResult, ValidationReport
 from portfolio_engine.utils.numerics import readonly_float_array
 
@@ -217,6 +218,7 @@ class GlobalFrontierResult:
     composition_results: tuple[CompositionFrontierResult, ...]
     points: tuple[GlobalFrontierPoint, ...]
     diagnostics: GlobalFrontierDiagnostics
+    hard_constraint_audit: HardConstraintAudit | None = None
 
     @property
     def frontier_type(self) -> str:
@@ -227,6 +229,28 @@ class GlobalFrontierResult:
     def valid_points(self) -> tuple[GlobalFrontierPoint, ...]:
         """Puntos válidos de todas las composiciones (incluye los dominados y duplicados)."""
         return tuple(point for point in self.points if point.is_valid_solution)
+
+    @property
+    def accepted_points(self) -> tuple[GlobalFrontierPoint, ...]:
+        """Puntos que superan la validación final de restricciones obligatorias.
+
+        Sin ``hard_constraint_audit`` (módulo no configurado) son los puntos válidos del solver.
+        Los rechazados se conservan en ``points`` con sus causas en la auditoría.
+        """
+        audit = self.hard_constraint_audit
+        if audit is None:
+            return self.valid_points
+        accepted = set(audit.accepted_point_ids)
+        return tuple(p for p in self.points if p.global_point_id in accepted)
+
+    @property
+    def accepted_envelope(self) -> tuple[GlobalFrontierPoint, ...]:
+        """Envolvente Pareto de los puntos aceptados (la del solver si no hay auditoría)."""
+        audit = self.hard_constraint_audit
+        if audit is None:
+            return self.envelope
+        accepted = set(audit.accepted_envelope_ids)
+        return tuple(p for p in self.points if p.global_point_id in accepted)
 
     @property
     def envelope(self) -> tuple[GlobalFrontierPoint, ...]:

@@ -1,0 +1,16 @@
+KILLED: validator: suelo de retorno ignorado
+KILLED: validator: volatilidad minima sin comprobar
+KILLED: validator: tolerancia de volatilidad sin tope de banda
+KILLED: validator: estado del solver siempre admisible
+KILLED: counts: sustituciones = max(a, r)
+KILLED: counts: posicion con w >= umbral
+KILLED: resolver: relajar un maximo sin autorizacion
+KILLED: integer: limite de sustituciones ignorado
+KILLED: preflight: presupuesto de cambios ignorado
+KILLED: band: se acepta la relajacion sin comprobar el minimo
+KILLED: band: corte tangente con signo cambiado
+KILLED: config_hash: el mandato no entra en el hash
+KILLED: gate: acepta puntos que el solver no valido
+KILLED: gate: acepta puntos sin pesos
+KILLED: gate: INFEASIBLE sin prueba determinista
+supervivientes: []

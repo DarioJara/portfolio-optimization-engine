@@ -508,6 +508,25 @@ def _run_exact_mip(
     )
 
 
+def _mandate_problems(request: PortfolioRequest, config: EngineConfig) -> tuple[str, ...]:
+    """Operaciones que no pasan por la validación final de las restricciones obligatorias.
+
+    Con ``EngineConfig.hard_constraints`` solo ``GLOBAL_FRONTIER`` (búsqueda de composiciones por
+    tamaño admisible y validación final de cada punto) aplica el mandato completo. Las demás
+    operaciones no lo imponen todavía: se rechazan antes de ejecutar nada en lugar de devolver
+    carteras que podrían violarlo (MASTER_SPEC §79; ``HARD_CONSTRAINTS_IMPLEMENTATION_REPORT.md``).
+    """
+    if config.hard_constraints is None:
+        return ()
+    return tuple(
+        f"operations[{position}] ({operation.kind.value}): con hard_constraints solo "
+        "GLOBAL_FRONTIER impone las restricciones obligatorias; la operación se rechaza en lugar "
+        "de ignorarlas."
+        for position, operation in enumerate(request.workload.operations)
+        if operation.kind is not OperationKind.GLOBAL_FRONTIER
+    )
+
+
 def _error(error: BaseException, index: int | None) -> TaskError:
     return TaskError(
         error_type=type(error).__name__,
@@ -554,7 +573,10 @@ def run_portfolio(
             worker_pid=None,
         )
 
-    problems = input_problems(request, context.snapshot)
+    problems = (
+        *input_problems(request, context.snapshot),
+        *_mandate_problems(request, context.config),
+    )
     if problems:
         error = TaskError("InputValidationError", "; ".join(problems), None, "")
         return finish(ExecutionStatus.FAILED_INPUT_VALIDATION, (), error)

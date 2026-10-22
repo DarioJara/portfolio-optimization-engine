@@ -40,7 +40,12 @@ from portfolio_engine.config.frontier_config import FrontierConfig
 from portfolio_engine.exceptions import FrontierError
 from portfolio_engine.frontiers.candidate_evaluator import QPCompositionEvaluator
 from portfolio_engine.frontiers.continuous_frontier import ContinuousFrontierEngine, FrontierProblem
+from portfolio_engine.frontiers.hard_constraint_gate import HardConstraintGate
 from portfolio_engine.frontiers.pareto import pareto_mask
+from portfolio_engine.hard_constraints.resolver import (
+    derive_engine_config,
+    resolve_hard_constraints,
+)
 from portfolio_engine.models.enums import (
     CostTreatment,
     EvaluationMode,
@@ -53,6 +58,7 @@ from portfolio_engine.models.frontier import (
     GlobalFrontierPoint,
     GlobalFrontierResult,
 )
+from portfolio_engine.models.hard_constraints import EffectiveHardConstraints
 from portfolio_engine.parallel.determinism import sequence_key
 
 
@@ -168,8 +174,16 @@ def global_pareto(
 class GlobalCandidateFrontierEngine:
     """Construye la ``GLOBAL_CANDIDATE_FRONTIER`` de una cartera y un escenario."""
 
-    def __init__(self, config: EngineConfig, evaluator: CompositionEvaluator | None = None) -> None:
+    def __init__(
+        self,
+        config: EngineConfig,
+        evaluator: CompositionEvaluator | None = None,
+        *,
+        _effective: EffectiveHardConstraints | None = None,
+    ) -> None:
         self._config = config
+        self._injected = evaluator
+        self._effective = _effective
         self._continuous = ContinuousFrontierEngine(config)
         if evaluator is None and config.candidates.evaluation_mode is EvaluationMode.QP_UTILITY:
             evaluator = QPCompositionEvaluator(config)
@@ -191,7 +205,10 @@ class GlobalCandidateFrontierEngine:
                 "La frontera global parte de la cartera actual: "
                 "composition_asset_ids debe ser None."
             )
-        self._continuous.reject_unenforced_constraints(problem)
+        if self._config.hard_constraints is not None and self._effective is None:
+            return self._solve_mandated(problem, cost_treatment, method)
+        solver_problem = self._qp_problem(problem)
+        self._continuous.reject_unenforced_constraints(solver_problem)
         started = time.perf_counter()
         context = CandidateContext(
             problem.portfolio_id,
@@ -204,19 +221,38 @@ class GlobalCandidateFrontierEngine:
         )
         search = self._candidates.search(problem.state.composition(), context)
         searched = time.perf_counter()
+        # Con un mandato inviable (ninguna composición admisible) no se invoca ningún solver.
+        mandate_infeasible = self._effective is not None and not search.compositions
         continuous = (
-            self._continuous.solve(problem, cost_treatment, method)
-            if problem.state.has_current_portfolio
+            self._continuous.solve(solver_problem, cost_treatment, method)
+            if problem.state.has_current_portfolio and not mandate_infeasible
             else None
         )
         results = tuple(
             self._composition_result(
-                problem, candidate.asset_ids, cost_treatment, method, continuous
+                solver_problem, candidate.asset_ids, cost_treatment, method, continuous
             )
             for candidate in search.compositions
         )
         solved = time.perf_counter()
         points = self._global_points(problem, cost_treatment, results)
+        audit = (
+            None
+            if self._effective is None
+            else HardConstraintGate(self._config).audit(
+                problem,
+                self._effective,
+                points,
+                search.diagnostics.notes,
+                len(search.compositions),
+                lambda accepted: self._accepted_envelope(accepted, cost_treatment),
+                cost_treatment,
+            )
+        )
+        if audit is not None and audit.effective.has_volatility_band:
+            audit = HardConstraintGate(self._config).with_band_proposals(
+                audit, problem, search.compositions, cost_treatment
+            )
         finished = time.perf_counter()
         return GlobalFrontierResult(
             portfolio_id=problem.portfolio_id,
@@ -252,7 +288,58 @@ class GlobalCandidateFrontierEngine:
                 pareto_time=finished - solved,
                 total_time=finished - started,
             ),
+            hard_constraint_audit=audit,
         )
+
+    # ------------------------------------------------------------------ restricciones duras
+
+    def _solve_mandated(
+        self,
+        problem: FrontierProblem,
+        cost_treatment: CostTreatment,
+        method: FrontierMethod,
+    ) -> GlobalFrontierResult:
+        """Frontera global bajo las restricciones obligatorias (``EngineConfig.hard_constraints``).
+
+        Resuelve el mandato efectivo de la cartera, deriva la configuración del motor (mismos
+        campos de B1–B4, alineados con el mandato), busca composiciones por cada tamaño admisible y
+        valida cada punto resultante contra el mandato completo (``HardConstraintGate``). El
+        ``VolatilityLimit`` de la especificación pasa al mandato (``max_volatility``) y lo impone
+        la validación final de cada punto, no la frontera QP (véase :meth:`_qp_problem`).
+        """
+        weights = dict(zip(problem.state.asset_ids, problem.state.weights.tolist(), strict=True))
+        effective = resolve_hard_constraints(
+            self._config, problem.portfolio_id, problem.spec, weights
+        )
+        derived = derive_engine_config(self._config, effective)
+        inner = GlobalCandidateFrontierEngine(derived, self._injected, _effective=effective)
+        return inner.solve(problem, cost_treatment, method)
+
+    def _qp_problem(self, problem: FrontierProblem) -> FrontierProblem:
+        """Problema de las fronteras QP: con mandato, sin ``VolatilityLimit`` en la especificación.
+
+        El límite pasa a ``max_volatility`` del mandato y lo impone la validación final de cada
+        punto (y la propuesta de banda); la frontera QP no puede imponerlo y
+        ``reject_unenforced_constraints`` lo rechazaría. La búsqueda de composiciones y la auditoría
+        sí reciben la especificación original.
+        """
+        spec = problem.spec
+        if self._effective is None or spec is None or spec.volatility_limit is None:
+            return problem
+        return replace(problem, spec=replace(spec, volatility_limit=None))
+
+    def _accepted_envelope(
+        self, accepted: Sequence[GlobalFrontierPoint], cost_treatment: CostTreatment
+    ) -> list[GlobalFrontierPoint]:
+        """Envolvente Pareto calculada solo entre los puntos aceptados por el mandato."""
+        flagged = global_pareto(accepted, self._config.frontier)
+        return [
+            point
+            for point in flagged
+            if point.is_valid_solution
+            and not point.is_duplicate
+            and self._primary_flag(point, cost_treatment)
+        ]
 
     # -------------------------------------------------------------------------------- pasos
 

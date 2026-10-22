@@ -52,9 +52,21 @@ ALLOWED_DEPENDENCIES: dict[str, set[str]] = {
         "scenarios",
         "risk",
         "cache",
+        "hard_constraints",
     },
     # Bloque 5.3: la caché de resultados es de bajo nivel (claves canónicas y almacén acotado).
     "cache": {"exceptions", "utils"},
+    # Restricciones duras de carteras finales: resolución con precedencia, factibilidad previa y
+    # validación final desde los pesos. Sin optimizers ni frontiers ni candidates (independencia).
+    "hard_constraints": {
+        "exceptions",
+        "utils",
+        "models",
+        "config",
+        "costs",
+        "constraints",
+        "validation",
+    },
     "costs": {"exceptions", "utils", "models", "config"},
     "metrics": {"exceptions", "utils", "models", "config", "costs"},
     "constraints": {"exceptions", "utils", "models", "config", "costs"},
@@ -71,6 +83,7 @@ ALLOWED_DEPENDENCIES: dict[str, set[str]] = {
         "constraints",
         "validation",
         "parallel",
+        "hard_constraints",
     },
     "frontiers": {
         "exceptions",
@@ -84,6 +97,7 @@ ALLOWED_DEPENDENCIES: dict[str, set[str]] = {
         "validation",
         "candidates",
         "parallel",
+        "hard_constraints",
     },
     "outputs": {"exceptions", "utils", "models", "config", "costs", "metrics"},
     # Bloque 4: ``scenarios`` orquesta escenarios y optimización multiescenario sobre los motores de
@@ -197,6 +211,11 @@ ALLOWED_NAMED_CONSTANTS = {
     ("parallel/journal.py", "PRIVATE_DIRECTORY_MODE"),
     ("parallel/journal.py", "PRIVATE_FILE_MODE"),
     ("parallel/markers.py", "TASK_FIELDS"),
+    # Restricciones duras: techo de seguridad de toda tolerancia de validación final y fracción de
+    # materialidad de la banda de volatilidad (invariantes de seguridad documentados, no parámetros
+    # de negocio: bloquean que una tolerancia numérica acepte una violación material).
+    ("config/hard_constraints_config.py", "TOLERANCE_CEILING"),
+    ("hard_constraints/validator.py", "BAND_TOLERANCE_FRACTION"),
 }
 
 

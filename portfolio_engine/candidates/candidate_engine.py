@@ -53,16 +53,26 @@ from portfolio_engine.candidates.expansion import (
 )
 from portfolio_engine.candidates.exploration import ExplorationPolicy
 from portfolio_engine.candidates.local_search import LocalSearch
+from portfolio_engine.candidates.merge import merge_search_results
 from portfolio_engine.candidates.prepared import CompositionFactory, PreparedComposition
 from portfolio_engine.candidates.screening import CandidateScreening, ScreeningResult
 from portfolio_engine.candidates.swap_generator import SwapGenerator
 from portfolio_engine.candidates.universe_data import UniverseSnapshot
 from portfolio_engine.config.engine_config import EngineConfig
 from portfolio_engine.constraints.constraint_set import build_constraint_set
-from portfolio_engine.constraints.feasibility import PreFeasibilityChecker, check_cardinality
+from portfolio_engine.constraints.feasibility import (
+    FeasibilityCause,
+    PreFeasibilityChecker,
+    check_cardinality,
+)
 from portfolio_engine.constraints.integer import CompositionLimits
 from portfolio_engine.constraints.liquidity import effective_upper, liquidity_capacity
 from portfolio_engine.exceptions import CandidateError
+from portfolio_engine.hard_constraints.preflight import PreflightData, check_preflight
+from portfolio_engine.hard_constraints.resolver import (
+    derive_engine_config,
+    resolve_hard_constraints,
+)
 from portfolio_engine.models.asset import Universe
 from portfolio_engine.models.composition import (
     CandidateComposition,
@@ -78,6 +88,7 @@ from portfolio_engine.models.enums import (
     EligibilityStatus,
     EvaluationMode,
 )
+from portfolio_engine.models.hard_constraints import EffectiveHardConstraints
 from portfolio_engine.models.portfolio import (
     CurrentPortfolioComposition,
     CurrentPortfolioState,
@@ -95,6 +106,7 @@ NOTE_INSUFFICIENT_ASSETS = "INSUFFICIENT_ELIGIBLE_ASSETS_FOR_TARGET_SIZE"
 NOTE_ESTIMATES_NOT_OPTIMIZED = "ESTIMATES_ARE_NOT_OPTIMIZED_RESULTS"
 NOTE_NON_BUYABLE_CAPPED = "E10_NON_BUYABLE_POSITIONS_CAPPED_AT_CURRENT_WEIGHT"
 NOTE_LIQUIDITY_ACTIVE = "A11_ADV_NAV_LIQUIDITY_CAPS_ACTIVE"
+NOTE_MANDATE_INFEASIBLE = "HARD_CONSTRAINTS_INFEASIBLE"
 STAGE_VALIDATION = "INDEPENDENT_VALIDATION"
 REASON_NO_CURRENT = "NO_CURRENT_PORTFOLIO"
 REASON_NO_COSTS = "NO_TRANSACTION_COST_DATA"
@@ -154,8 +166,41 @@ class CandidateEngine:
     def search(
         self, current: CurrentPortfolioComposition, context: CandidateContext
     ) -> CandidateSearchResult:
-        """Composiciones candidatas junto con los diagnósticos completos de la generación."""
+        """Composiciones candidatas junto con los diagnósticos completos de la generación.
+
+        Con ``EngineConfig.hard_constraints`` configurado se genera una búsqueda por cada tamaño de
+        cartera admisible (``search_with_mandate``); sin él, el comportamiento es el de siempre.
+        """
+        if self._config.hard_constraints is not None:
+            return self.search_with_mandate(current, context)
         return _Search(self._config, self._evaluator, current, context).run()
+
+    def search_with_mandate(
+        self, current: CurrentPortfolioComposition, context: CandidateContext
+    ) -> CandidateSearchResult:
+        """Una búsqueda por tamaño admisible bajo las restricciones obligatorias, fusionadas.
+
+        Cada ejecución usa el mismo motor y la misma configuración derivada del mandato efectivo;
+        solo cambia el tamaño objetivo (la cardinalidad se garantiza en la generación discreta, no
+        recortando pesos después). Los resultados se fusionan sin duplicados, con la referencia
+        primero y el cupo ``max_candidates`` repartido por rango entre tamaños.
+        """
+        weights = dict(zip(context.state.asset_ids, context.state.weights.tolist(), strict=True))
+        effective = resolve_hard_constraints(
+            self._config, context.portfolio_id, context.spec, weights
+        )
+        derived = derive_engine_config(self._config, effective)
+        sizes = effective.allowed_sizes
+        if not sizes:
+            search = _Search(derived, self._evaluator, current, context, effective, None)
+            return search.empty_infeasible(
+                [f"{cause.code}: {cause.detail}" for cause in search.mandate_causes(None)]
+            )
+        runs = [
+            _Search(derived, self._evaluator, current, context, effective, size).run()
+            for size in sizes
+        ]
+        return merge_search_results(runs, sizes, derived.candidates.max_candidates)
 
 
 class _Search:
@@ -167,7 +212,11 @@ class _Search:
         evaluator: CompositionEvaluator | None,
         current: CurrentPortfolioComposition,
         context: CandidateContext,
+        mandate: EffectiveHardConstraints | None = None,
+        size_override: int | None = None,
     ) -> None:
+        self._mandate = mandate
+        self._size_override = size_override
         state = context.state
         if current.portfolio_id != context.portfolio_id or current.asset_ids != frozenset(
             state.asset_ids
@@ -263,6 +312,10 @@ class _Search:
         if target is None:
             self._notes.append(NOTE_COLD_START_DISABLED)
             return self._finish([], [], None)
+        if self._mandate is not None:
+            infeasible = self.mandate_causes(target)
+            if infeasible:
+                return self.empty_infeasible([f"{c.code}: {c.detail}" for c in infeasible])
         causes = self._cardinality_causes(target)
         if causes:
             self._notes.extend(causes)
@@ -281,6 +334,8 @@ class _Search:
         return self._cfg.utility_risk_aversions
 
     def _target_size(self) -> int | None:
+        if self._size_override is not None:
+            return self._size_override
         spec = self._context.spec
         if spec is not None and spec.target_portfolio_size is not None:
             return spec.target_portfolio_size
@@ -319,13 +374,7 @@ class _Search:
 
     def _services(self, target: int) -> SearchServices:
         cfg = self._cfg
-        index = self._snapshot.index
-        limits = CompositionLimits(
-            target_size=target,
-            max_new_assets=None if self._cold else cfg.max_new_assets,
-            max_swaps=None if self._cold else cfg.max_swaps,
-            mandatory=frozenset(index.asset_id_at(p) for p in self._eligibility.mandatory_hold),
-        )
+        limits = self._limits(target)
         factory = CompositionFactory(
             snapshot=self._snapshot,
             eligible=self._eligibility.enterable,
@@ -353,6 +402,59 @@ class _Search:
             scenario_id=self._context.scenario_id,
             rejections=self._rejections,
         )
+
+    def _limits(self, target: int) -> CompositionLimits:
+        """Límites discretos de la búsqueda: B3 (``[candidates]``) más los del mandato efectivo."""
+        cfg = self._cfg
+        index = self._snapshot.index
+        mandatory = frozenset(index.asset_id_at(p) for p in self._eligibility.mandatory_hold)
+        mandate = self._mandate
+        if mandate is None or self._cold:
+            return CompositionLimits(
+                target_size=target,
+                max_new_assets=None if self._cold else cfg.max_new_assets,
+                max_swaps=None if self._cold else cfg.max_swaps,
+                mandatory=mandatory,
+            )
+        return CompositionLimits(
+            target_size=target,
+            max_new_assets=mandate.max_added_assets,
+            max_swaps=mandate.max_swaps,
+            mandatory=mandatory,
+            max_removed_assets=mandate.max_removed_assets,
+            max_total_changed=mandate.max_total_changed_assets,
+            max_replacements=mandate.max_replacements,
+            max_pure_additions=mandate.max_pure_additions,
+            max_pure_removals=mandate.max_pure_removals,
+        )
+
+    def mandate_causes(self, size: int | None) -> tuple[FeasibilityCause, ...]:
+        """Causas deterministas de inviabilidad del mandato (``size`` ``None`` = todos)."""
+        mandate = self._mandate
+        if mandate is None:
+            return ()
+        snapshot = self._snapshot
+        reference = np.array(self._reference, dtype=np.int64)
+        enterable = np.setdiff1d(
+            self._eligibility.enterable.global_indices, reference, assume_unique=True
+        )
+        pool = np.union1d(reference, enterable).astype(np.int64)
+        data = PreflightData(
+            original_size=len(self._reference),
+            enterable_count=int(enterable.size),
+            forced_exits=len(self._eligibility.mandatory_exit),
+            mandatory_holds=len(self._eligibility.mandatory_hold),
+            long_only=self._config.constraints.long_only,
+            mu=snapshot.mu[pool],
+            sigma=snapshot.sigma[np.ix_(pool, pool)],
+            budget=1.0,
+        )
+        return check_preflight(mandate, data, None if size is None else (size,))
+
+    def empty_infeasible(self, causes: list[str]) -> CandidateSearchResult:
+        """Resultado sin composiciones: el mandato es inviable (causas deterministas)."""
+        self._notes.extend(f"{NOTE_MANDATE_INFEASIBLE}: {cause}" for cause in causes)
+        return self._finish([], [], None)
 
     # ------------------------------------------------------------------------------ perfiles
 
@@ -621,6 +723,10 @@ class _Search:
         target = None if self._cold else len(self._reference)
         if spec is not None and spec.target_portfolio_size is not None:
             target = spec.target_portfolio_size
+        limits = None
+        if self._mandate is not None and self._size_override is not None:
+            target = self._size_override
+            limits = self._limits(target)
         accepted: list[CandidateComposition] = []
         for candidate in candidates:
             codes = validate_candidate_composition(
@@ -634,6 +740,7 @@ class _Search:
                 max_new_assets=None if self._cold else cfg.max_new_assets,
                 max_swaps=None if self._cold else cfg.max_swaps,
                 is_reference=candidate.is_reference,
+                limits=limits,
             )
             if codes:
                 self._rejections.record(

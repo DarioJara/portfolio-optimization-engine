@@ -13,6 +13,14 @@ composición candidata ``C``::
     cardinalidad = |C| = TargetPortfolioSize
 
 Las comprobaciones devuelven códigos de violación explícitos; nada se relaja en silencio.
+
+Restricciones duras de carteras finales (``hard_constraints``): ``CompositionLimits`` admite además
+intervalo de cardinalidad (``min_size`` / ``max_size``), activos retirados, cambios totales,
+sustituciones uno a uno y altas/bajas independientes. Con ``a = nuevos`` y ``r = retirados``:
+``total = a + r``, ``replacements = min(a, r)``, ``pure_additions = a − min(a, r)`` y
+``pure_removals = r − min(a, r)`` (:mod:`portfolio_engine.hard_constraints.counts` es la misma
+definición para la validación final). ``max_new_assets`` es el límite de ``a`` (alias de
+``max_added_assets``).
 """
 
 from __future__ import annotations
@@ -29,6 +37,13 @@ CARDINALITY = "CARDINALITY"
 MAX_NEW_ASSETS = "MAX_NEW_ASSETS"
 MAX_SWAPS = "MAX_SWAPS"
 MANDATORY_ASSET_REMOVED = "MANDATORY_ASSET_REMOVED"
+CARDINALITY_BELOW_MIN = "CARDINALITY_BELOW_MIN"
+CARDINALITY_ABOVE_MAX = "CARDINALITY_ABOVE_MAX"
+MAX_REMOVED_ASSETS = "MAX_REMOVED_ASSETS"
+MAX_TOTAL_CHANGED_ASSETS = "MAX_TOTAL_CHANGED_ASSETS"
+MAX_REPLACEMENTS = "MAX_REPLACEMENTS"
+MAX_PURE_ADDITIONS = "MAX_PURE_ADDITIONS"
+MAX_PURE_REMOVALS = "MAX_PURE_REMOVALS"
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,12 +55,26 @@ class CompositionLimits:
         max_new_assets: ``MaximumNewAssets`` (``None`` = sin límite).
         max_swaps: ``MaximumSwaps`` (``None`` = sin límite).
         mandatory: activos que no pueden abandonar la composición (p. ej. ``FREEZE_WEIGHT``).
+        min_size: tamaño mínimo de la composición final (``None`` = sin mínimo).
+        max_size: tamaño máximo de la composición final (``None`` = sin máximo).
+        max_removed_assets: activos retirados como máximo (``None`` = sin límite).
+        max_total_changed: altas más bajas como máximo (``None`` = sin límite).
+        max_replacements: sustituciones uno a uno (``min(a, r)``) como máximo.
+        max_pure_additions: altas independientes (``a − min(a, r)``) como máximo.
+        max_pure_removals: bajas independientes (``r − min(a, r)``) como máximo.
     """
 
     target_size: int | None
     max_new_assets: int | None
     max_swaps: int | None
     mandatory: frozenset[str]
+    min_size: int | None = None
+    max_size: int | None = None
+    max_removed_assets: int | None = None
+    max_total_changed: int | None = None
+    max_replacements: int | None = None
+    max_pure_additions: int | None = None
+    max_pure_removals: int | None = None
 
 
 def new_assets(current: Collection[str], candidate: Collection[str]) -> frozenset[str]:
@@ -78,9 +107,27 @@ def move_violations(
         violations.append(MAX_NEW_ASSETS)
     if limits.max_swaps is not None and swap_count(current, candidate) > limits.max_swaps:
         violations.append(MAX_SWAPS)
+    violations.extend(_component_violations(limits, current, candidate))
     if not limits.mandatory <= frozenset(candidate):
         violations.append(MANDATORY_ASSET_REMOVED)
     return tuple(violations)
+
+
+def _component_violations(
+    limits: CompositionLimits, current: Collection[str], candidate: Collection[str]
+) -> list[str]:
+    """Límites de retirados, cambios totales, sustituciones y altas/bajas independientes."""
+    added = len(new_assets(current, candidate))
+    removed = len(removed_assets(current, candidate))
+    paired = min(added, removed)
+    checks = (
+        (limits.max_removed_assets, removed, MAX_REMOVED_ASSETS),
+        (limits.max_total_changed, added + removed, MAX_TOTAL_CHANGED_ASSETS),
+        (limits.max_replacements, paired, MAX_REPLACEMENTS),
+        (limits.max_pure_additions, added - paired, MAX_PURE_ADDITIONS),
+        (limits.max_pure_removals, removed - paired, MAX_PURE_REMOVALS),
+    )
+    return [code for limit, value, code in checks if limit is not None and value > limit]
 
 
 def limit_violations(
@@ -88,8 +135,13 @@ def limit_violations(
 ) -> tuple[str, ...]:
     """Todas las violaciones de una composición final: cardinalidad y movimientos."""
     violations = list(move_violations(limits, current, candidate))
-    if limits.target_size is not None and len(frozenset(candidate)) != limits.target_size:
+    size = len(frozenset(candidate))
+    if limits.target_size is not None and size != limits.target_size:
         violations.insert(0, CARDINALITY)
+    if limits.min_size is not None and size < limits.min_size:
+        violations.append(CARDINALITY_BELOW_MIN)
+    if limits.max_size is not None and size > limits.max_size:
+        violations.append(CARDINALITY_ABOVE_MAX)
     return tuple(violations)
 
 

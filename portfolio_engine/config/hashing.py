@@ -8,12 +8,21 @@ from enum import Enum
 from portfolio_engine.config.engine_config import EngineConfig
 from portfolio_engine.utils.hashing import canonical_json, sha256_hex
 
+#: Campos opcionales añadidos después de las líneas base de hashes publicadas: si valen ``None`` no
+#: forman parte del ``ConfigSnapshot``, de modo que activar su ausencia no cambia ``ConfigHash``
+#: (compatibilidad con cachés, diarios y líneas base existentes). Con un valor sí se incluyen.
+_OMITTED_WHEN_NONE = frozenset({"hard_constraints"})
+
 
 def config_to_dict(config: object) -> dict[str, object]:
     """Convierte un dataclass de configuración (recursivamente) en un diccionario canónico."""
     if not dataclasses.is_dataclass(config) or isinstance(config, type):
         raise TypeError("config_to_dict espera una instancia de dataclass.")
-    return {field.name: _value(getattr(config, field.name)) for field in dataclasses.fields(config)}
+    return {
+        field.name: _value(getattr(config, field.name))
+        for field in dataclasses.fields(config)
+        if not (field.name in _OMITTED_WHEN_NONE and getattr(config, field.name) is None)
+    }
 
 
 def _value(value: object) -> object:

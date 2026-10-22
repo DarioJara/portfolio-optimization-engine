@@ -51,11 +51,15 @@ def validate_candidate_composition(
     max_new_assets: int | None,
     max_swaps: int | None,
     is_reference: bool,
+    limits: CompositionLimits | None = None,
 ) -> tuple[str, ...]:
     """Códigos de violación de ``asset_ids`` (vacío si la composición es válida).
 
     ``is_reference`` marca la composición que representa la cartera actual: no se le exige
     cardinalidad ni salida de los ``FORCE_LIQUIDATE`` (su peso es cero en la optimización).
+    ``limits`` (restricciones duras de carteras finales) sustituye a los límites construidos desde
+    ``target_size`` / ``max_new_assets`` / ``max_swaps``; la referencia solo conserva los activos
+    obligatorios.
     """
     ids = list(asset_ids)
     violations: list[str] = []
@@ -67,12 +71,15 @@ def validate_candidate_composition(
     held = set(state.asset_ids)
     violations.extend(_new_asset_violations(ids, held, universe, spec, unknown_liquidity_policy))
     violations.extend(_held_violations(set(ids), held, universe, restricted_policy, is_reference))
-    limits = CompositionLimits(
-        target_size=None if is_reference else target_size,
-        max_new_assets=None if is_reference else max_new_assets,
-        max_swaps=None if is_reference else max_swaps,
-        mandatory=frozenset(),
-    )
+    if limits is None:
+        limits = CompositionLimits(
+            target_size=None if is_reference else target_size,
+            max_new_assets=None if is_reference else max_new_assets,
+            max_swaps=None if is_reference else max_swaps,
+            mandatory=frozenset(),
+        )
+    elif is_reference:
+        limits = CompositionLimits(None, None, None, limits.mandatory)
     checker = move_violations if is_reference else limit_violations
     violations.extend(checker(limits, held, ids))
     return tuple(dict.fromkeys(violations))

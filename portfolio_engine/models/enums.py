@@ -483,3 +483,34 @@ class CVaRObjective(StrEnum):
     MIN_CVAR = "MIN_CVAR"
     UTILITY_WITH_LIMIT = "UTILITY_WITH_LIMIT"
     MAX_RETURN_WITH_LIMIT = "MAX_RETURN_WITH_LIMIT"
+
+
+class CardinalityPolicy(StrEnum):
+    """Política global de cardinalidad respecto al número de posiciones de la cartera original.
+
+    ``FIXED`` (valor por defecto): tamaño final igual al original. ``INCREASE``: puede aumentar
+    dentro de los límites configurados. ``DECREASE``: puede reducirse dentro de los límites.
+    """
+
+    FIXED = "FIXED"
+    INCREASE = "INCREASE"
+    DECREASE = "DECREASE"
+
+
+class VolatilityBandEnforcement(StrEnum):
+    """Modo de aplicación de la banda de volatilidad. Solo existe ``HARD``: no hay modo blando."""
+
+    HARD = "HARD"
+
+
+class AuditStatus(StrEnum):
+    """Veredicto global de la validación final de restricciones obligatorias de una cartera.
+
+    ``FEASIBLE``: al menos una propuesta supera todas las comprobaciones. ``NO_FEASIBLE_SOLUTION``:
+    se buscó y ninguna propuesta cumple (no demuestra inviabilidad: la búsqueda es heurística).
+    ``INFEASIBLE``: la factibilidad previa **demuestra** que ninguna propuesta puede cumplir.
+    """
+
+    FEASIBLE = "FEASIBLE"
+    NO_FEASIBLE_SOLUTION = "NO_FEASIBLE_SOLUTION"
+    INFEASIBLE = "INFEASIBLE"

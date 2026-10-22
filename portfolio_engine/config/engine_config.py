@@ -18,6 +18,7 @@ from portfolio_engine.config.cvar_config import CVaRConfig
 from portfolio_engine.config.data_config import DataConfig
 from portfolio_engine.config.exact_mip_config import ExactMIPConfig
 from portfolio_engine.config.frontier_config import FrontierConfig
+from portfolio_engine.config.hard_constraints_config import HardConstraintsConfig
 from portfolio_engine.config.return_config import ReturnConfig
 from portfolio_engine.config.risk_config import RiskConfig
 from portfolio_engine.config.robust_config import RobustConfig
@@ -35,6 +36,9 @@ class EngineConfig:
         optimization_horizon_years: horizonte ``H`` (años) sobre el que se comparan expected
             returns, costes y métricas netas (E-03). Única fuente de verdad.
         random_seed: semilla raíz de toda aleatoriedad del motor.
+        hard_constraints: restricciones obligatorias de las carteras finales (global, perfiles y
+            carteras). ``None`` = módulo no configurado: el motor se comporta exactamente como
+            antes y el ``ConfigHash`` no cambia (``config_to_dict`` omite el campo si es ``None``).
     """
 
     data: DataConfig
@@ -54,6 +58,7 @@ class EngineConfig:
     scenarios: ScenarioConfig
     optimization_horizon_years: float
     random_seed: int
+    hard_constraints: HardConstraintsConfig | None = None
 
     def __post_init__(self) -> None:
         expected_types = {
@@ -76,5 +81,9 @@ class EngineConfig:
         for name, expected in expected_types.items():
             if not isinstance(getattr(self, name), expected):
                 raise ConfigError(f"{name} debe ser {expected.__name__}.")
+        if self.hard_constraints is not None and not isinstance(
+            self.hard_constraints, HardConstraintsConfig
+        ):
+            raise ConfigError("hard_constraints debe ser HardConstraintsConfig o None.")
         require_positive(self.optimization_horizon_years, "optimization_horizon_years")
         require_int_at_least(self.random_seed, 0, "random_seed")

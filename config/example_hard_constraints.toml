@@ -1,0 +1,67 @@
+# Restricciones OBLIGATORIAS de las carteras finales (HARD_CONSTRAINTS_DESIGN.md).
+#
+# Configuracion de EJEMPLO. Se carga con ``load_hard_constraints(path)`` y se adjunta a un
+# ``EngineConfig`` con ``dataclasses.replace(config, hard_constraints=...)``, o se incluye tal cual
+# como tabla ``[hard_constraints]`` en el TOML del motor. Sin esta seccion el motor y su ConfigHash
+# no cambian. Cada clave omitida significa "no configurado" (nunca un valor implicito), salvo
+# ``cardinality_policy``, cuyo valor efectivo es FIXED si ningun nivel lo define.
+#
+# Unidades: pesos como fraccion del NAV (0.2 = 20 %); volatilidad y retorno ANUALIZADOS en tanto por
+# uno (0.15 = 15 % anual), las mismas del RiskModel.
+#
+# Precedencia: global (esta tabla + campos globales del motor) < perfil < cartera/PortfolioSpec.
+# Un nivel posterior solo puede ENDURECER un limite; relajarlo exige una relaxation_authorization.
+
+[hard_constraints]
+# --- Cardinalidad (posiciones realmente mantenidas, w_i > position_weight_threshold) ---
+cardinality_policy = "FIXED"          # FIXED | INCREASE | DECREASE
+# target_size = 11                    # tamano exacto (debe ser compatible con la politica)
+# min_size / max_size                 # intervalo absoluto adicional
+# max_size_increase = 2               # obligatorio con INCREASE (o max_size)
+# max_size_decrease = 2               # obligatorio con DECREASE (o min_size)
+
+# --- Componentes respecto a la cartera original ---
+max_replacements = 3                  # sustituciones uno a uno: min(altas, bajas)
+max_total_changed_assets = 6          # altas + bajas
+# max_added_assets / max_removed_assets / max_pure_additions / max_pure_removals
+
+# --- Banda de volatilidad anualizada (HARD) ---
+min_volatility = 0.08
+max_volatility = 0.18
+volatility_band_enforcement = "HARD"
+# min_volatility hace el problema NO convexo: la estrategia de busqueda se declara explicitamente.
+band_max_starts = 6
+band_max_iterations = 25
+band_convergence_tolerance = 1e-9
+
+# --- Pesos y concentracion ---
+min_active_weight = 0.02              # obligatorio: peso minimo estrictamente positivo por posicion
+max_active_weight = 0.20
+max_concentration_hhi = 0.18          # sum(w^2) <=
+min_effective_number_of_positions = 6 # 1 / sum(w^2) >=
+# diversification_penalty_weight = 0.0   # objetivo secundario BLANDO (no es una restriccion)
+
+# --- Retorno esperado y costes ---
+preserve_original_expected_return = true   # mu'w >= mu'w0
+expected_return_treatment = "GROSS"        # GROSS | NET (obligatorio con un minimo de retorno)
+# min_expected_return = 0.05
+# max_transaction_cost = 0.01
+
+# --- Definiciones y tolerancias (solo nivel global; cada una <= 1e-6) ---
+# position_weight_threshold = 1e-8     # por defecto: frontier.zero_weight_tolerance
+volatility_tolerance = 1e-8
+
+[hard_constraints.profiles.CONSERVATIVE]
+max_volatility = 0.12                  # endurece el maximo global
+
+[hard_constraints.portfolios.P1]
+profile = "CONSERVATIVE"
+max_replacements = 2                   # endurece el maximo global
+
+[hard_constraints.portfolios.P2]
+max_volatility = 0.22                  # RELAJA el maximo global: exige autorizacion
+[[hard_constraints.portfolios.P2.relaxation_authorizations]]
+field = "max_volatility"
+authorized_by = "Comite de Riesgos"
+reason = "Mandato agresivo aprobado para la cartera P2"
+reference = "ACTA-2026-10-001"

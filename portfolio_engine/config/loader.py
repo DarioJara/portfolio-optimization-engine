@@ -30,6 +30,12 @@ from portfolio_engine.config.data_config import DataConfig
 from portfolio_engine.config.engine_config import EngineConfig
 from portfolio_engine.config.exact_mip_config import ExactMIPConfig
 from portfolio_engine.config.frontier_config import FrontierConfig
+from portfolio_engine.config.hard_constraints_config import (
+    HardConstraintsConfig,
+    MandateLevel,
+    MandateSettings,
+    RelaxationAuthorization,
+)
 from portfolio_engine.config.return_config import ReturnConfig
 from portfolio_engine.config.risk_config import RiskConfig
 from portfolio_engine.config.robust_config import RobustConfig
@@ -39,6 +45,9 @@ from portfolio_engine.config.transaction_cost_config import TransactionCostConfi
 from portfolio_engine.exceptions import ConfigError
 
 ENGINE_SECTION = "engine"
+#: Sección opcional: restricciones obligatorias de las carteras finales (véase
+#: ``load_hard_constraints``). Su ausencia deja el motor y su ``ConfigHash`` exactamente como antes.
+HARD_CONSTRAINTS_SECTION = "hard_constraints"
 _SECTIONS: Mapping[str, type[Any]] = types.MappingProxyType(
     {
         "data": DataConfig,
@@ -68,7 +77,7 @@ def load_engine_config(source: str | Path | Mapping[str, Any]) -> EngineConfig:
     if not isinstance(raw, Mapping):
         raise ConfigError("La configuración debe ser un diccionario de secciones.")
     known = {ENGINE_SECTION, *_SECTIONS}
-    unknown = sorted(set(raw) - known)
+    unknown = sorted(set(raw) - known - {HARD_CONSTRAINTS_SECTION})
     if unknown:
         raise ConfigError(f"Secciones de configuración desconocidas: {unknown}")
     missing = sorted(known - set(raw))
@@ -91,6 +100,63 @@ def load_engine_config(source: str | Path | Mapping[str, Any]) -> EngineConfig:
             engine["optimization_horizon_years"], float, "engine.optimization_horizon_years"
         ),
         random_seed=_convert(engine["random_seed"], int, "engine.random_seed"),
+        hard_constraints=(
+            load_hard_constraints(raw[HARD_CONSTRAINTS_SECTION])
+            if HARD_CONSTRAINTS_SECTION in raw
+            else None
+        ),
+    )
+
+
+def load_hard_constraints(source: str | Path | Mapping[str, Any]) -> HardConstraintsConfig:
+    """Carga las restricciones obligatorias desde un TOML (con tabla ``[hard_constraints]``).
+
+    Estructura: la tabla ``[hard_constraints]`` es el nivel global;
+    ``[hard_constraints.profiles.X]`` y ``[hard_constraints.portfolios.ID]`` son overrides por
+    perfil y por cartera (esta última puede declarar ``profile = "X"``);
+    ``[[...relaxation_authorizations]]`` autoriza relajar un campo.
+    Las mismas reglas estrictas del cargador: clave desconocida o tipo erróneo es ``ConfigError``.
+    """
+    raw: object = source
+    if isinstance(source, (str, Path)):
+        document = read_toml(source)
+        raw = document.get(HARD_CONSTRAINTS_SECTION, document)
+    if not isinstance(raw, Mapping):
+        raise ConfigError("[hard_constraints] debe ser una tabla.")
+    body = dict(raw)
+    profiles = body.pop("profiles", {})
+    portfolios = body.pop("portfolios", {})
+    for name, table in (("profiles", profiles), ("portfolios", portfolios)):
+        if not isinstance(table, Mapping):
+            raise ConfigError(f"[hard_constraints.{name}] debe ser una tabla de tablas.")
+    return HardConstraintsConfig(
+        global_settings=_build(MandateSettings, body, HARD_CONSTRAINTS_SECTION),
+        profiles=tuple(_level(name, table, "profiles") for name, table in sorted(profiles.items())),
+        portfolios=tuple(
+            _level(name, table, "portfolios") for name, table in sorted(portfolios.items())
+        ),
+    )
+
+
+def _level(name: str, table: object, kind: str) -> MandateLevel:
+    path = f"{HARD_CONSTRAINTS_SECTION}.{kind}.{name}"
+    if not isinstance(table, Mapping):
+        raise ConfigError(f"[{path}] debe ser una tabla.")
+    body = dict(table)
+    authorizations = body.pop("relaxation_authorizations", [])
+    profile = body.pop("profile", None) if kind == "portfolios" else None
+    if not isinstance(authorizations, list):
+        raise ConfigError(f"{path}.relaxation_authorizations debe ser una lista de tablas.")
+    if profile is not None and not isinstance(profile, str):
+        raise ConfigError(f"{path}.profile debe ser texto.")
+    return MandateLevel(
+        name=name,
+        settings=_build(MandateSettings, body, path),
+        relaxations=tuple(
+            _build(RelaxationAuthorization, item, f"{path}.relaxation_authorizations[{index}]")
+            for index, item in enumerate(authorizations)
+        ),
+        profile=profile,
     )
 
 

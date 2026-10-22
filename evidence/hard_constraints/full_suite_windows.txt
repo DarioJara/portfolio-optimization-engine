@@ -1,0 +1,27 @@
+# Suite completa (Windows 11, Python 3.13.6, .venv; rama feature/hard-constraints-final-portfolios)
+# Comando: .venv/Scripts/python.exe -m pytest tests -q -p no:cacheprovider --durations=10
+# Se omiten las lineas de progreso (puntos); se conservan duraciones, omisiones y el resumen.
+
+============================ slowest 10 durations =============================
+38.66s setup    tests/integration/test_parallel_equivalence.py::test_parallel_results_match_sequential_results_under_t1[W0-GROSS-RISK]
+29.97s call     tests/unit/parallel/test_executor.py::test_a_poison_task_is_found_even_without_warm_up
+29.47s call     tests/integration/test_recovery.py::test_resume_after_the_cause_of_the_failure_is_fixed_completes_the_task
+28.72s call     tests/unit/parallel/test_executor.py::test_a_poison_task_is_quarantined_and_healthy_neighbours_complete[batch of 1]
+28.15s call     tests/integration/test_recovery.py::test_a_batch_over_its_deadline_is_split_and_only_the_hanging_task_fails
+27.74s call     tests/integration/test_recovery.py::test_workers_that_are_recycled_are_not_mistaken_for_crashes
+27.06s call     tests/unit/parallel/test_executor.py::test_a_poison_task_is_quarantined_and_healthy_neighbours_complete[batch of 2]
+26.16s call     tests/integration/test_recovery.py::test_more_deadlines_than_the_failure_budget_still_let_healthy_tasks_finish
+24.70s call     tests/unit/candidates/test_determinism.py::test_candidate_generation_does_not_depend_on_the_python_hash_seed
+22.58s call     tests/integration/test_recovery.py::test_a_poison_task_does_not_fail_its_healthy_batch_neighbours
+=========================== short test summary info ===========================
+SKIPPED [1] tests\integration\test_forkserver_linux.py:24: forkserver Linux-only CI test
+SKIPPED [1] tests\integration\test_recovery_linux.py:110: evidencia espec?fica de Linux
+SKIPPED [1] tests\integration\test_recovery_linux.py:130: evidencia espec?fica de Linux
+SKIPPED [1] tests\integration\test_recovery_linux.py:146: evidencia espec?fica de Linux
+SKIPPED [1] tests\integration\test_recovery_linux.py:164: evidencia espec?fica de Linux
+SKIPPED [1] tests\integration\test_recovery_linux.py:199: evidencia espec?fica de Linux
+SKIPPED [1] tests\integration\test_recovery_linux.py:218: evidencia espec?fica de Linux
+SKIPPED [1] tests\integration\test_recovery_linux.py:231: evidencia espec?fica de Linux
+SKIPPED [1] tests\unit\parallel\test_journal.py:375: permisos POSIX
+SKIPPED [1] tests\unit\parallel\test_shared_data.py:256: inventario de /dev/shm solo en Linux
+2095 passed, 10 skipped in 1431.31s (0:23:51)
