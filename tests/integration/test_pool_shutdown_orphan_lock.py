@@ -18,8 +18,11 @@ from __future__ import annotations
 import subprocess
 import sys
 import textwrap
+from types import SimpleNamespace
 
 import pytest
+
+from portfolio_engine.parallel import supervisor as supervisor_module
 
 pytestmark = pytest.mark.integration
 
@@ -81,11 +84,45 @@ def test_shutdown_after_killing_one_worker_completes_with_kill_pool_workers(vict
     assert _run(victim, "fixed", 60.0)
 
 
-def test_control_plain_shutdown_hangs_when_the_killed_worker_held_the_queue_lock() -> None:
-    """Control: sin la corrección, en una de las dos ejecuciones el cierre se cuelga.
+class _FakeProcess:
+    def __init__(self, alive: bool, events: list[str], name: str) -> None:
+        self._alive, self._events, self._name = alive, events, name
 
-    Documenta el riesgo de CPython que justifica ``kill_pool_workers``. Si una versión futura de
-    Python lo corrigiera, esta prueba fallará y indicará que la protección puede revisarse.
-    """
-    outcomes = [_run(victim, "plain", 15.0) for victim in (0, 1)]
-    assert outcomes.count(False) >= 1, outcomes
+    def is_alive(self) -> bool:
+        return self._alive
+
+    def kill(self) -> None:
+        self._events.append(f"kill:{self._name}")
+        self._alive = False
+
+
+class _FakePool:
+    def __init__(self, events: list[str]) -> None:
+        self._events = events
+        self._processes = {
+            1: _FakeProcess(True, events, "registered"),
+            2: _FakeProcess(True, events, "unregistered"),
+            3: _FakeProcess(False, events, "dead"),
+        }
+
+    def shutdown(self, wait: bool, cancel_futures: bool) -> None:
+        self._events.append(f"shutdown:{wait}:{cancel_futures}")
+
+
+def test_terminate_pool_kills_every_live_worker_before_waiting_for_the_shutdown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Orden determinista: se matan todos los workers vivos (registrados o no) y solo después
+    se espera el cierre; así ningún superviviente queda esperando un semáforo huérfano."""
+    events: list[str] = []
+    monkeypatch.setattr(
+        supervisor_module.markers,
+        "terminate_owned",
+        lambda pid, token: events.append(f"owned:{pid}"),
+    )
+    snapshot = SimpleNamespace(workers=[7], tasks={}, tokens={})
+    pool = _FakePool(events)
+    supervisor_module.BatchSupervisor._terminate_pool(object(), pool, snapshot)  # type: ignore[arg-type]
+    assert events[0] == "owned:7"
+    assert sorted(events[1:3]) == ["kill:registered", "kill:unregistered"]
+    assert events[3] == "shutdown:True:True" and len(events) == 4  # el proceso muerto no se mata
