@@ -1711,3 +1711,67 @@ El run `39748508753` se canceló a los 44 min en la suite completa. Diagnóstico
 ### Limitaciones (abiertas)
 
 Suite de integración completa de Windows no repetida tras la corrección; que el run cancelado fuese este cuelgue es coherente pero no demostrable (sin logs); `ci.yml` sigue sin tope por prueba (propuesta: `faulthandler_timeout`, no aplicada).
+
+---
+
+## [Restricciones obligatorias de carteras finales (HC)] — 2026-10-22
+
+Rama `feature/hard-constraints-final-portfolios` (desde `origin/main` `75d8bb5`; no toca el PR #9). Código y pruebas en `03661f4`.
+Auditoría: `AUDIT_PORTFOLIO_HARD_CONSTRAINTS.md`; diseño: `HARD_CONSTRAINTS_DESIGN.md`; informe: `HARD_CONSTRAINTS_IMPLEMENTATION_REPORT.md`;
+pruebas: `HARD_CONSTRAINTS_TEST_MATRIX.md`.
+
+### Alcance
+
+El motor sin modificar publicaba como válidos puntos con cardinalidad, sustituciones, volatilidad o concentración fuera de mandato
+(sobre 11 posiciones: 195/240 puntos con menos de 11 posiciones y 131/240 con más de 3 sustituciones). Se añade un mandato parametrizable
+(opcional; sin la sección `[hard_constraints]` el motor y su `ConfigHash` `86af211e` no cambian). **Ningún estado de los 316 `RequirementID`
+cambia**; se registran los requisitos propuestos `HC-001…HC-014` fuera de ese total. No se modifican solvers, tolerancias ni `MASTER_SPEC.md`.
+
+### Baseline de no regresión
+
+`tests/unit/{constraints,validation,config,candidates}`: **556 passed** antes de modificar. Suite completa final: **2095 passed, 10 skipped** (Windows,
+23 min 51 s), 2105 colectadas = 1975 existentes + 130 nuevas.
+
+### Añadido
+
+- `config/hard_constraints_config.py`: `MandateSettings`, `MandateLevel`, `RelaxationAuthorization`, `HardConstraintsConfig` (carga TOML estricta en
+  `config/loader.py`; `EngineConfig.hard_constraints` opcional, omitido del `ConfigHash` si es `None`). `config/example_hard_constraints.toml`.
+- `models/hard_constraints.py`, `models/enums.py` (`CardinalityPolicy`, `VolatilityBandEnforcement`, `AuditStatus`): `EffectiveHardConstraints`
+  (procedencia, autorizaciones, `effective_hash`), `FinalProposalReport`, `HardConstraintAudit`, `BandProposal`.
+- `hard_constraints/`: `resolver.py` (precedencia global < perfil < cartera, relajamiento solo con autorización trazable, `derive_engine_config`),
+  `preflight.py` (factibilidad previa `HC_*`), `validator.py` (`FinalProposalValidator`), `counts.py`.
+- `constraints/integer.py`: `CompositionLimits` con intervalo de tamaño, retirados, cambios totales, sustituciones y altas/bajas independientes
+  (campos nuevos con valor por defecto: los llamadores existentes no cambian).
+- `candidates/`: `CandidateEngine.search_with_mandate` (una búsqueda por tamaño admisible) y `merge.py`.
+- `frontiers/`: `HardConstraintGate` (auditoría por punto; envolvente solo entre aceptados; ranking secundario) y `VolatilityBandSolver`
+  (relajación convexa certificada + procedimiento DC con cortes tangentes para `σ_min`).
+- `models/frontier.py`: `GlobalFrontierResult.hard_constraint_audit`, `accepted_points`, `accepted_envelope`.
+- 130 pruebas nuevas (`tests/unit/hard_constraints/`, `tests/unit/frontiers/test_{volatility_band,hard_constraint_gate}.py`,
+  `tests/unit/candidates/test_mandate_search.py`, `tests/unit/test_traceability_contract.py`, `tests/integration/test_hard_constraints_{pipeline,parallel}.py`).
+- `evidence/hard_constraints/`: medición del motor sin mandato, control de mutación (15/15 detectados) y resumen de la suite completa.
+
+### Modificado
+
+- `validation/composition_validator.py`: parámetro opcional `limits`.
+- `frontiers/global_frontier.py`: ruta con mandato (configuración derivada, `VolatilityLimit` fuera de la frontera QP, sin solver si el mandato es
+  inviable); sin mandato el flujo es el de siempre.
+- `parallel/task.py`: con mandato, solo `GLOBAL_FRONTIER`; las demás operaciones se rechazan antes de ejecutar (`FAILED_INPUT_VALIDATION`).
+- `tests/unit/test_architecture_rules.py`: paquete `hard_constraints` en el grafo de capas y dos constantes de seguridad con nombre
+  (`TOLERANCE_CEILING`, `BAND_TOLERANCE_FRACTION`).
+
+### Verificación (ejecutada realmente)
+
+| Comprobación | Resultado |
+|---|---|
+| Suite completa (Windows 11, Python 3.13.6, `.venv`) | 2095 passed, 10 skipped (preexistentes de plataforma) |
+| `mypy --strict portfolio_engine` | sin errores (186 ficheros) |
+| `ruff check .` y `ruff format --check .` | limpios (409 ficheros) |
+| Secuencial ≡ paralelo (T1, 2 workers `spawn`), diario y reanudación con mandato | 6 pruebas passed |
+| Control de mutación (15 defectos) | 15 detectados, 0 supervivientes |
+| `ConfigHash` de la configuración de ejemplo | `86af211e` (sin cambio) |
+
+### Limitaciones (abiertas)
+
+`σ >= σ_min` es no convexa: se garantiza admisibilidad, no optimalidad global (`FEASIBLE_LOCAL` con brecha); `NO_FEASIBLE_SOLUTION` no prueba
+inviabilidad; `Σ w²`/`N_eff` solo se validan en la frontera QP; el objetivo de diversificación solo ordena propuestas admisibles; solo `GLOBAL_FRONTIER`
+impone el mandato; sin ejecución Linux/CI. Decisiones D-1…D-5 pendientes (`HARD_CONSTRAINTS_DESIGN.md` §13).

@@ -1535,3 +1535,29 @@ la desviación #4 en §3.1.
 Ambos métodos usan `numpy.linalg.eigh` (no `eigvalsh`) para la reconstrucción, evitando la
 pérdida de precisión de `eigvalsh` documentada en `CHANGELOG.md` (Bloque 1, "Limitaciones
 conocidas") para magnitudes de entrada extremas (~1e-160), irrelevante en covarianzas reales.
+
+
+---
+
+## Anexo C — Restricciones obligatorias de carteras finales (HC)
+
+> Diseño completo y matemática en `HARD_CONSTRAINTS_DESIGN.md`; auditoría previa en `AUDIT_PORTFOLIO_HARD_CONSTRAINTS.md`.
+> No modifica `MASTER_SPEC.md`: las enmiendas E-HC-01…07 están propuestas para aprobación.
+
+**Paquetes y dependencias (§4.1).** Se añade `hard_constraints` (lógica pura: `resolver`, `preflight`, `validator`, `counts`) que depende solo de
+`exceptions`, `utils`, `models`, `config`, `costs`, `constraints` y `validation` (nunca de `optimizers`, `frontiers` ni `candidates`). Las clases de
+datos viven en `config/hard_constraints_config.py` y `models/hard_constraints.py` (para respetar el grafo de capas). Lo consumen `candidates`
+(`search_with_mandate`, `merge`), `frontiers` (`hard_constraint_gate`, `volatility_band`) y `parallel` (rechazo previo de operaciones no cubiertas).
+`tests/unit/test_architecture_rules.py::ALLOWED_DEPENDENCIES` refleja estas aristas.
+
+**Fuente de verdad.** `EngineConfig.hard_constraints` (opcional, omitido del `ConfigHash` si es `None`) → `resolve_hard_constraints(config, portfolio_id,
+spec, pesos actuales)` → `EffectiveHardConstraints` (valores efectivos, procedencia, autorizaciones aplicadas, `effective_hash`). `derive_engine_config`
+alinea con él los campos que ya leían B1–B4 (`frontier.min_holding_weight`, `constraints.global_min/max_weight`, `candidates.max_new_assets/max_swaps`).
+
+**Flujo de `GlobalCandidateFrontierEngine.solve` con mandato.** preflight por tamaño → una búsqueda de composiciones por tamaño admisible →
+fronteras B2 por composición (con la configuración derivada) → `HardConstraintGate.audit` (validación final por punto, envolvente solo entre
+aceptados, ranking secundario) → `VolatilityBandSolver` por composición si hay banda de volatilidad. Sin mandato, el flujo es el de B3.
+
+**Estados.** `AuditStatus`: `FEASIBLE` · `NO_FEASIBLE_SOLUTION` (buscada y no hallada) · `INFEASIBLE` (demostrada por la factibilidad previa).
+`BandOutcome`: `OPTIMAL_CERTIFIED` · `FEASIBLE_LOCAL` · `NO_FEASIBLE_SOLUTION_FOUND` · `INFEASIBLE_PROVEN` · `SOLVER_FAILURE`. Los estados del solver
+(§45) viajan intactos y no se confunden con inviabilidad.
