@@ -50,6 +50,9 @@ from portfolio_engine.optimizers.base import (
 from portfolio_engine.optimizers.problem import CanonicalProblem, ConicProblem
 from portfolio_engine.optimizers.status import map_clarabel_status
 
+#: Estado nativo de Clarabel cuando se agota ``max_iter`` (el reintento mantiene la numérica).
+ITERATION_LIMIT_STATUS = "MaxIterations"
+
 SUPPORTED_CLASSES = frozenset({ProblemClass.QP, ProblemClass.LP, ProblemClass.SOCP})
 
 
@@ -140,6 +143,7 @@ class ClarabelBackend(OptimizationBackend):
         self._pending_setup_time = 0.0
         self._pending_update_time = 0.0
         self._updated_fields: list[str] = []
+        self._last_native_status = ""
 
     @property
     def name(self) -> str:
@@ -201,7 +205,7 @@ class ClarabelBackend(OptimizationBackend):
             raise SolverError(f"Clarabel no admite {type(problem).__name__}.")
         started = time.perf_counter()
         form = to_conic_form(problem, problem.q, problem.lower, problem.upper)
-        self._solver = self._new_solver(form, self._conic.max_iterations)
+        self._solver = self._new_solver(form, self._conic.max_iterations, self._conic.equilibrate)
         elapsed = time.perf_counter() - started
         self._problem = problem
         self._form = form
@@ -240,7 +244,9 @@ class ClarabelBackend(OptimizationBackend):
         if form.same_structure(current):
             self._solver.update(q=merged_q, b=form.b)
         else:
-            self._solver = self._new_solver(form, self._conic.max_iterations)
+            self._solver = self._new_solver(
+                form, self._conic.max_iterations, self._conic.equilibrate
+            )
             self._setup_count += 1
         elapsed = time.perf_counter() - started
         self._form = form
@@ -263,6 +269,7 @@ class ClarabelBackend(OptimizationBackend):
     def solve(self) -> SolveResult:
         """Resuelve con los datos actuales del workspace."""
         raw = self._require_solver().solve()
+        self._last_native_status = str(raw.status)
         result = self._normalize(
             raw,
             setup_time=self._pending_setup_time,
@@ -276,11 +283,25 @@ class ClarabelBackend(OptimizationBackend):
         return result
 
     def cold_retry(self) -> SolveResult:
-        """Reintento en frío: solver nuevo con los datos actuales y más iteraciones."""
+        """Reintento en frío: solver nuevo con los datos actuales y más iteraciones.
+
+        Las tolerancias son las configuradas (no se relajan). Tras un estancamiento numérico
+        (``AlmostSolved``, ``NumericalError``, ``InsufficientProgress``) repetir el mismo método
+        determinista reproduce el mismo estancamiento, así que el reintento usa otra numérica
+        (``conic.retry_equilibrate``); un ``Solved`` del reintento cumple exactamente las mismas
+        condiciones que uno del primer intento. Tras ``MaxIterations`` el límite era el nº de
+        iteraciones, no la numérica: se conserva el equilibrado primario. El estado del reintento
+        es el suyo (nunca se mejora artificialmente).
+        """
         form = self._require_form()
         iterations = self._conic.max_iterations * self._solver_config.retry_iteration_multiplier
         started = time.perf_counter()
-        retry = self._new_solver(form, iterations)
+        equilibrate = (
+            self._conic.equilibrate
+            if self._last_native_status == ITERATION_LIMIT_STATUS
+            else self._conic.retry_equilibrate
+        )
+        retry = self._new_solver(form, iterations, equilibrate)
         setup_time = time.perf_counter() - started
         return self._normalize(
             retry.solve(),
@@ -292,7 +313,7 @@ class ClarabelBackend(OptimizationBackend):
 
     # -------------------------------------------------------------------------------- internos
 
-    def _new_solver(self, form: ConicForm, max_iterations: int) -> Any:
+    def _new_solver(self, form: ConicForm, max_iterations: int, equilibrate: bool) -> Any:
         settings = clarabel.DefaultSettings()
         settings.verbose = False
         settings.max_iter = max_iterations
@@ -301,7 +322,7 @@ class ClarabelBackend(OptimizationBackend):
         settings.tol_feas = self._conic.tol_feas
         settings.tol_infeas_abs = self._conic.tol_infeas_abs
         settings.tol_infeas_rel = self._conic.tol_infeas_rel
-        settings.equilibrate_enable = self._conic.equilibrate
+        settings.equilibrate_enable = equilibrate
         if self._conic.time_limit_seconds is not None:
             settings.time_limit = self._conic.time_limit_seconds
         return clarabel.DefaultSolver(form.P, form.q, form.A, form.b, list(form.cones), settings)

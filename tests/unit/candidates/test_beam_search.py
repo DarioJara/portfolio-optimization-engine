@@ -134,10 +134,10 @@ def test_diversity_min_distance_separates_the_survivors() -> None:
     )
     children = list(expansion.children)
     assert len(children) > 6
-    apart = select_survivors(children, 6, 2)
+    apart = select_survivors(children, 6, 2, config.candidates.improvement_tolerance)
     ids = [frozenset(node.prepared.asset_ids) for node in apart]
     assert all(swap_count(a, b) >= 2 for i, a in enumerate(ids) for b in ids[i + 1 :])
-    close = select_survivors(children, 6, 1)
+    close = select_survivors(children, 6, 1, config.candidates.improvement_tolerance)
     assert any(
         swap_count(frozenset(a.prepared.asset_ids), frozenset(b.prepared.asset_ids)) == 1
         for i, a in enumerate(close)
@@ -163,11 +163,12 @@ def test_selection_orders_by_estimated_gain_and_breaks_ties_by_hash() -> None:
         )
         .children
     )
-    chosen = select_survivors(children, 6, 1)
+    chosen = select_survivors(children, 6, 1, config.candidates.improvement_tolerance)
     keys = [node.ranking_key() for node in chosen]
     assert keys == sorted(keys) and len(chosen) == 6
     assert (
-        select_survivors(list(reversed(children)), 6, 1) == chosen
+        select_survivors(list(reversed(children)), 6, 1, config.candidates.improvement_tolerance)
+        == chosen
     )  # independiente del orden de entrada
 
 

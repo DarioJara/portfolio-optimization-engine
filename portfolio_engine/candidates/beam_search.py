@@ -25,6 +25,7 @@ from portfolio_engine.candidates.expansion import (
     SearchNode,
     SearchServices,
     StageAccumulator,
+    rank_nodes,
 )
 from portfolio_engine.candidates.screening import ScreeningResult
 from portfolio_engine.constraints.integer import swap_count
@@ -50,15 +51,17 @@ class SearchOutcome:
 
 
 def select_survivors(
-    nodes: Sequence[SearchNode], width: int, min_distance: int
+    nodes: Sequence[SearchNode], width: int, min_distance: int, tie_tolerance: float
 ) -> list[SearchNode]:
     """Hasta ``width`` nodos por orden de búsqueda con distancia mínima entre ellos.
 
     La distancia entre dos composiciones es ``swap_count`` (activos sustituidos); con
-    ``min_distance = 1`` solo se descartan duplicados.
+    ``min_distance = 1`` solo se descartan duplicados. Las mejoras que distan menos de
+    ``tie_tolerance`` son un empate y se desempatan por hash (:func:`rank_nodes`), de modo que la
+    selección no depende del ruido de redondeo de la CPU.
     """
     kept: list[SearchNode] = []
-    for node in sorted(nodes, key=SearchNode.ranking_key):
+    for node in rank_nodes(nodes, tie_tolerance):
         if len(kept) == width:
             break
         ids = frozenset(node.prepared.asset_ids)
@@ -114,7 +117,12 @@ class BeamSearch:
                 children.extend(expansion.children)
                 if root_screening is None:
                     root_screening, root_shortlist = expansion.screening, expansion.shortlisted
-            survivors = select_survivors(children, config.beam_width, config.diversity_min_distance)
+            survivors = select_survivors(
+                children,
+                config.beam_width,
+                config.diversity_min_distance,
+                config.improvement_tolerance,
+            )
             pool.update({child.composition_hash: child for child in children})
             finals = [node.gain for node in survivors if len(node.positions) == target]
             level_best = max(finals) if finals else None

@@ -120,6 +120,26 @@ class SupervisorHooks:
     report: Callable[[str, str], None]
 
 
+def kill_pool_workers(pool: ProcessPoolExecutor) -> int:
+    """Mata todos los workers vivos del ``pool`` y devuelve cuántos eran.
+
+    Solo se usa con un pool que se descarta. Terminar solo a los workers registrados deja un
+    bloqueo permanente si el terminado era el que, dentro de ``call_queue.get()``, sostenía el
+    semáforo de lectura de la cola: el semáforo no se libera, los demás workers esperan ese
+    semáforo para siempre, nunca reciben el centinela de cierre y ``shutdown(wait=True)`` no
+    termina (observado en CI en la prueba de iniciadores que siempre fallan;
+    ``REMEDIATION_H1_FB551.md`` §11). Los procesos de ``pool._processes`` son hijos propios del
+    coordinador, así que no hay riesgo de terminar un proceso ajeno.
+    """
+    processes = getattr(pool, "_processes", None) or {}
+    killed = 0
+    for process in list(processes.values()):
+        if process.is_alive():
+            process.kill()
+            killed += 1
+    return killed
+
+
 class _Seen:
     """Primera vez que el coordinador observó cada tarea y lote en curso (reloj propio)."""
 
@@ -432,6 +452,7 @@ class BatchSupervisor:
         targets = set(snapshot.workers) | {marker.pid for marker in snapshot.tasks.values()}
         for pid in targets:
             markers.terminate_owned(pid, snapshot.tokens.get(pid))
+        kill_pool_workers(pool)  # ningún superviviente puede quedar esperando un lock huérfano
         pool.shutdown(wait=True, cancel_futures=True)
 
     def _recover(self, pool: ProcessPoolExecutor) -> None:

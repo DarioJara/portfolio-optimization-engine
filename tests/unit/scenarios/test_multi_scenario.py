@@ -389,7 +389,11 @@ def test_worst_case_maximizes_the_minimum_scenario_utility() -> None:
             for _, _, mu, s in data
         ],
         method="SLSQP",
-        options={"ftol": 1e-15, "maxiter": 2000},
+        # ftol=1e-12 (no 1e-15): el óptimo |x4| ≈ 0,09 tiene un ulp de ≈ 1,4e-17 y ftol=1e-15
+        # exige ≈ 70 ulp, en la resolución de coma flotante: según la CPU SLSQP termina con
+        # «Positive directional derivative for linesearch» (H-1, INVESTIGATION_H1_B4.md §3). Las
+        # comprobaciones de abajo (atol=1e-4 en pesos, abs=1e-7 en el valor) no cambian.
+        options={"ftol": 1e-12, "maxiter": 2000},
     )
     assert result_oracle.success
     np.testing.assert_allclose(solution.weights, result_oracle.x[:4], atol=1e-4)

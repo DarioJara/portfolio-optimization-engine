@@ -1,0 +1,31 @@
+env: {"blas": [{"architecture": "Haswell", "internal_api": "openblas", "version": "0.3.34.106.0"}], "clarabel": "0.11.1", "cpu": {"flags": [], "model": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel"}, "env": {}, "numpy": "2.5.3", "numpy_cpu_features_enabled": ["AVX", "AVX2", "BMI", "BMI2", "CX16", "F16C", "FMA3", "GFNI", "LAHF", "LZCNT", "MMX", "MOVBE", "POPCNT", "SSE", "SSE2", "SSE3", "SSE41", "SSE42", "SSSE3", "VAES", "VPCLMULQDQ", "X86_V2", "X86_V3"], "os": "Windows-11-10.0.26200-SP0", "osqp": "1.1.3", "python": "3.13.6", "scipy": "1.18.1"}
+h1-config: {"equilibrate": true, "retry_equilibrate": false, "tol_feas": 1e-09}
+  0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------   
+  1  +1.4553e-01  -9.8351e-01  1.13e+00  1.08e-01  6.21e-02  4.10e-02  2.28e-01  8.77e-01  
+  2  +6.6071e-02  -1.2588e-01  1.92e-01  2.00e-02  1.24e-02  1.29e-02  5.18e-02  7.99e-01  
+  3  +9.7464e-02  +6.3112e-02  3.44e-02  3.58e-03  2.18e-03  2.08e-03  1.05e-02  9.28e-01  
+  4  +9.3584e-02  +8.9956e-02  3.63e-03  3.79e-04  2.35e-04  2.26e-04  1.15e-03  8.92e-01  
+  5  +9.2621e-02  +9.2549e-02  7.20e-05  7.53e-06  4.67e-06  4.59e-06  2.29e-05  9.83e-01  
+  6  +9.2609e-02  +9.2605e-02  3.63e-06  3.80e-07  2.35e-07  2.31e-07  1.16e-06  9.50e-01  
+  7  +9.2609e-02  +9.2609e-02  1.01e-07  1.06e-08  6.57e-09  6.61e-09  3.23e-08  9.77e-01  
+  8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01  
+  9  +9.2609e-02  +9.2609e-02  1.36e-11  3.60e-09  8.85e-13  9.05e-13  4.40e-12  9.90e-01  
+ 10  +9.2609e-02  +9.2609e-02  1.37e-13  1.50e-10  8.88e-15  9.05e-15  4.45e-14  9.90e-01  
+---------------------------------------------------------------------------------------------
+Terminated with status = Solved
+solve time = 1.0673ms
+h1-clarabel-tail: {"rows": []}
+h1-before: {"eps": 0.0, "iterations": [10], "n": 3, "states": {"OPTIMAL/SOLVER": 3}, "valid": 3}
+h1-before: {"eps": 1e-16, "iterations": [9, 10, 20, 22], "n": 30, "states": {"OPTIMAL/SOLVER": 14, "OPTIMAL_INACCURATE/CROSS_CHECK": 16}, "valid": 14}
+h1-before: {"eps": 1e-14, "iterations": [9, 10, 20, 22], "n": 30, "states": {"OPTIMAL/SOLVER": 12, "OPTIMAL_INACCURATE/CROSS_CHECK": 18}, "valid": 12}
+h1-before: {"eps": 1e-12, "iterations": [9, 20, 22], "n": 30, "states": {"OPTIMAL/SOLVER": 8, "OPTIMAL_INACCURATE/CROSS_CHECK": 22}, "valid": 8}
+h1-after: {"eps": 0.0, "iterations": [10], "n": 3, "states": {"OPTIMAL/SOLVER": 3}, "valid": 3}
+h1-after: {"eps": 1e-16, "iterations": [9, 10, 18, 19], "n": 30, "states": {"OPTIMAL/CROSS_CHECK": 16, "OPTIMAL/SOLVER": 14}, "valid": 30}
+h1-after: {"eps": 1e-14, "iterations": [9, 10, 18, 19], "n": 30, "states": {"OPTIMAL/CROSS_CHECK": 18, "OPTIMAL/SOLVER": 12}, "valid": 30}
+h1-after: {"eps": 1e-12, "iterations": [9, 18, 19], "n": 30, "states": {"OPTIMAL/CROSS_CHECK": 22, "OPTIMAL/SOLVER": 8}, "valid": 30}
+  static reg : on, ϵ1 = 1.0e-8, ϵ2 = 4.9e-32  dynamic reg: on, ϵ = 1.0e-13, δ = 2.0e-7iter    pcost        dcost       gap       pres      dres      k/t        μ       step      fb551-before: {"different": 10, "eps": 1e-16, "n": 12, "reference_size": 10, "same_candidates": 2}
+fb551-before: {"different": 11, "eps": 1e-14, "n": 12, "reference_size": 10, "same_candidates": 1}
+fb551-before: {"different": 12, "eps": 1e-12, "n": 12, "reference_size": 10, "same_candidates": 0}
+fb551-after: {"different": 0, "eps": 1e-16, "n": 12, "reference_size": 9, "same_candidates": 12}
+fb551-after: {"different": 0, "eps": 1e-14, "n": 12, "reference_size": 9, "same_candidates": 12}
+fb551-after: {"different": 0, "eps": 1e-12, "n": 12, "reference_size": 9, "same_candidates": 12}

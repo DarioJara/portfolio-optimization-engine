@@ -461,6 +461,7 @@ class _Search:
             self._finals(pool, services.target_size, reference_hash),
             cfg.local_search_starts,
             cfg.diversity_min_distance,
+            cfg.improvement_tolerance,
         )
         local = LocalSearch(services, expander)
         polishing_budget = EvaluationBudget(cfg.max_evaluations)
@@ -472,6 +473,7 @@ class _Search:
             self._finals(pool, services.target_size, reference_hash),
             cfg.beam_width,
             cfg.diversity_min_distance,
+            cfg.improvement_tolerance,
         )
         return _ProfileResult(
             lam,
