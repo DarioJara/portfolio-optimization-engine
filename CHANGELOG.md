@@ -1815,7 +1815,7 @@ Total 316 = **241 `VALIDATED` / 42 `PARTIAL` / 33 `NOT_IMPLEMENTED`** (B5.5 hab�
 | Windows 11 — Python 3.13.6, *worktree* limpio de `0be043a` (cabeza de código; los commits posteriores solo son documentación), sin carga concurrente | **2016 passed, 12 skipped, 0 failed** (16 min 30 s) |
 | Ídem, baseline previo de B5.5 (`933c0cc`) | 1994 passed, 11 skipped; la diferencia son las pruebas de la remediación de `main` y las nuevas de este cierre |
 | Linux — GitHub Actions, run `39774545136` (`0be043a`, Xeon Platinum 8573C, núcleo `SkylakeX`, Python 3.11.17) | **2028 passed, 3 skipped** (4 min 13 s); huella con 0 divergencias en los núcleos nativo, `Haswell` y `SkylakeX`; H-1 + desempate + multiescenario: 33 passed por núcleo |
-| (CI de la cabeza final) | se añade tras publicar: ver la sección 9 de `REMEDIATION_BLOCK_5_5.md` en la rama |
+| Linux — GitHub Actions, run `39776822484` (`389d897`, AMD EPYC 9V45, núcleo `SkylakeX`) | **2028 passed, 3 skipped** (5 min 00 s); mismas comprobaciones de núcleos con 0 divergencias |
 | `mypy --strict portfolio_engine` | 0 errores (179 ficheros) |
 | `ruff check .` y `ruff format --check .` | limpios |
 
