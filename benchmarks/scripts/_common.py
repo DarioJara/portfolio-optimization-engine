@@ -357,6 +357,30 @@ def weight_vectors(
     return found
 
 
+def solution_records(value: object) -> list[Any]:
+    """Objetos con ``weights``/``is_valid_solution``/``validation``/``status`` de una operación.
+
+    Puntos de frontera (de composición y de las composiciones de una frontera global) y
+    ``StrategyResult`` (también los de un multiescenario). Sin duplicados: no se recorre
+    ``GlobalFrontierResult.points`` (envuelve puntos que ya están en ``composition_results``).
+    """
+    records: list[Any] = []
+    if isinstance(value, CompositionFrontierResult):
+        records.extend(value.points)
+    elif isinstance(value, StrategyResult):
+        records.append(value)
+    elif isinstance(value, GlobalFrontierResult):
+        children: list[object] = list(value.composition_results)
+        children.append(value.continuous)
+        for child in children:
+            records.extend(solution_records(child))
+    elif isinstance(value, MultiScenarioResult):
+        children = [*value.frontiers, *value.strategies, value.single_solution]
+        for child in children:
+            records.extend(solution_records(child))
+    return records
+
+
 @dataclass
 class ConstraintAudit:
     """Resultado de la revalidación independiente de las soluciones de una ejecución."""
@@ -367,11 +391,19 @@ class ConstraintAudit:
     max_budget_error: float = 0.0
     max_bound_excess: float = 0.0
     flag_inconsistencies: int = 0
+    #: ``is_valid_solution`` falso con informe de validación válido (modo de fallo de H-1: pesos
+    #: correctos rechazados por la política de estado, p. ej. ``OPTIMAL_INACCURATE``).
+    valid_weights_but_rejected: int = 0
     status_histogram: dict[str, int] = field(default_factory=dict)
 
     @property
     def clean(self) -> bool:
-        return not (self.budget_violations or self.bound_violations or self.flag_inconsistencies)
+        return not (
+            self.budget_violations
+            or self.bound_violations
+            or self.flag_inconsistencies
+            or self.valid_weights_but_rejected
+        )
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -379,10 +411,47 @@ class ConstraintAudit:
             "budget_violations": self.budget_violations,
             "bound_violations": self.bound_violations,
             "flag_inconsistencies": self.flag_inconsistencies,
+            "valid_weights_but_rejected": self.valid_weights_but_rejected,
             "max_budget_error": self.max_budget_error,
             "max_bound_excess": self.max_bound_excess,
             "solver_status_histogram": dict(sorted(self.status_histogram.items())),
         }
+
+
+def _audit_weights(
+    value: object,
+    audit: ConstraintAudit,
+    caps: dict[str, float | None],
+    budget_tol: float,
+    bound_tol: float,
+) -> None:
+    """Presupuesto, largo-solo y ``MaxWeight`` de todos los vectores de pesos de ``value``."""
+    for ids, weights in weight_vectors(value):
+        audit.solutions += 1
+        budget_error = abs(float(weights.sum()) - 1.0)
+        audit.max_budget_error = max(audit.max_budget_error, budget_error)
+        if not np.isfinite(weights).all() or budget_error > budget_tol:
+            audit.budget_violations += 1
+        upper = np.array([caps[a] if caps[a] is not None else np.inf for a in ids])
+        excess = float(max((weights - upper).max(), (-weights).max()))
+        audit.max_bound_excess = max(audit.max_bound_excess, excess)
+        if excess > bound_tol:
+            audit.bound_violations += 1
+
+
+def _audit_flags(value: object, audit: ConstraintAudit) -> None:
+    """Coherencia ``is_valid_solution``/``validation`` y pesos válidos rechazados (modo H-1)."""
+    for wrapper in getattr(value, "points", ()):
+        point = getattr(wrapper, "point", wrapper)  # GlobalFrontierPoint envuelve un punto
+        key = f"point:{getattr(point.status, 'value', str(point.status))}"
+        audit.status_histogram[key] = audit.status_histogram.get(key, 0) + 1
+    for record in solution_records(value):
+        validation = getattr(record, "validation", None)
+        if record.is_valid_solution and validation is not None and not validation.is_valid:
+            audit.flag_inconsistencies += 1
+        rejected = record.weights is not None and not record.is_valid_solution
+        if rejected and validation is not None and validation.is_valid:
+            audit.valid_weights_but_rejected += 1
 
 
 def audit_constraints(
@@ -392,13 +461,12 @@ def audit_constraints(
 
     Para cada solución con pesos comprueba ``|Σw − 1| ≤ budget_tolerance``,
     ``w ≥ −bound_tolerance`` y ``w ≤ MaxWeight_i + bound_tolerance`` (tolerancias de
-    ``config.solver``). Además comprueba que ninguna solución marcada válida tenga un informe de
-    validación inválido. Complementa (no sustituye) al ``SolutionValidator`` que ya corre dentro del
-    motor sobre el 100 % de las soluciones, con todas las restricciones del mandato.
+    ``config.solver``). Además cuenta (a) soluciones marcadas válidas con informe de validación
+    inválido y (b) **pesos válidos rechazados** (``is_valid_solution`` falso con informe válido: el
+    modo de fallo de H-1). NO revisa grupos, rotación, cardinalidad, costes ni riesgo: esas
+    restricciones solo las cubre el ``SolutionValidator`` interno del motor.
     """
     audit = ConstraintAudit()
-    budget_tol = config.solver.budget_tolerance
-    bound_tol = config.solver.bound_tolerance
     caps = {a.asset_id: a.max_weight for a in snapshot.universe.assets}
     for result in results:
         for outcome in result.operations:
@@ -407,28 +475,10 @@ def audit_constraints(
             if status is not None:
                 key = getattr(status, "value", str(status))
                 audit.status_histogram[key] = audit.status_histogram.get(key, 0) + 1
-            for ids, weights in weight_vectors(value):
-                audit.solutions += 1
-                budget_error = abs(float(weights.sum()) - 1.0)
-                audit.max_budget_error = max(audit.max_budget_error, budget_error)
-                if not np.isfinite(weights).all() or budget_error > budget_tol:
-                    audit.budget_violations += 1
-                upper = np.array([caps[a] if caps[a] is not None else np.inf for a in ids])
-                excess = float(max((weights - upper).max(), (-weights).max()))
-                audit.max_bound_excess = max(audit.max_bound_excess, excess)
-                if excess > bound_tol:
-                    audit.bound_violations += 1
-            for wrapper in getattr(value, "points", ()):
-                point = getattr(wrapper, "point", wrapper)  # GlobalFrontierPoint envuelve un punto
-                point_status = getattr(point.status, "value", str(point.status))
-                key = f"point:{point_status}"
-                audit.status_histogram[key] = audit.status_histogram.get(key, 0) + 1
-                validation = getattr(point, "validation", None)
-                if point.is_valid_solution and validation is not None and not validation.is_valid:
-                    audit.flag_inconsistencies += 1
-            validation = getattr(value, "validation", None)
-            if getattr(value, "is_valid_solution", False) and validation is not None:
-                audit.flag_inconsistencies += 0 if validation.is_valid else 1
+            _audit_weights(
+                value, audit, caps, config.solver.budget_tolerance, config.solver.bound_tolerance
+            )
+            _audit_flags(value, audit)
     return audit
 
 
@@ -482,10 +532,17 @@ def solution_fingerprint(results: tuple[TaskResult, ...]) -> dict[str, Any]:
             for outcome in result.operations
             for point in getattr(outcome.result, "points", ())
         ]
+        strategy_statuses = [
+            getattr(record.status, "value", str(record.status))
+            for outcome in result.operations
+            for record in solution_records(outcome.result)
+            if isinstance(record, StrategyResult)
+        ]
         fingerprint[result.portfolio_id] = {
             "execution_status": result.execution_status.value,
             "solutions": vectors,
             "point_statuses": statuses,
+            "strategy_statuses": strategy_statuses,
         }
     return fingerprint
 

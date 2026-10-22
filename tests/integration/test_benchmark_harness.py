@@ -221,3 +221,20 @@ def test_throughput_rates_divide_the_deterministic_work_by_the_wall_time() -> No
         scaling_script._rates(cells, run, None)["sequential:w1:b-"]["solver_calls_per_second"]
         is None
     )
+
+
+def test_valid_weights_rejected_by_status_invalidate_the_audit() -> None:
+    """A-03 / H-1: pesos correctos con ``is_valid_solution`` falso (p. ej. ``OPTIMAL_INACCURATE``)
+    ya no pasan inadvertidos: el contador sube y la celda dejaría de ser válida."""
+    batch = SYNTHETIC.generate(SCALING, _pure("W0-GROSS-RISK"), 2, 6)
+    run = SequentialExecutor(batch.config, batch.snapshot).run(batch.requests)
+    assert COMMON.audit_constraints(run.results, batch.snapshot, batch.config).clean
+    point = run.results[0].operations[0].result.points[0]  # type: ignore[union-attr]
+    assert point.validation is not None and point.validation.is_valid
+    object.__setattr__(point, "is_valid_solution", False)
+    try:
+        audit = COMMON.audit_constraints(run.results, batch.snapshot, batch.config)
+    finally:
+        object.__setattr__(point, "is_valid_solution", True)
+    assert audit.valid_weights_but_rejected == 1 and not audit.clean
+    assert audit.to_json()["valid_weights_but_rejected"] == 1

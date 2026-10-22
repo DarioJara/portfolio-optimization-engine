@@ -8,6 +8,7 @@ suite (en CI, Linux) y exige T1 (``|Δpeso| ≤ 1e-6``) con igualdad exacta de r
 
 Uso::
 
+    python benchmarks/scripts/cross_platform_reference.py check     # exit 1 si hay divergencias
     python benchmarks/scripts/cross_platform_reference.py explain   # diagnóstico de divergencias
     python benchmarks/scripts/cross_platform_reference.py write     # regenerar (razón documentada)
 """
@@ -55,6 +56,8 @@ def differences(reference: dict[str, Any], current: dict[str, Any], tolerance: f
             found.append(f"{portfolio_id}: estado de ejecución distinto")
         if expected["point_statuses"] != got["point_statuses"]:
             found.append(f"{portfolio_id}: estados de solver distintos")
+        if expected.get("strategy_statuses") != got.get("strategy_statuses"):
+            found.append(f"{portfolio_id}: estados de solver de las estrategias distintos")
         if len(expected["solutions"]) != len(got["solutions"]):
             found.append(f"{portfolio_id}: nº de soluciones distinto")
             continue
@@ -109,7 +112,24 @@ def explain(reference: dict[str, Any], current: dict[str, Any], tolerance: float
     return lines or ["sin divergencias"]
 
 
+def openblas_kernel() -> str:
+    """Núcleo de OpenBLAS cargado (``threadpoolctl``), p. ej. ``Haswell`` o ``SkylakeX``."""
+    from threadpoolctl import threadpool_info
+
+    kernels = {
+        str(info.get("architecture")) for info in threadpool_info() if info.get("architecture")
+    }
+    return ",".join(sorted(kernels)) or "desconocido"
+
+
 def main() -> None:
+    if sys.argv[1:] == ["check"]:
+        document = json.loads(REFERENCE_PATH.read_text(encoding="utf-8"))
+        found = differences(document["portfolios"], compute(), 1e-6)
+        print(f"kernel={openblas_kernel()} divergencias={len(found)}")
+        for line in found:
+            print(line)
+        raise SystemExit(1 if found else 0)
     if sys.argv[1:] == ["explain"]:
         document = json.loads(REFERENCE_PATH.read_text(encoding="utf-8"))
         for line in explain(document["portfolios"], compute(), 1e-6):
