@@ -4,6 +4,11 @@ Fecha: 2026-10-21. Rama: `block5-benchmarks-final-audit` (base `main` `8ceaf3a`,
 **Estado final: `FINAL_STATUS = READY_FOR_INDEPENDENT_AUDIT`** (justificación en §12). Sin merge, sin despliegue, sin acceso a Arsys/Oracle/SQL Server,
 sin datos reales. **No se ejecutó ninguna carga de ≥ 1.000 carteras.**
 
+> **Actualización del cierre (2026-10-22).** Tras `AUDIT_BLOCK_5_5.md` (`PASS_WITH_CHANGES`) se integró `main` (PR #10), se retiró el `xfail` de F-B55-1, se corrigieron A-03, A-04, A-05, A-06 y A-07 y se
+> revisaron A-01 y A-02; el detalle y la verificación están en **`REMEDIATION_BLOCK_5_5.md`**, que prevalece sobre este informe donde difieran: §5.1 (F-B55-1 está **cerrado** y su causa es el núcleo de OpenBLAS, no
+> la plataforma), §7 y §10 (H-1: el fallo en EPYC 7763 **sí** se observó y está **remediado en `main`**), §9 (241 `VALIDATED` / 42 `PARTIAL`; `BEN-005`, `TST-005` y `PAR-003` degradados) y §12. Las cifras de
+> rendimiento no cambian (misma CPU, contadores de trabajo idénticos); las proyecciones son **orden de magnitud, no intervalo de confianza** (A-04).
+
 > Todas las cifras de este informe proceden de ejecuciones reales cuyos JSON están versionados en `benchmarks/results/` con commit
 > (árbol limpio), versiones, huella del host, comando y semilla (BEN-006; `tests/unit/benchmark/test_result_metadata.py` lo comprueba); las
 > cifras de **Linux** proceden de las anotaciones públicas de la CI de GitHub (los artefactos y logs no son accesibles sin autenticación).
@@ -44,7 +49,7 @@ lanzaba sondas de CPU en paralelo (162 pruebas tardaron 707 s). Aislada, la prue
 | Host | Windows 11 Home 10.0.26200, Intel Core i7-13620H (10 núcleos físicos / 16 lógicos, SMT activo, híbrido P+E), 16,9 GB de RAM |
 | Python y librerías | Python 3.13.6; numpy 2.5.3, scipy 1.18.1, osqp 1.1.3, clarabel 0.11.1, pyscipopt 6.2.1, threadpoolctl 3.7.0, psutil 7.2.2 |
 | Hilos BLAS | 1 por worker (línea base, PAR-007); `OMP/OPENBLAS/MKL_NUM_THREADS` sin definir en el coordinador |
-| **Presión de memoria** | **6,7–8,8 GB de swap en uso y 0,4–1,3 GB de RAM disponible al iniciar cada medición**, con 15–35 % de CPU de fondo (navegador y otras aplicaciones del usuario). Registrado en `metadata.host` de cada JSON |
+| **Presión de memoria** | **6,7–11,1 GB de swap en uso y 0,3–2,3 GB de RAM disponible al iniciar cada medición**, con 15–35 % de CPU de fondo (navegador y otras aplicaciones del usuario). Registrado en `metadata.host` de cada JSON |
 | Variabilidad observada | El **mismo trabajo** (688.707 iteraciones de solver, 6.404 llamadas, mismo `snapshot_key`) tardó **29,8 s** en una campaña y **17,8 s** en otra (×1,67); el arranque de un pool `spawn` con 4 workers osciló entre 6,3 s y 30,5 s |
 | Consecuencia | Los tiempos absolutos están inflados y son ruidosos; se informan **mínimo y mediana**, **contadores deterministas** (llamadas al solver, iteraciones, fronteras) y la comparación entre variantes **dentro de una misma campaña**. Las proyecciones llevan un factor ×1,67 explícito |
 | No disponible | Linux local (WSL sin distribución; `forkserver` no existe en Windows): la evidencia de `forkserver` y de Linux procede de la CI de GitHub (§10). No se midió en Arsys (prohibido) |
@@ -78,15 +83,17 @@ violaciones no es válida y el script termina con error.
 |---|---|
 | Diferencias T1 frente a la secuencial (`\|Δ\| ≤ 1e-6`, estados de ejecución y de solver idénticos) | **0** |
 | Diagnóstico T0 (igualdad exacta de cada `float` comparado, todas las repeticiones) | **0 flotantes distintos; `\|Δ\|` máx. = 0,0**: los resultados paralelos son idénticos bit a bit a los secuenciales en esta máquina |
-| Auditoría independiente de restricciones (presupuesto, largo-solo, `MaxWeight`, coherencia `is_valid_solution`/`validation`) | **0 violaciones** en 208.452 soluciones revalidadas |
+| Auditoría independiente de restricciones (presupuesto, largo-solo, `MaxWeight`, coherencia `is_valid_solution`/`validation`) | **0 violaciones** en 208.452 **re-auditorías** (suma sobre las 100 celdas, que revalidan los mismos lotes; ≈ 59 lotes y ≈ 127.000 soluciones distintas según la auditoría independiente) de presupuesto, largo-solo y `MaxWeight`; no revisa grupos, rotación, cardinalidad, costes ni riesgo (solo el validador interno del motor). Desde el cierre cuenta también los pesos válidos rechazados por estado (`valid_weights_but_rejected`) |
 | Integridad (cada `TaskID` exactamente una vez; enviadas = Σ estados finales) | cumplida en todas las celdas (y en todos los escenarios de recuperación, §8) |
 | Estados de solver | histograma idéntico secuencial↔paralelo (prueba `test_a_mixed_batch_in_a_real_pool_equals_the_sequential_run_under_t1`, C-08) |
 | Mutación del auditor | pesos corrompidos a propósito (presupuesto, `MaxWeight`, negativos) son detectados (`test_the_independent_constraint_audit_detects_violations_in_mutated_results`) |
 | Carteras degeneradas (C-27) | rutas `INFEASIBLE` (solver) y `FAILED_INPUT_VALIDATION` ejercitadas sin romper el lote |
 | Regresión B1–B4 (C-24) | suite completa idéntica antes/después: §2 y §11 |
-| Equivalencia Windows ↔ Linux (C-28) | referencia versionada (10 carteras, 565 soluciones) y prueba por cartera que la reproduce bajo T1: **9 de 10 carteras coinciden en Linux**; **1 cartera W1 diverge (hallazgo F-B55-1, abajo)** |
+| Equivalencia Windows ↔ Linux (C-28) | referencia versionada (10 carteras, 565 soluciones) y prueba por cartera que la reproduce bajo T1: tras la remediación de `main` coinciden **las 10 carteras** en Linux con los núcleos `SkylakeX` y `Haswell` (F-B55-1 cerrado, abajo) |
 
-### 5.1 Hallazgo F-B55-1 — la búsqueda de candidatos de W1 no es idéntica entre plataformas (abierto, Medio)
+### 5.1 Hallazgo F-B55-1 — la búsqueda de candidatos de W1 no es idéntica entre CPU (**CERRADO** el 2026-10-22; texto original conservado)
+
+> **Cierre.** La atribución a la «plataforma» de este apartado era errónea (`AUDIT_BLOCK_5_5.md` A-02): el factor es el **núcleo de OpenBLAS** que carga la CPU (`SkylakeX` → 12 composiciones, `Haswell` → 11), probado por intervención con `OPENBLAS_CORETYPE` en `REMEDIATION_H1_FB551.md`, y la causa es un desempate sensible a ulps en `rank_nodes`, corregido en `main` (PR #10). Con esa corrección el `xfail` se retiró y la huella de referencia coincide en Windows/`Haswell`, Linux/`SkylakeX` y Linux/`Haswell` forzado (`REMEDIATION_BLOCK_5_5.md` §3). Lo que sigue es el texto histórico.
 
 **Qué se observó.** El lote de referencia (`ENG-MIX-BASE`, 10 carteras, semilla 7) se reprodujo en Linux (Ubuntu 22.04, Python 3.11.17, GitHub Actions; Xeon Platinum 8573C,
 Xeon 6973P-C y AMD EPYC 9V45). 9 de las 10 carteras (W0, W2, W3, W4 y una de las dos W1) coinciden con Windows bajo T1 (estados y número de soluciones idénticos). La cartera
@@ -183,7 +190,7 @@ Lectura: (a) el speedup con 4 workers es 1,48× y con 8 workers 1,68× (eficienc
 (≈ 7 s, constante), (ii) la **cola larga**: W1 supone 20 de 100 carteras pero ≈ 82 % del cómputo y cada tarea W1 dura ≈ 1,2 s, y (iii) la
 planificación del coordinador; la fracción serie efectiva de Karp–Flatt baja de 0,79 (2 workers) a 0,54 (8) porque el arranque pesa menos.
 (b) Descontando el arranque, la eficiencia en régimen estacionario con 4 workers es **0,64** (primera campaña) a **0,90** (campaña de tasas) y con 8 workers 0,59 (una medición); es la que usa la proyección, con ese rango.
-(c) Con 8 workers el pico agregado de RSS es 1,5 GB: en una máquina con 0,4–1,3 GB libres cada worker extra empeora el swap.
+(c) Con 8 workers el pico agregado de RSS es 1,5 GB: en una máquina con 0,3–2,3 GB libres cada worker extra empeora el swap.
 
 ### 6.4 Modelo de coste del mix y sensibilidad (E17)
 
@@ -349,6 +356,8 @@ test falla por el criterio de éxito de su oráculo SLSQP (`ftol = 1e-15`: 67–
 mensaje que CI). **Ningún algoritmo, tolerancia ni test se cambió**; la remediación es una fase B4 independiente (propuesta en el documento). Observaciones de
 la CI de Linux: §10.
 
+**Actualización del cierre.** La sonda de este apartado dejó de reproducir el fallo tras integrar la remediación de `main`: con la tolerancia **configurada 1e-9** la validez es 1,00 con todas las perturbaciones (antes 1,00 / 0,47 / 0,35 / 0,35 / 0,37 / 0,05), porque el reintento en frío usa otra numérica (`conic.retry_equilibrate = false`) con las mismas tolerancias; el estado del reintento es el suyo y nunca se promueve. El `ftol` del oráculo SLSQP del test pasó a 1e-12. El run `39613590671` (EPYC 7763, `41e4264`, antes de integrar) confirmó que el fallo original **es determinista** en núcleos `Haswell`; la afirmación «no se ha vuelto a observar» de §10 queda retirada.
+
 ## 8. Regresión de rendimiento (BEN-005, TST-005)
 
 * `benchmarks/results/baselines/perf_reference_work.json` fija el **trabajo determinista** (llamadas al solver e iteraciones) de 7 celdas de referencia;
@@ -361,6 +370,8 @@ la CI de Linux: §10.
   omite y esa omisión **no cuenta como validación** (queda dicho en su docstring).
 
 ## 9. Estado de los requisitos (solo estados verificables)
+
+> **Revisado en el cierre (A-05): 241 `VALIDATED` / 42 `PARTIAL` / 33 `NOT_IMPLEMENTED`.** `BEN-005`, `TST-005` y `PAR-003` pasan a `PARTIAL` (la regresión de tiempo es opt-in y no corre en CI; AUTO está calibrado en una sola mezcla sintética); `BEN-004` conserva `VALIDATED` con el criterio justificado en `REMEDIATION_BLOCK_5_5.md` §7. La tabla siguiente es la de B5.5 antes de la revisión.
 
 Recuento contractual tras B5.5: **316 `RequirementID` = 244 `VALIDATED` / 39 `PARTIAL` / 33 `NOT_IMPLEMENTED` / 0 `IMPLEMENTED`** (antes 238 / 42 / 36 / 0; verificado
 contando las filas de `TRACEABILITY.md`). Ningún requisito pasa a `VALIDATED` sin una prueba de aceptación que pasa de verdad.
@@ -414,6 +425,8 @@ Evidencia de Linux de B5.5 (run `39527318745`, Python 3.11.17):
 
 El paso final retira el disparador temporal; el SHA que queda como cabeza de la rama difiere del último SHA probado solo en ese cambio de `ci.yml` y en documentación.
 
+**Actualización del cierre — CI tras la integración.** Run `39613590671` (`41e4264`, antes de integrar, EPYC 7763): `failure` (H-1, determinista). Run `39774545136` (`0be043a`, con `main` integrado, Xeon 8573C): **success, 2028 passed, 3 skipped**; huella de referencia con 0 divergencias y 33 pruebas de H-1/desempate/multiescenario pasadas con el núcleo nativo, `Haswell` y `SkylakeX` forzados; contador de trabajo W1 de Linux 484 llamadas (ya sin la variante de 506). Ver `REMEDIATION_BLOCK_5_5.md` §3 y §9.
+
 ## 11. Gate final
 
 | Comprobación | Resultado |
@@ -433,6 +446,8 @@ Archivos modificados o añadidos (resumen): configuración de medida (`config/de
 `pyproject.toml` (comentario del extra `bench`); documentación (`REPORT_BLOCK_5_5.md`, `BLOCK_5_5_LARGE_SCALE_PLAN.md`, `INVESTIGATION_H1_B4.md`, `TRACEABILITY.md`, `CHANGELOG.md`, `ARCHITECTURE.md`, `BLOCK_5_IMPLEMENTATION_PLAN.md`).
 
 ## 12. Estado final, pendientes y decisiones
+
+> **Superado por `REMEDIATION_BLOCK_5_5.md` (estado `BLOCK_5_5_STATUS`, hallazgos pendientes y decisiones).** F-B55-1 está cerrado y H-1 remediado en `main`; siguen abiertos BEN-007 (1.200 carteras), W2/W5 a dimensión realista y la regresión de tiempo en el destino.
 
 ### 12.1 Lo que NO se ha hecho (declarado, no omitido)
 
@@ -455,7 +470,7 @@ Archivos modificados o añadidos (resumen): configuración de medida (`config/de
 | H-1 | Alto (preexistente, B4) | Tolerancia cónica 1e-9 en el borde de lo alcanzable + oráculo SLSQP `ftol=1e-15` (`INVESTIGATION_H1_B4.md`) | Mecanismo reproducido en Windows y Linux; **no remediado** |
 | F-B55-2 | Informativo | El arranque `spawn` en Windows (7–30 s por pool) domina cargas de ≤ 100 carteras baratas; en Linux 1,1–1,4 s | Sin acción en B5; conviene `forkserver` en el servidor Linux |
 | F-B55-3 | Informativo | El speedup está limitado por la cola larga de W1/W5 (4 workers: 1,5×; 8: 1,7× a 100 carteras); el orden por coste (LPT) previsto en el plan no puede aplicarse sin coste previo por cartera | Sin acción; relevante para dimensionar workers |
-| Entorno | Limitación | Medido con 6,7–8,8 GB de swap en uso: tiempos absolutos inflados (×1,67 observado) | Repetir en una máquina dedicada antes de fijar objetivos de rendimiento |
+| Entorno | Limitación | Medido con 6,7–11,1 GB de swap en uso: tiempos absolutos inflados (×1,67 observado) | Repetir en una máquina dedicada antes de fijar objetivos de rendimiento |
 
 ### 12.3 Decisiones necesarias (detalle y recomendaciones en `BLOCK_5_5_LARGE_SCALE_PLAN.md` §6)
 

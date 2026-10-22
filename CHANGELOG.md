@@ -1777,3 +1777,48 @@ No se emite `BLOCK_5_STATUS`.
 
 Medición local de una máquina con la memoria saturada (tiempos ×1,67 de variación observada con el mismo trabajo); nada medido en Arsys ni a ≥ 1.000 carteras; W2 y W5 sin medir a dimensión realista; E5 `fork`,
 E7, E11, E12 y E14 no ejecutados; el fallo original de H-1 (EPYC 7763) no se ha vuelto a observar ni se ha descartado; la validación de `forkserver` en Windows es imposible (no existe).
+
+
+---
+
+## [Bloque 5.5 — Cierre tras AUDIT_BLOCK_5_5] — 2026-10-22
+
+Rama `block5-benchmarks-final-audit` (PR #9) con `main` `75d8bb5` integrado (PR #10). Detalle y verificación en `REMEDIATION_BLOCK_5_5.md`. Sin merge, sin cambios directos en `main`, sin cargas de ≥ 1.000 carteras.
+
+### Integrado y configurado
+
+- `git merge origin/main` (conflictos solo de documentación en `CHANGELOG.md` y `TRACEABILITY.md`, resueltos conservando ambos lados). Entran: `conic.retry_equilibrate` (reintento en frío con otra numérica y las
+  mismas tolerancias), desempate por banda en `rank_nodes`, `kill_pool_workers` y las pruebas asociadas.
+- `conic.retry_equilibrate = false` en la configuración del motor usada por B5.5; `config_hash` **`5d3cdc5e…` → `86af211e…`**. Referencia multiplataforma, baselines de rendimiento, sonda H-1 y lote `ENG-MIX-BASE` regenerados sobre árbol limpio.
+
+### Cambios numéricos y de composiciones (medidos)
+
+- **Ninguno en la CPU de medida (Windows, núcleo `Haswell`)**: huella de 10 carteras / 565 soluciones bit a bit idéntica; W1 = 11 composiciones / 240 soluciones; contadores de `ENG-MIX-BASE` 10 y 100 idénticos
+  (72.728 / 688.707 iteraciones; 652 / 6.404 llamadas al solver). En Linux/`SkylakeX` desaparece la variante de 12 composiciones (506 → 484 llamadas, 47.009 iteraciones frente a 46.934 en Windows, +0,16 %).
+- Sonda H-1 con la tolerancia configurada: validez 1,00 en todas las perturbaciones (antes 0,35–1,00); el reintento termina `OPTIMAL` con las tolerancias configuradas, sin promover ningún estado.
+
+### Corregido (AUDIT_BLOCK_5_5)
+
+- **A-01/A-02/M-1/M-2:** `xfail` de F-B55-1 retirado; F-B55-1 reescrito como dependiente del núcleo de OpenBLAS; pruebas por cartera y de subproceso con `OPENBLAS_CORETYPE` forzado; paso de CI «OpenBLAS kernel matrix»;
+  informe, investigación de H-1, trazabilidad y changelog sin las afirmaciones «no se ha vuelto a observar».
+- **A-03/M-3:** contador `valid_weights_but_rejected` en la puerta de validez; cifras presentadas como re-auditorías; familias revalidadas declaradas. **A-04/M-4:** proyecciones rotuladas «orden de magnitud».
+  **A-05/M-5:** `BEN-005`, `TST-005`, `PAR-003` → `PARTIAL`; `BEN-004` `VALIDATED` con criterio justificado. **A-06:** estados de estrategia en la huella. **A-07:** swap 6,7–11,1 GB.
+
+### Estado de requisitos
+
+Total 316 = **241 `VALIDATED` / 42 `PARTIAL` / 33 `NOT_IMPLEMENTED`** (B5.5 había llegado a 244 / 39 / 33). Sin cambios en los requisitos de B1–B4 (la evidencia de PR #10 ya figura en `main`).
+
+### Pruebas (ejecutadas realmente)
+
+| Entorno | Resultado |
+|---|---|
+| Windows 11 — Python 3.13.6, *worktree* limpio de `0be043a` (cabeza de código; los commits posteriores solo son documentación), sin carga concurrente | **2016 passed, 12 skipped, 0 failed** (16 min 30 s) |
+| Ídem, baseline previo de B5.5 (`933c0cc`) | 1994 passed, 11 skipped; la diferencia son las pruebas de la remediación de `main` y las nuevas de este cierre |
+| Linux — GitHub Actions, run `39774545136` (`0be043a`, Xeon Platinum 8573C, núcleo `SkylakeX`, Python 3.11.17) | **2028 passed, 3 skipped** (4 min 13 s); huella con 0 divergencias en los núcleos nativo, `Haswell` y `SkylakeX`; H-1 + desempate + multiescenario: 33 passed por núcleo |
+| (CI de la cabeza final) | se añade tras publicar: ver la sección 9 de `REMEDIATION_BLOCK_5_5.md` en la rama |
+| `mypy --strict portfolio_engine` | 0 errores (179 ficheros) |
+| `ruff check .` y `ruff format --check .` | limpios |
+
+### Limitaciones (abiertas)
+
+BEN-007 (1.200 carteras) sin ejecutar por falta de autorización; W2/W5 y C-28 a dimensión realista/otras mezclas sin medir; sin comparación de tiempos en el destino; sin run nativo en EPYC 7763 posterior a la integración.

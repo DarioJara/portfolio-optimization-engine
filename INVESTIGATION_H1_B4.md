@@ -91,6 +91,8 @@ del test (`atol=1e-4` en pesos, `abs=1e-7` en el valor): el fallo es **del crite
 4. **Política de CI hasta entonces:** un fallo exacto de esos dos tests se re-ejecuta y se registra, nunca se enmascara (ya fijado en
    `AUDIT_BLOCK_5_3.md`).
 
+> **ACTUALIZACIÓN (2026-10-22, cierre de B5.5).** Este documento fue escrito antes de que se observara el fallo original: el run `39613590671` (EPYC 7763, `41e4264`) falló de forma **determinista** (`OPTIMAL_INACCURATE/CROSS_CHECK`, 22 iteraciones, 0 % de validez sin perturbar), lo que cierra la incertidumbre de §4 («no demostrado que el estado sea `AlmostSolved`») y **desmiente** las afirmaciones de §6 sobre que el fallo no se había vuelto a observar. `REMEDIATION_H1_FB551.md` (PR #10, ya en `main`) precisó el mecanismo (el residuo primal se estanca por encima de `tol_feas`; el reintento en frío repetía el mismo método determinista), demostró que el núcleo de OpenBLAS (`Haswell` falla, `SkylakeX` no) decide el lado del ulp, y lo corrigió sin relajar tolerancias (`conic.retry_equilibrate`). Tras integrarlo, la sonda de este documento da validez 1,00 con la tolerancia configurada en todas las perturbaciones. §5 (remediación propuesta) queda cumplida salvo las alternativas (a)–(c) de política, que no se necesitaron.
+
 ## 6. Observaciones de CI en Linux durante B5.5
 
 Durante B5.5 la CI (`ci.yml`, paso «B5.5 H-1 numerical probe») ejecutó la sonda de este documento en los runners de Linux y anotó los resultados (anotaciones públicas del run `39527318745`, `933c0cc`,

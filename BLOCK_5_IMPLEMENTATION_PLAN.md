@@ -304,5 +304,7 @@ Rama `block5-benchmarks-final-audit` (sobre `main` `8ceaf3a`), pendiente de audi
 | P-08 | PARTIAL | Los benchmarks registran commit y `dirty`; la biblioteca sigue sin invocar `git` |
 | P-09 | CUMPLIDO con limitación | Sin cambio (`ELLIPSOIDAL`) |
 
-Hallazgos que condicionan el cierre del Bloque 5: **F-B55-1** (W1: candidatos distintos entre plataformas; remediación B3) y **H-1** (B4; remediación independiente). `BLOCK_5_STATUS` no se emite hasta validar 1.200 carteras y
+> **Cierre (2026-10-22, `REMEDIATION_BLOCK_5_5.md`):** `main` (PR #10) integrado; F-B55-1 cerrado y H-1 remediado; `BEN-005`, `TST-005` y `PAR-003` revisados a `PARTIAL` (total 241 / 42 / 33).
+
+Hallazgos que condicionan el cierre del Bloque 5 (texto previo al cierre): **F-B55-1** (W1: candidatos distintos entre plataformas; remediación B3) y **H-1** (B4; remediación independiente). `BLOCK_5_STATUS` no se emite hasta validar 1.200 carteras y
 completar la auditoría independiente.

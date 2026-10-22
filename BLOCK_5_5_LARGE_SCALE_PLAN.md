@@ -5,6 +5,8 @@ Fecha: 2026-10-21. Rama `block5-benchmarks-final-audit`. **Documento de preparac
 con su factor de extrapolación declarado; **no sustituyen a la ejecución**. Los JSON de cada estimación están en `benchmarks/results/capacity_estimate_*.json`
 (`metadata.executed = false`).
 
+> **Rótulo obligatorio (AUDIT_BLOCK_5_5 A-04): las cifras de este documento son ÓRDENES DE MAGNITUD, no intervalos de confianza.** El rango óptimo/central/pesimista de cada fila son repeticiones de las **mismas** carteras (3 por clase en las filas «U=700»); la eficiencia con 8 workers procede de **una sola** medición (intervalo degenerado) y con 4 de dos; la memoria es una **cota inferior** (constante en N: el coordinador retiene los resultados y no se midió por encima de 300 tareas); las clases sin medir (W2, W5: 6–26 % de las carteras) están excluidas y renormalizadas, lo que sesga **a la baja**; el factor ×1,67 es una variación de fase observada una vez; y la máquina de medida (10 núcleos P+E, 6,7–11,1 GB de swap) no es el destino (6 núcleos compartidos con SQL Server). Cualquier compromiso de capacidad exige ejecutar P1–P4.
+
 ## 1. Qué hay medido y de dónde sale cada entrada
 
 | Entrada | Valor medido | Fuente | Confianza |
@@ -168,7 +170,7 @@ Clases usadas: 7; fracción sin medir (excluida y renormalizada): 16 % (W2-STRES
 | ID | Decisión | Opciones y recomendación |
 |---|---|---|
 | D-A | **Autorizar P1 (1.000)** y/o **P2 (1.200)** en esta máquina | Recomendado: autorizar P1 y P2 juntos; son ≈ 5–13 min cada uno con 4 workers según la proyección. Indicar `--authorized-by` |
-| D-B | **Dónde** ejecutar 5.000/22.000 | Local (memoria saturada: 6,7–8,8 GB de swap, sin sentido para dimensionar) frente a Arsys (prohibido hasta nueva instrucción). Recomendado: liberar memoria/ejecutar en un equipo dedicado o autorizar Arsys en ventana acordada |
+| D-B | **Dónde** ejecutar 5.000/22.000 | Local (memoria saturada: 6,7–11,1 GB de swap, sin sentido para dimensionar) frente a Arsys (prohibido hasta nueva instrucción). Recomendado: liberar memoria/ejecutar en un equipo dedicado o autorizar Arsys en ventana acordada |
 | D-C | Referencia secuencial en 5.000/22.000 | Omitirla y validar T1 contra una submuestra secuencial (recomendado) o aceptar horas de secuencial |
 | D-D | **Mezcla de carga** (D-01) | Mantener `ENG-MIX-BASE/LIGHT/HEAVY/CONIC` (supuestos) o aportar la distribución real anonimizada; el modelo `N·Σ sᵢ·cᵢ` se comprobó con ±1,3 % en estas mezclas |
 | D-E | Workers y reserva para SQL Server (D-11) | Medido hasta 8; recomendado ≤ 4 mientras no haya medidas en el servidor |
