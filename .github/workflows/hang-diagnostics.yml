@@ -1,0 +1,53 @@
+name: Hang diagnostics (temporary)
+
+# TEMPORAL: diagnostica el run cancelado 39748508753 (suite completa >44 min en un runner EPYC 9V74).
+# Ejecuta solo las pruebas con multiprocessing, con tope de 12 min, salida por prueba (-v) y volcado de
+# pilas de faulthandler a los 120 s; si se agota el tope, anota el nombre de la prueba en curso.
+# Se elimina al cerrar el diagnóstico.
+on:
+  push:
+    branches: [fix/h1-fb551-numerical-remediation]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mp-tests:
+    name: multiprocessing tests ${{ matrix.shard }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[dev,exact-mip,bench]'
+      - name: Multiprocessing tests with a hard cap and per-test output
+        shell: bash
+        run: |
+          set +e
+          cpu="$(lscpu | grep 'Model name' | sed 's/  */ /g')"
+          echo "::notice title=hang-cpu::${cpu}"
+          started=$(date +%s)
+          timeout 720 python -m pytest -p no:cacheprovider -v -o faulthandler_timeout=120 --durations=12 \
+            tests/integration tests/unit/parallel tests/performance 2>&1 | tee out.txt
+          status=${PIPESTATUS[0]}
+          elapsed=$(( $(date +%s) - started ))
+          echo "::notice title=hang-summary::exit=${status} elapsed=${elapsed}s | $(tail -n 1 out.txt)"
+          echo "::notice title=hang-last-lines::$(grep -E '::' out.txt | tail -n 3 | cut -c1-300 | paste -sd '|')"
+          grep -nE 'Timeout \(|Thread 0x|File "' out.txt | head -n 12 | cut -c1-250 | while IFS= read -r line; do echo "::warning title=hang-stack::$line"; done
+          grep -E '^[0-9.]+s (call|setup|teardown)' out.txt | head -n 6 | while IFS= read -r line; do echo "::notice title=hang-slowest::$line"; done
+          exit $status
