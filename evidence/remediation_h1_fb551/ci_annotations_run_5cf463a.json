@@ -1,0 +1,2126 @@
+[
+ {
+  "run": "Remediation H-1 / F-B55-1 diagnostics (temporary)",
+  "run_id": 39663855280,
+  "job": "CPU sample 1",
+  "conclusion": "success",
+  "annotations": [
+   {
+    "level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-noavx512",
+    "message": "W1-GLOBAL-NET-000005-0000: soluciones 240 (ref) vs 260 (actual); composiciones distintas 11 vs 12, solo en ref 0, solo en actual 1; estados ref {'OPTIMAL': 220} vs actual {'OPTIMAL': 240}|  composiciones comunes con distinto nº de soluciones: 0; máx |Δpeso| en las demás (k-ésima solución de cada composición): 3.495e-12|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-default",
+    "message": "W1-GLOBAL-NET-000005-0000: soluciones 240 (ref) vs 260 (actual); composiciones distintas 11 vs 12, solo en ref 0, solo en actual 1; estados ref {'OPTIMAL': 220} vs actual {'OPTIMAL': 240}|  composiciones comunes con distinto nº de soluciones: 0; máx |Δpeso| en las demás (k-ésima solución de cada composición): 3.495e-12|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 10, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 2}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 2, \"OPTIMAL/SOLVER\": 8}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 2}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 15, \"OPTIMAL/SOLVER\": 5}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 12, \"OPTIMAL/SOLVER\": 8}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 11, \"OPTIMAL/SOLVER\": 9}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [9], \"n\": 3, \"states\": {\"OPTIMAL/SOLVER\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 5, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 15}, \"valid\": 5}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 12}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 9, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 11}, \"valid\": 9}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [9], \"n\": 3, \"states\": {\"OPTIMAL/SOLVER\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": []}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-env",
+    "message": "{\"blas\": [{\"architecture\": \"SkylakeX\", \"internal_api\": \"openblas\", \"version\": \"0.3.31.188.0\"}], \"clarabel\": \"0.11.1\", \"cpu\": {\"flags\": [\"avx\", \"avx2\", \"avx512_bf16\", \"avx512_bitalg\", \"avx512_vbmi2\", \"avx512_vnni\", \"avx512_vp2intersect\", \"avx512_vpopcntdq\", \"avx512bw\", \"avx512cd\", \"avx512dq\", \"avx512f\", \"avx512ifma\", \"avx512vbmi\", \"avx512vl\", \"bmi2\", \"fma\", \"sse4_2\"], \"model\": \"AMD EPYC 9V45 96-Core Processor\"}, \"env\": {\"OMP_NUM_THREADS\": \"1\", \"OPENBLAS_NUM_THREADS\": \"1\"}, \"numpy\": \"2.4.6\", \"numpy_cpu_features_enabled\": [\"AVX\", \"AVX2\", \"AVX512BF16\", \"AVX512BITALG\", \"AVX512BW\", \"AVX512CD\", \"AVX512DQ\", \"AVX512F\", \"AVX512IFMA\", \"AVX512VBMI\", \"AVX512VBMI2\", \"AVX512VL\", \"AVX512VNNI\", \"AVX512VPOPCNTDQ\", \"AVX512_CLX\", \"AVX512_CNL\", \"AVX512_ICL\", \"AVX512_SKX\", \"BMI\", \"BMI2\", \"CX16\", \"F16C\", \"FMA3\", \"GFNI\", \"LAHF\", \"LZCNT\", \"MMX\", \"MOVBE\", \"POPCNT\", \"SSE\", \"SSE2\", \"SSE3\", \"SSE41\", \"SSE42\", \"SSSE3\", \"VAES\", \"VPCLMULQDQ\", \"X86_V2\", \"X86_V3\", \"X86_V4\"], \"os\": \"Linux-6.8.0-1070-azure-x86_64-with-glibc2.35\", \"osqp\": \"1.1.3\", \"python\": \"3.11.17\", \"scipy\": \"1.17.1\"}"
+   }
+  ]
+ },
+ {
+  "run": "Remediation H-1 / F-B55-1 diagnostics (temporary)",
+  "run_id": 39663855280,
+  "job": "CPU sample 10",
+  "conclusion": "success",
+  "annotations": [
+   {
+    "level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-noavx512",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 12, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 10, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 2}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 2, \"OPTIMAL/SOLVER\": 8}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 2}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 13, \"OPTIMAL/SOLVER\": 7}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 9, \"OPTIMAL/SOLVER\": 11}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 13, \"OPTIMAL/SOLVER\": 7}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 7, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 13}, \"valid\": 7}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 11, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 9}, \"valid\": 11}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 7, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 13}, \"valid\": 7}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-env",
+    "message": "{\"blas\": [{\"architecture\": \"Haswell\", \"internal_api\": \"openblas\", \"version\": \"0.3.31.188.0\"}], \"clarabel\": \"0.11.1\", \"cpu\": {\"flags\": [\"avx\", \"avx2\", \"bmi2\", \"fma\", \"sse4_2\"], \"model\": \"AMD EPYC 7763 64-Core Processor\"}, \"env\": {\"OMP_NUM_THREADS\": \"1\", \"OPENBLAS_NUM_THREADS\": \"1\"}, \"numpy\": \"2.4.6\", \"numpy_cpu_features_enabled\": [\"AVX\", \"AVX2\", \"BMI\", \"BMI2\", \"CX16\", \"F16C\", \"FMA3\", \"LAHF\", \"LZCNT\", \"MMX\", \"MOVBE\", \"POPCNT\", \"SSE\", \"SSE2\", \"SSE3\", \"SSE41\", \"SSE42\", \"SSSE3\", \"VAES\", \"VPCLMULQDQ\", \"X86_V2\", \"X86_V3\"], \"os\": \"Linux-6.8.0-1070-azure-x86_64-with-glibc2.35\", \"osqp\": \"1.1.3\", \"python\": \"3.11.17\", \"scipy\": \"1.17.1\"}"
+   }
+  ]
+ },
+ {
+  "run": "Remediation H-1 / F-B55-1 diagnostics (temporary)",
+  "run_id": 39663855280,
+  "job": "CPU sample 12",
+  "conclusion": "success",
+  "annotations": [
+   {
+    "level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-noavx512",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 12, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 10, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 2}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 2, \"OPTIMAL/SOLVER\": 8}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 2}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 13, \"OPTIMAL/SOLVER\": 7}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 9, \"OPTIMAL/SOLVER\": 11}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 13, \"OPTIMAL/SOLVER\": 7}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 7, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 13}, \"valid\": 7}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 11, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 9}, \"valid\": 11}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 7, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 13}, \"valid\": 7}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-env",
+    "message": "{\"blas\": [{\"architecture\": \"Haswell\", \"internal_api\": \"openblas\", \"version\": \"0.3.31.188.0\"}], \"clarabel\": \"0.11.1\", \"cpu\": {\"flags\": [\"avx\", \"avx2\", \"bmi2\", \"fma\", \"sse4_2\"], \"model\": \"AMD EPYC 7763 64-Core Processor\"}, \"env\": {\"OMP_NUM_THREADS\": \"1\", \"OPENBLAS_NUM_THREADS\": \"1\"}, \"numpy\": \"2.4.6\", \"numpy_cpu_features_enabled\": [\"AVX\", \"AVX2\", \"BMI\", \"BMI2\", \"CX16\", \"F16C\", \"FMA3\", \"LAHF\", \"LZCNT\", \"MMX\", \"MOVBE\", \"POPCNT\", \"SSE\", \"SSE2\", \"SSE3\", \"SSE41\", \"SSE42\", \"SSSE3\", \"VAES\", \"VPCLMULQDQ\", \"X86_V2\", \"X86_V3\"], \"os\": \"Linux-6.8.0-1070-azure-x86_64-with-glibc2.35\", \"osqp\": \"1.1.3\", \"python\": \"3.11.17\", \"scipy\": \"1.17.1\"}"
+   }
+  ]
+ },
+ {
+  "run": "Remediation H-1 / F-B55-1 diagnostics (temporary)",
+  "run_id": 39663855280,
+  "job": "CPU sample 3",
+  "conclusion": "success",
+  "annotations": [
+   {
+    "level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-noavx512",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 12, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 10, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 2}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 2, \"OPTIMAL/SOLVER\": 8}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 2}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 13, \"OPTIMAL/SOLVER\": 7}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 9, \"OPTIMAL/SOLVER\": 11}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 13, \"OPTIMAL/SOLVER\": 7}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 7, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 13}, \"valid\": 7}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 11, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 9}, \"valid\": 11}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 7, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 13}, \"valid\": 7}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-env",
+    "message": "{\"blas\": [{\"architecture\": \"Haswell\", \"internal_api\": \"openblas\", \"version\": \"0.3.31.188.0\"}], \"clarabel\": \"0.11.1\", \"cpu\": {\"flags\": [\"avx\", \"avx2\", \"bmi2\", \"fma\", \"sse4_2\"], \"model\": \"AMD EPYC 7763 64-Core Processor\"}, \"env\": {\"OMP_NUM_THREADS\": \"1\", \"OPENBLAS_NUM_THREADS\": \"1\"}, \"numpy\": \"2.4.6\", \"numpy_cpu_features_enabled\": [\"AVX\", \"AVX2\", \"BMI\", \"BMI2\", \"CX16\", \"F16C\", \"FMA3\", \"LAHF\", \"LZCNT\", \"MMX\", \"MOVBE\", \"POPCNT\", \"SSE\", \"SSE2\", \"SSE3\", \"SSE41\", \"SSE42\", \"SSSE3\", \"VAES\", \"VPCLMULQDQ\", \"X86_V2\", \"X86_V3\"], \"os\": \"Linux-6.8.0-1070-azure-x86_64-with-glibc2.35\", \"osqp\": \"1.1.3\", \"python\": \"3.11.17\", \"scipy\": \"1.17.1\"}"
+   }
+  ]
+ },
+ {
+  "run": "Remediation H-1 / F-B55-1 diagnostics (temporary)",
+  "run_id": 39663855280,
+  "job": "CPU sample 7",
+  "conclusion": "success",
+  "annotations": [
+   {
+    "level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-noavx512",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 12, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 10, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 2}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 2, \"OPTIMAL/SOLVER\": 8}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 2}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 13, \"OPTIMAL/SOLVER\": 7}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 9, \"OPTIMAL/SOLVER\": 11}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 13, \"OPTIMAL/SOLVER\": 7}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 7, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 13}, \"valid\": 7}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 11, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 9}, \"valid\": 11}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 7, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 13}, \"valid\": 7}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-env",
+    "message": "{\"blas\": [{\"architecture\": \"Haswell\", \"internal_api\": \"openblas\", \"version\": \"0.3.31.188.0\"}], \"clarabel\": \"0.11.1\", \"cpu\": {\"flags\": [\"avx\", \"avx2\", \"bmi2\", \"fma\", \"sse4_2\"], \"model\": \"AMD EPYC 7763 64-Core Processor\"}, \"env\": {\"OMP_NUM_THREADS\": \"1\", \"OPENBLAS_NUM_THREADS\": \"1\"}, \"numpy\": \"2.4.6\", \"numpy_cpu_features_enabled\": [\"AVX\", \"AVX2\", \"BMI\", \"BMI2\", \"CX16\", \"F16C\", \"FMA3\", \"LAHF\", \"LZCNT\", \"MMX\", \"MOVBE\", \"POPCNT\", \"SSE\", \"SSE2\", \"SSE3\", \"SSE41\", \"SSE42\", \"SSSE3\", \"VAES\", \"VPCLMULQDQ\", \"X86_V2\", \"X86_V3\"], \"os\": \"Linux-6.8.0-1070-azure-x86_64-with-glibc2.35\", \"osqp\": \"1.1.3\", \"python\": \"3.11.17\", \"scipy\": \"1.17.1\"}"
+   }
+  ]
+ },
+ {
+  "run": "Remediation H-1 / F-B55-1 diagnostics (temporary)",
+  "run_id": 39663855280,
+  "job": "CPU sample 5",
+  "conclusion": "success",
+  "annotations": [
+   {
+    "level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-noavx512",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 12, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 10, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 2}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 2, \"OPTIMAL/SOLVER\": 8}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 2}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 13, \"OPTIMAL/SOLVER\": 7}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 9, \"OPTIMAL/SOLVER\": 11}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 13, \"OPTIMAL/SOLVER\": 7}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 7, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 13}, \"valid\": 7}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 11, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 9}, \"valid\": 11}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 7, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 13}, \"valid\": 7}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-env",
+    "message": "{\"blas\": [{\"architecture\": \"Haswell\", \"internal_api\": \"openblas\", \"version\": \"0.3.31.188.0\"}], \"clarabel\": \"0.11.1\", \"cpu\": {\"flags\": [\"avx\", \"avx2\", \"bmi2\", \"fma\", \"sse4_2\"], \"model\": \"AMD EPYC 7763 64-Core Processor\"}, \"env\": {\"OMP_NUM_THREADS\": \"1\", \"OPENBLAS_NUM_THREADS\": \"1\"}, \"numpy\": \"2.4.6\", \"numpy_cpu_features_enabled\": [\"AVX\", \"AVX2\", \"BMI\", \"BMI2\", \"CX16\", \"F16C\", \"FMA3\", \"LAHF\", \"LZCNT\", \"MMX\", \"MOVBE\", \"POPCNT\", \"SSE\", \"SSE2\", \"SSE3\", \"SSE41\", \"SSE42\", \"SSSE3\", \"VAES\", \"VPCLMULQDQ\", \"X86_V2\", \"X86_V3\"], \"os\": \"Linux-6.8.0-1070-azure-x86_64-with-glibc2.35\", \"osqp\": \"1.1.3\", \"python\": \"3.11.17\", \"scipy\": \"1.17.1\"}"
+   }
+  ]
+ },
+ {
+  "run": "Remediation H-1 / F-B55-1 diagnostics (temporary)",
+  "run_id": 39663855280,
+  "job": "CPU sample 8",
+  "conclusion": "success",
+  "annotations": [
+   {
+    "level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-noavx512",
+    "message": "W1-GLOBAL-NET-000005-0000: soluciones 240 (ref) vs 260 (actual); composiciones distintas 11 vs 12, solo en ref 0, solo en actual 1; estados ref {'OPTIMAL': 220} vs actual {'OPTIMAL': 240}|  composiciones comunes con distinto nº de soluciones: 0; máx |Δpeso| en las demás (k-ésima solución de cada composición): 3.495e-12|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-default",
+    "message": "W1-GLOBAL-NET-000005-0000: soluciones 240 (ref) vs 260 (actual); composiciones distintas 11 vs 12, solo en ref 0, solo en actual 1; estados ref {'OPTIMAL': 220} vs actual {'OPTIMAL': 240}|  composiciones comunes con distinto nº de soluciones: 0; máx |Δpeso| en las demás (k-ésima solución de cada composición): 3.495e-12|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 10, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 2}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 2, \"OPTIMAL/SOLVER\": 8}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 2}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 15, \"OPTIMAL/SOLVER\": 5}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 12, \"OPTIMAL/SOLVER\": 8}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 11, \"OPTIMAL/SOLVER\": 9}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [9], \"n\": 3, \"states\": {\"OPTIMAL/SOLVER\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 5, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 15}, \"valid\": 5}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 12}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 9, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 11}, \"valid\": 9}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [9], \"n\": 3, \"states\": {\"OPTIMAL/SOLVER\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": []}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-env",
+    "message": "{\"blas\": [{\"architecture\": \"SkylakeX\", \"internal_api\": \"openblas\", \"version\": \"0.3.31.188.0\"}], \"clarabel\": \"0.11.1\", \"cpu\": {\"flags\": [\"avx\", \"avx2\", \"avx512_bf16\", \"avx512_bitalg\", \"avx512_vbmi2\", \"avx512_vnni\", \"avx512_vpopcntdq\", \"avx512bw\", \"avx512cd\", \"avx512dq\", \"avx512f\", \"avx512ifma\", \"avx512vbmi\", \"avx512vl\", \"bmi2\", \"fma\", \"sse4_2\"], \"model\": \"AMD EPYC 9V74 80-Core Processor\"}, \"env\": {\"OMP_NUM_THREADS\": \"1\", \"OPENBLAS_NUM_THREADS\": \"1\"}, \"numpy\": \"2.4.6\", \"numpy_cpu_features_enabled\": [\"AVX\", \"AVX2\", \"AVX512BF16\", \"AVX512BITALG\", \"AVX512BW\", \"AVX512CD\", \"AVX512DQ\", \"AVX512F\", \"AVX512IFMA\", \"AVX512VBMI\", \"AVX512VBMI2\", \"AVX512VL\", \"AVX512VNNI\", \"AVX512VPOPCNTDQ\", \"AVX512_CLX\", \"AVX512_CNL\", \"AVX512_ICL\", \"AVX512_SKX\", \"BMI\", \"BMI2\", \"CX16\", \"F16C\", \"FMA3\", \"GFNI\", \"LAHF\", \"LZCNT\", \"MMX\", \"MOVBE\", \"POPCNT\", \"SSE\", \"SSE2\", \"SSE3\", \"SSE41\", \"SSE42\", \"SSSE3\", \"VAES\", \"VPCLMULQDQ\", \"X86_V2\", \"X86_V3\", \"X86_V4\"], \"os\": \"Linux-6.8.0-1070-azure-x86_64-with-glibc2.35\", \"osqp\": \"1.1.3\", \"python\": \"3.11.17\", \"scipy\": \"1.17.1\"}"
+   }
+  ]
+ },
+ {
+  "run": "Remediation H-1 / F-B55-1 diagnostics (temporary)",
+  "run_id": 39663855280,
+  "job": "CPU sample 6",
+  "conclusion": "success",
+  "annotations": [
+   {
+    "level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-noavx512",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 12, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 10, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 2}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 2, \"OPTIMAL/SOLVER\": 8}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 2}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 13, \"OPTIMAL/SOLVER\": 7}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 9, \"OPTIMAL/SOLVER\": 11}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 13, \"OPTIMAL/SOLVER\": 7}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 7, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 13}, \"valid\": 7}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 11, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 9}, \"valid\": 11}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 7, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 13}, \"valid\": 7}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-env",
+    "message": "{\"blas\": [{\"architecture\": \"Haswell\", \"internal_api\": \"openblas\", \"version\": \"0.3.31.188.0\"}], \"clarabel\": \"0.11.1\", \"cpu\": {\"flags\": [\"avx\", \"avx2\", \"bmi2\", \"fma\", \"sse4_2\"], \"model\": \"AMD EPYC 7763 64-Core Processor\"}, \"env\": {\"OMP_NUM_THREADS\": \"1\", \"OPENBLAS_NUM_THREADS\": \"1\"}, \"numpy\": \"2.4.6\", \"numpy_cpu_features_enabled\": [\"AVX\", \"AVX2\", \"BMI\", \"BMI2\", \"CX16\", \"F16C\", \"FMA3\", \"LAHF\", \"LZCNT\", \"MMX\", \"MOVBE\", \"POPCNT\", \"SSE\", \"SSE2\", \"SSE3\", \"SSE41\", \"SSE42\", \"SSSE3\", \"VAES\", \"VPCLMULQDQ\", \"X86_V2\", \"X86_V3\"], \"os\": \"Linux-6.8.0-1070-azure-x86_64-with-glibc2.35\", \"osqp\": \"1.1.3\", \"python\": \"3.11.17\", \"scipy\": \"1.17.1\"}"
+   }
+  ]
+ },
+ {
+  "run": "Remediation H-1 / F-B55-1 diagnostics (temporary)",
+  "run_id": 39663855280,
+  "job": "CPU sample 9",
+  "conclusion": "success",
+  "annotations": [
+   {
+    "level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-noavx512",
+    "message": "W1-GLOBAL-NET-000005-0000: soluciones 240 (ref) vs 260 (actual); composiciones distintas 11 vs 12, solo en ref 0, solo en actual 1; estados ref {'OPTIMAL': 220} vs actual {'OPTIMAL': 240}|  composiciones comunes con distinto nº de soluciones: 0; máx |Δpeso| en las demás (k-ésima solución de cada composición): 3.495e-12|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-default",
+    "message": "W1-GLOBAL-NET-000005-0000: soluciones 240 (ref) vs 260 (actual); composiciones distintas 11 vs 12, solo en ref 0, solo en actual 1; estados ref {'OPTIMAL': 220} vs actual {'OPTIMAL': 240}|  composiciones comunes con distinto nº de soluciones: 0; máx |Δpeso| en las demás (k-ésima solución de cada composición): 3.495e-12|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 10, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 2}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 2, \"OPTIMAL/SOLVER\": 8}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 2}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 15, \"OPTIMAL/SOLVER\": 5}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 12, \"OPTIMAL/SOLVER\": 8}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 11, \"OPTIMAL/SOLVER\": 9}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [9], \"n\": 3, \"states\": {\"OPTIMAL/SOLVER\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 5, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 15}, \"valid\": 5}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 12}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 9, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 11}, \"valid\": 9}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [9], \"n\": 3, \"states\": {\"OPTIMAL/SOLVER\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": []}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-env",
+    "message": "{\"blas\": [{\"architecture\": \"SkylakeX\", \"internal_api\": \"openblas\", \"version\": \"0.3.31.188.0\"}], \"clarabel\": \"0.11.1\", \"cpu\": {\"flags\": [\"avx\", \"avx2\", \"avx512_bf16\", \"avx512_bitalg\", \"avx512_vbmi2\", \"avx512_vnni\", \"avx512_vpopcntdq\", \"avx512bw\", \"avx512cd\", \"avx512dq\", \"avx512f\", \"avx512ifma\", \"avx512vbmi\", \"avx512vl\", \"bmi2\", \"fma\", \"sse4_2\"], \"model\": \"AMD EPYC 9V74 80-Core Processor\"}, \"env\": {\"OMP_NUM_THREADS\": \"1\", \"OPENBLAS_NUM_THREADS\": \"1\"}, \"numpy\": \"2.4.6\", \"numpy_cpu_features_enabled\": [\"AVX\", \"AVX2\", \"AVX512BF16\", \"AVX512BITALG\", \"AVX512BW\", \"AVX512CD\", \"AVX512DQ\", \"AVX512F\", \"AVX512IFMA\", \"AVX512VBMI\", \"AVX512VBMI2\", \"AVX512VL\", \"AVX512VNNI\", \"AVX512VPOPCNTDQ\", \"AVX512_CLX\", \"AVX512_CNL\", \"AVX512_ICL\", \"AVX512_SKX\", \"BMI\", \"BMI2\", \"CX16\", \"F16C\", \"FMA3\", \"GFNI\", \"LAHF\", \"LZCNT\", \"MMX\", \"MOVBE\", \"POPCNT\", \"SSE\", \"SSE2\", \"SSE3\", \"SSE41\", \"SSE42\", \"SSSE3\", \"VAES\", \"VPCLMULQDQ\", \"X86_V2\", \"X86_V3\", \"X86_V4\"], \"os\": \"Linux-6.8.0-1070-azure-x86_64-with-glibc2.35\", \"osqp\": \"1.1.3\", \"python\": \"3.11.17\", \"scipy\": \"1.17.1\"}"
+   }
+  ]
+ },
+ {
+  "run": "Remediation H-1 / F-B55-1 diagnostics (temporary)",
+  "run_id": 39663855280,
+  "job": "CPU sample 4",
+  "conclusion": "success",
+  "annotations": [
+   {
+    "level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-noavx512",
+    "message": "W1-GLOBAL-NET-000005-0000: soluciones 240 (ref) vs 260 (actual); composiciones distintas 11 vs 12, solo en ref 0, solo en actual 1; estados ref {'OPTIMAL': 220} vs actual {'OPTIMAL': 240}|  composiciones comunes con distinto nº de soluciones: 0; máx |Δpeso| en las demás (k-ésima solución de cada composición): 3.495e-12|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-default",
+    "message": "W1-GLOBAL-NET-000005-0000: soluciones 240 (ref) vs 260 (actual); composiciones distintas 11 vs 12, solo en ref 0, solo en actual 1; estados ref {'OPTIMAL': 220} vs actual {'OPTIMAL': 240}|  composiciones comunes con distinto nº de soluciones: 0; máx |Δpeso| en las demás (k-ésima solución de cada composición): 3.495e-12|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 10, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 2}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 2, \"OPTIMAL/SOLVER\": 8}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 2}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 15, \"OPTIMAL/SOLVER\": 5}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 12, \"OPTIMAL/SOLVER\": 8}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 11, \"OPTIMAL/SOLVER\": 9}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [9], \"n\": 3, \"states\": {\"OPTIMAL/SOLVER\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 5, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 15}, \"valid\": 5}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 12}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 9, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 11}, \"valid\": 9}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [9], \"n\": 3, \"states\": {\"OPTIMAL/SOLVER\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": []}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-env",
+    "message": "{\"blas\": [{\"architecture\": \"SkylakeX\", \"internal_api\": \"openblas\", \"version\": \"0.3.31.188.0\"}], \"clarabel\": \"0.11.1\", \"cpu\": {\"flags\": [\"avx\", \"avx2\", \"avx512_bitalg\", \"avx512_vbmi2\", \"avx512_vnni\", \"avx512_vpopcntdq\", \"avx512bw\", \"avx512cd\", \"avx512dq\", \"avx512f\", \"avx512ifma\", \"avx512vbmi\", \"avx512vl\", \"bmi2\", \"fma\", \"sse4_2\"], \"model\": \"INTEL(R) XEON(R) PLATINUM 8573C\"}, \"env\": {\"OMP_NUM_THREADS\": \"1\", \"OPENBLAS_NUM_THREADS\": \"1\"}, \"numpy\": \"2.4.6\", \"numpy_cpu_features_enabled\": [\"AVX\", \"AVX2\", \"AVX512BITALG\", \"AVX512BW\", \"AVX512CD\", \"AVX512DQ\", \"AVX512F\", \"AVX512IFMA\", \"AVX512VBMI\", \"AVX512VBMI2\", \"AVX512VL\", \"AVX512VNNI\", \"AVX512VPOPCNTDQ\", \"AVX512_CLX\", \"AVX512_CNL\", \"AVX512_ICL\", \"AVX512_SKX\", \"BMI\", \"BMI2\", \"CX16\", \"F16C\", \"FMA3\", \"GFNI\", \"LAHF\", \"LZCNT\", \"MMX\", \"MOVBE\", \"POPCNT\", \"SSE\", \"SSE2\", \"SSE3\", \"SSE41\", \"SSE42\", \"SSSE3\", \"VAES\", \"VPCLMULQDQ\", \"X86_V2\", \"X86_V3\", \"X86_V4\"], \"os\": \"Linux-6.8.0-1070-azure-x86_64-with-glibc2.35\", \"osqp\": \"1.1.3\", \"python\": \"3.11.17\", \"scipy\": \"1.17.1\"}"
+   }
+  ]
+ },
+ {
+  "run": "Remediation H-1 / F-B55-1 diagnostics (temporary)",
+  "run_id": 39663855280,
+  "job": "CPU sample 11",
+  "conclusion": "success",
+  "annotations": [
+   {
+    "level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-noavx512",
+    "message": "W1-GLOBAL-NET-000005-0000: soluciones 240 (ref) vs 260 (actual); composiciones distintas 11 vs 12, solo en ref 0, solo en actual 1; estados ref {'OPTIMAL': 220} vs actual {'OPTIMAL': 240}|  composiciones comunes con distinto nº de soluciones: 0; máx |Δpeso| en las demás (k-ésima solución de cada composición): 3.495e-12|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-default",
+    "message": "W1-GLOBAL-NET-000005-0000: soluciones 240 (ref) vs 260 (actual); composiciones distintas 11 vs 12, solo en ref 0, solo en actual 1; estados ref {'OPTIMAL': 220} vs actual {'OPTIMAL': 240}|  composiciones comunes con distinto nº de soluciones: 0; máx |Δpeso| en las demás (k-ésima solución de cada composición): 3.495e-12|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 10, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 2}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 2, \"OPTIMAL/SOLVER\": 8}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 2}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 15, \"OPTIMAL/SOLVER\": 5}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 12, \"OPTIMAL/SOLVER\": 8}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 11, \"OPTIMAL/SOLVER\": 9}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [9], \"n\": 3, \"states\": {\"OPTIMAL/SOLVER\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 5, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 15}, \"valid\": 5}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 12}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 9, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 11}, \"valid\": 9}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [9], \"n\": 3, \"states\": {\"OPTIMAL/SOLVER\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": []}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-env",
+    "message": "{\"blas\": [{\"architecture\": \"SkylakeX\", \"internal_api\": \"openblas\", \"version\": \"0.3.31.188.0\"}], \"clarabel\": \"0.11.1\", \"cpu\": {\"flags\": [\"avx\", \"avx2\", \"avx512_bf16\", \"avx512_bitalg\", \"avx512_vbmi2\", \"avx512_vnni\", \"avx512_vpopcntdq\", \"avx512bw\", \"avx512cd\", \"avx512dq\", \"avx512f\", \"avx512ifma\", \"avx512vbmi\", \"avx512vl\", \"bmi2\", \"fma\", \"sse4_2\"], \"model\": \"AMD EPYC 9V74 80-Core Processor\"}, \"env\": {\"OMP_NUM_THREADS\": \"1\", \"OPENBLAS_NUM_THREADS\": \"1\"}, \"numpy\": \"2.4.6\", \"numpy_cpu_features_enabled\": [\"AVX\", \"AVX2\", \"AVX512BF16\", \"AVX512BITALG\", \"AVX512BW\", \"AVX512CD\", \"AVX512DQ\", \"AVX512F\", \"AVX512IFMA\", \"AVX512VBMI\", \"AVX512VBMI2\", \"AVX512VL\", \"AVX512VNNI\", \"AVX512VPOPCNTDQ\", \"AVX512_CLX\", \"AVX512_CNL\", \"AVX512_ICL\", \"AVX512_SKX\", \"BMI\", \"BMI2\", \"CX16\", \"F16C\", \"FMA3\", \"GFNI\", \"LAHF\", \"LZCNT\", \"MMX\", \"MOVBE\", \"POPCNT\", \"SSE\", \"SSE2\", \"SSE3\", \"SSE41\", \"SSE42\", \"SSSE3\", \"VAES\", \"VPCLMULQDQ\", \"X86_V2\", \"X86_V3\", \"X86_V4\"], \"os\": \"Linux-6.8.0-1070-azure-x86_64-with-glibc2.35\", \"osqp\": \"1.1.3\", \"python\": \"3.11.17\", \"scipy\": \"1.17.1\"}"
+   }
+  ]
+ },
+ {
+  "run": "Remediation H-1 / F-B55-1 diagnostics (temporary)",
+  "run_id": 39663855280,
+  "job": "CPU sample 2",
+  "conclusion": "success",
+  "annotations": [
+   {
+    "level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-after-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-noavx512",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-haswell",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-b55-before-default",
+    "message": "sin divergencias|"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-after",
+    "message": "{\"different\": 0, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 9, \"same_candidates\": 12}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 12, \"eps\": 1e-12, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 11, \"eps\": 1e-14, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 1}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-fb551-before",
+    "message": "{\"different\": 10, \"eps\": 1e-16, \"n\": 12, \"reference_size\": 10, \"same_candidates\": 2}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 2, \"OPTIMAL/SOLVER\": 8}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 10, \"states\": {\"OPTIMAL/CROSS_CHECK\": 6, \"OPTIMAL/SOLVER\": 4}, \"valid\": 10}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 8, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 2}, \"valid\": 8}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 10, \"states\": {\"OPTIMAL/SOLVER\": 4, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 6}, \"valid\": 4}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 13, \"OPTIMAL/SOLVER\": 7}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 9, \"OPTIMAL/SOLVER\": 11}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 18, 19], \"n\": 20, \"states\": {\"OPTIMAL/CROSS_CHECK\": 13, \"OPTIMAL/SOLVER\": 7}, \"valid\": 20}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-after",
+    "message": "{\"eps\": 0.0, \"iterations\": [19], \"n\": 3, \"states\": {\"OPTIMAL/CROSS_CHECK\": 3}, \"valid\": 3}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-12, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 7, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 13}, \"valid\": 7}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-14, \"iterations\": [9, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 11, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 9}, \"valid\": 11}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 1e-16, \"iterations\": [9, 10, 20, 22], \"n\": 20, \"states\": {\"OPTIMAL/SOLVER\": 7, \"OPTIMAL_INACCURATE/CROSS_CHECK\": 13}, \"valid\": 7}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-before",
+    "message": "{\"eps\": 0.0, \"iterations\": [22], \"n\": 3, \"states\": {\"OPTIMAL_INACCURATE/CROSS_CHECK\": 3}, \"valid\": 0}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-clarabel-tail",
+    "message": "{\"rows\": [\"0  -4.7594e-02  -1.0848e+01  1.08e+01  6.19e-01  3.44e-01  1.00e+00  1.64e+00   ------\", \"8  +9.2609e-02  +9.2609e-02  1.34e-09  1.40e-10  8.67e-11  8.72e-11  4.26e-10  9.87e-01\", \"9  +9.2609e-02  +9.2609e-02  1.40e-11  3.83e-09  9.07e-13  8.99e-13  4.41e-12  9.90e-01\", \"10  +9.2609e-02  +9.2609e-02  1.40e-13  3.55e-09  9.08e-15  8.99e-15  4.41e-14  9.90e-01\", \"11  +9.2609e-02  +9.2609e-02  1.32e-14  9.54e-09  8.16e-16  8.71e-16  3.98e-15  9.57e-01\", \"Terminated with status = AlmostSolved\"]}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-h1-config",
+    "message": "{\"equilibrate\": true, \"retry_equilibrate\": false, \"tol_feas\": 1e-09}"
+   },
+   {
+    "level": "notice",
+    "title": "diag-env",
+    "message": "{\"blas\": [{\"architecture\": \"Haswell\", \"internal_api\": \"openblas\", \"version\": \"0.3.31.188.0\"}], \"clarabel\": \"0.11.1\", \"cpu\": {\"flags\": [\"avx\", \"avx2\", \"bmi2\", \"fma\", \"sse4_2\"], \"model\": \"AMD EPYC 7763 64-Core Processor\"}, \"env\": {\"OMP_NUM_THREADS\": \"1\", \"OPENBLAS_NUM_THREADS\": \"1\"}, \"numpy\": \"2.4.6\", \"numpy_cpu_features_enabled\": [\"AVX\", \"AVX2\", \"BMI\", \"BMI2\", \"CX16\", \"F16C\", \"FMA3\", \"LAHF\", \"LZCNT\", \"MMX\", \"MOVBE\", \"POPCNT\", \"SSE\", \"SSE2\", \"SSE3\", \"SSE41\", \"SSE42\", \"SSSE3\", \"VAES\", \"VPCLMULQDQ\", \"X86_V2\", \"X86_V3\"], \"os\": \"Linux-6.8.0-1070-azure-x86_64-with-glibc2.35\", \"osqp\": \"1.1.3\", \"python\": \"3.11.17\", \"scipy\": \"1.17.1\"}"
+   }
+  ]
+ },
+ {
+  "run": "Portfolio Engine CI",
+  "run_id": 39663855062,
+  "job": "Ubuntu / Python 3.11",
+  "conclusion": "success",
+  "annotations": [
+   {
+    "level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/"
+   },
+   {
+    "level": "notice",
+    "title": "pytest-summary",
+    "message": "1973 passed, 2 skipped in 320.27s (0:05:20)"
+   },
+   {
+    "level": "notice",
+    "title": "runner-cpu",
+    "message": "Model name: AMD EPYC 7763 64-Core Processor"
+   },
+   {
+    "level": "notice",
+    "title": "b54-linux-passed-2",
+    "message": "e_2;test_journal.py::test_the_cli_flags_an_incomplete_journal;test_journal.py::test_a_shard_with_valid_checksum_but_invalid_content_is_set_aside_not_fatal[json-recursion];test_journal.py::test_a_shard_with_valid_checksum_but_invalid_content_is_set_aside_not_fatal[codec-depth];test_journal.py::test_a_shard_with_valid_checksum_but_invalid_content_is_set_aside_not_fatal[post-init-error];test_journal.py::test_a_shard_with_valid_checksum_but_invalid_content_is_set_aside_not_fatal[foreign-type];test_journal.py::test_a_shard_with_valid_checksum_but_invalid_content_is_set_aside_not_fatal[unknown-tag];test_forkserver_linux.py::test_forkserver_results_match_sequential_and_use_workers"
+   },
+   {
+    "level": "notice",
+    "title": "b54-linux-passed-1",
+    "message": "test_recovery_linux.py::test_forkserver_recovers_a_killed_worker_and_isolates_a_poison_task;test_recovery_linux.py::test_forkserver_enforces_task_deadlines_and_leaves_no_children;test_recovery_linux.py::test_forkserver_resumes_a_journal;test_recovery_linux.py::test_flock_excludes_a_second_process_and_is_released_when_the_holder_dies;test_recovery_linux.py::test_journal_and_scratch_permissions_are_private;test_recovery_linux.py::test_a_zombie_is_reported_as_gone_before_it_is_reaped;test_recovery_linux.py::test_start_token_matches_proc_and_distinguishes_processes;test_markers.py::test_scan_reads_registered_workers_and_the_latest_task_per_batch;test_markers.py::test_scan_ignores_malformed_names[w.abc];test_markers.py::test_scan_ignores_malformed_names[t.1.2];test_markers.py::test_scan_ignores_malformed_names[t.a.b.c.d];test_markers.py::test_scan_ignores_malformed_names[w.];test_markers.py::test_scan_ignores_malformed_names[otro];test_markers.py::test_scan_ignores_malformed_names[t.1.2.x];test_markers.py::test_scan_of_a_missing_directory_is_empty;test_markers.py::test_a_batch_marker_replaces_its_previous_mark_and_cleans_up;test_markers.py::test_a_marker_without_a_directory_is_a_no_op;test_markers.py::test_an_abrupt_death_leaves_the_task_mark_and_the_worker_registration;test_markers.py::test_a_live_process_is_not_gone_and_clear_removes_every_mark;test_markers.py::test_terminate_process_kills_a_real_child_and_ignores_missing_pids;test_markers.py::test_start_tokens_identify_a_process_and_workers_register_theirs;test_markers.py::test_scan_reads_tokens_and_accepts_marks_without_one;test_markers.py::test_a_foreign_process_is_never_terminated_even_with_a_matching_token;test_markers.py::test_an_owned_child_is_terminated_only_when_identity_matches;test_journal.py::test_a_journal_restores_every_result_exactly;test_journal.py::test_only_deterministic_task_outcomes_are_restorable;test_journal.py::test_resume_is_rejected_when_any_identity_field_differs_and_nothing_is_modified[format_version];test_journal.py::test_resume_is_rejected_when_any_identity_field_differs_and_nothing_is_modified[config_hash];test_journal.py::test_resume_is_rejected_when_any_identity_field_differs_and_nothing_is_modified[snapshot_key];test_journal.py::test_resume_is_rejected_when_any_identity_field_differs_and_nothing_is_modified[code_hash];test_journal.py::test_resume_is_rejected_when_any_identity_field_differs_and_nothing_is_modified[request_set_hash];test_journal.py::test_resume_is_rejected_when_any_identity_field_differs_and_nothing_is_modified[n_tasks];test_journal.py::test_resume_is_rejected_when_any_identity_field_differs_and_nothing_is_modified[python_version];test_journal.py::test_resume_is_rejected_when_any_identity_field_differs_and_nothing_is_modified[library_versions];test_journal.py::test_a_foreign_request_source_is_rejected;test_journal.py::test_a_truncated_shard_is_detected_and_only_its_tasks_are_lost;test_journal.py::test_a_flipped_byte_in_a_shard_is_detected;test_journal.py::test_a_shard_with_a_forged_record_is_rejected_even_with_a_valid_checksum;test_journal.py::test_orphan_temporaries_from_an_interrupted_write_are_removed;test_journal.py::test_a_missing_manifest_or_a_tampered_one_is_an_error;test_journal.py::test_a_new_journal_never_overwrites_an_existing_one;test_journal.py::test_two_runs_cannot_share_a_journal_and_the_lock_is_released_on_close;test_journal.py::test_a_run_dying_with_the_lock_does_not_block_a_later_resume;test_journal.py::test_the_journal_never_uses_pickle_and_only_contains_json;test_journal.py::test_posix_permissions_are_private;test_journal.py::test_events_are_checksummed_and_a_truncated_tail_is_tolerated;test_journal.py::test_the_event_log_never_contains_portfolio_content;test_journal.py::test_the_cli_prints_one_stable_json_object_and_does_not_modify_the_journal;test_journal.py::test_the_cli_reports_unreadable_journals_with_exit_cod"
+   },
+   {
+    "level": "notice",
+    "title": "b54-linux-passed-count",
+    "message": "56"
+   },
+   {
+    "level": "notice",
+    "title": "b54-linux-summary",
+    "message": "============================= 56 passed in 23.73s =============================="
+   },
+   {
+    "level": "notice",
+    "title": "b54-linux-env",
+    "message": "Linux 6.8.0-1070-azure | Python 3.11.17 | uid=1001 | Model name: AMD EPYC 7763 64-Core Processor"
+   }
+  ]
+ }
+]

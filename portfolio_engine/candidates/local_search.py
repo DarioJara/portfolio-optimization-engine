@@ -18,6 +18,7 @@ from portfolio_engine.candidates.expansion import (
     SearchNode,
     SearchServices,
     StageAccumulator,
+    rank_nodes,
 )
 from portfolio_engine.models.composition import StageDiagnostics
 from portfolio_engine.models.enums import CandidateOrigin
@@ -78,7 +79,7 @@ class LocalSearch:
                 and child.estimate.satisfies_constraints
                 and child.gain > current.gain + config.improvement_tolerance
             ]
-            best = min(better, key=SearchNode.ranking_key) if better else None
+            best = rank_nodes(better, config.improvement_tolerance)[0] if better else None
             stages.append(
                 accumulator.build(
                     CandidateOrigin.LOCAL_SEARCH,
